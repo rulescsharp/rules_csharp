@@ -229,6 +229,15 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = []):
 
     providers = [csharp_info, default_info]
 
+    if not is_analyzer:
+        providers.append(coverage_common.instrumented_files_info(
+            ctx,
+            source_attributes = ["srcs"],
+            dependency_attributes = ["deps", "exports"],
+            extensions = ["cs"],
+            metadata_files = [pdb],
+        ))
+
     if is_analyzer:
         analyzer_info = CSharpAnalyzerInfo(
             analyzers = depset([out_dll]),

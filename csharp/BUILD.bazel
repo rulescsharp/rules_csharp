@@ -57,5 +57,6 @@ bzl_library(
     deps = [
         ":toolchains_bzl",
         "//csharp/private:nuget_repo_bzl",
+        "@bazel_tools//tools:bzl_srcs",
     ],
 )

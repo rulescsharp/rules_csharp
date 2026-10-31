@@ -1,5 +1,6 @@
 """Module extensions for rules_csharp."""
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//csharp:toolchains.bzl", "DOTNET_ARTIFACTS", "PLATFORMS", "csharp_toolchains_hub", "runtime_pack", "sdk_exec")
 load("//csharp/private:nuget_repo.bzl", "nuget_hub_repo", "nuget_package_repo")
 
@@ -115,6 +116,19 @@ def _csharp_impl(module_ctx):
                 rid = rid,
                 urls = candidate_urls,
             )
+
+    http_archive(
+        name = "csharp_coverlet",
+        build_file_content = """filegroup(
+    name = "files",
+    srcs = glob(["tools/net8.0/any/**"]),
+    visibility = ["//visibility:public"],
+)
+""",
+        sha256 = "b01e98cead98a7888745b5f2a48c4e71d4b5372e6c70e751b81cc8ccf4af0a76",
+        type = "zip",
+        urls = ["https://api.nuget.org/v3-flatcontainer/coverlet.console/10.1.0/coverlet.console.10.1.0.nupkg"],
+    )
 
     csharp_toolchains_hub(
         name = "dotnet_toolchains",

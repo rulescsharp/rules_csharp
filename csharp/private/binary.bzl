@@ -226,6 +226,19 @@ def _binary_common_impl(ctx, is_test = False):
             extra_output_files.append(declared)
             runfiles_symlinks[prefix + dest] = f
 
+    coverlet_dll = ""
+    if is_test and ctx.configuration.coverage_enabled:
+        # Coverlet finds symbols next to each assembly. Only instrumented targets carry a pdb here.
+        for dep in ctx.attr.deps:
+            if InstrumentedFilesInfo in dep:
+                for f in dep[InstrumentedFilesInfo].metadata_files.to_list():
+                    runfiles_symlinks[prefix + f.basename] = f
+        for f in ctx.files._coverlet:
+            # Keep the package layout so runtimes/<rid> copies never shadow the portable ones.
+            runfiles_symlinks[prefix + "coverlet/" + f.short_path.split("tools/net8.0/any/", 1)[1]] = f
+            if f.basename == "coverlet.console.dll":
+                coverlet_dll = "coverlet/" + f.basename
+
     data_files = ctx.files.data if hasattr(ctx.files, "data") else []
     runfiles_files.extend(data_files)
 
@@ -237,11 +250,6 @@ def _binary_common_impl(ctx, is_test = False):
         vstest_path = toolchain.vstest_dll.path if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll else ""
         dotnet_path = toolchain.dotnet_muxer.path
         test_filter = getattr(ctx.attr, "test_filter", "")
-
-        src_lines = []
-        for s in ctx.files.srcs:
-            src_lines.append("SF:" + s.path + "\nDA:1,1\nend_of_record")
-        lcov_content = "\n".join(src_lines)
 
         if is_windows:
             runner_content = """@echo off
@@ -311,12 +319,6 @@ if "{target_type}"=="library" (
     "!EXE_PATH!" %*
 )
 set EXIT_CODE=%ERRORLEVEL%
-if not "%COVERAGE_OUTPUT_FILE%"=="" (
-    (
-        echo TN:
-        echo {lcov_content}
-    ) > "%COVERAGE_OUTPUT_FILE%"
-)
 rmdir /s /q "%SCRATCH%" 2>nul
 exit /b %EXIT_CODE%
 """.format(
@@ -325,7 +327,6 @@ exit /b %EXIT_CODE%
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
                 exe_name_len = len(exe_file.basename),
-                lcov_content = lcov_content,
                 main_dll_len = len(main_dll.basename),
                 main_dll_name = main_dll.basename,
                 target_type = target_type,
@@ -381,34 +382,65 @@ if [ ! -f "$VSTEST_DLL" ]; then
     VSTEST_DLL="{vstest_path}"
 fi
 
+COVERLET_DLL="$DIR/{coverlet_dll}"
+if [ -n "${{COVERAGE_DIR:-}}" ] && [ -f "$COVERLET_DLL" ]; then
+    # Coverlet instruments assemblies in place, so run from a writable copy.
+    APP_DIR="$SCRATCH/app"
+    mkdir -p "$APP_DIR"
+    for f in "$(dirname "$MAIN_DLL_PATH")"/*.dll "$(dirname "$MAIN_DLL_PATH")"/*.pdb "$(dirname "$MAIN_DLL_PATH")"/*.json; do
+        [ -e "$f" ] || continue
+        [ "$(basename "$f")" = vstest.console.dll ] || cp -L "$f" "$APP_DIR/"
+    done
+    chmod -R u+w "$APP_DIR"
+    MAIN_DLL_PATH="$APP_DIR/$(basename "$MAIN_DLL_PATH")"
+fi
+
 if [ "{target_type}" = "library" ]; then
-    if [ -n "$FILTER" ]; then
-        "$DOTNET_BIN" exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console --TestCaseFilter:"$FILTER" "$@"
-    else
-        "$DOTNET_BIN" exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console "$@"
-    fi
+    set -- exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console ${{FILTER:+--TestCaseFilter:"$FILTER"}} "$@"
+    TEST_BIN="$DOTNET_BIN"
 else
     if [ -n "$FILTER" ]; then
         export TESTBRIDGE_TEST_ONLY="$FILTER"
     fi
-    "$EXE_PATH" "$@"
+    TEST_BIN="$EXE_PATH"
+    if [ -n "${{APP_DIR:-}}" ]; then
+        set -- exec "$MAIN_DLL_PATH" "$@"
+        TEST_BIN="$DOTNET_BIN"
+    fi
 fi
-EXIT_CODE=$?
 
-if [ -n "${{COVERAGE_OUTPUT_FILE:-}}" ]; then
-    cat << 'COV_EOF' > "$COVERAGE_OUTPUT_FILE"
-TN:
-{lcov_content}
-COV_EOF
+# set -e would exit before the cleanup below, so capture the test's exit code.
+EXIT_CODE=0
+if [ -n "${{APP_DIR:-}}" ]; then
+    # Coverlet splits --targetargs like a command line, so quote each argument.
+    TARGET_ARGS=""
+    for a in "$@"; do
+        TARGET_ARGS="$TARGET_ARGS \\"$(printf '%s' "$a" | sed 's/"/\\\\"/g')\\""
+    done
+    "$DOTNET_BIN" exec --roll-forward LatestMajor "$COVERLET_DLL" "$MAIN_DLL_PATH" \\
+        --target "$TEST_BIN" --targetargs "$TARGET_ARGS" \\
+        --exclude-assemblies-without-sources None \\
+        --include-test-assembly \\
+        --format lcov --output "$SCRATCH/coverlet.info" || EXIT_CODE=$?
+    # Coverlet reports the absolute paths the compiler saw. Map each to its exec path in the manifest.
+    awk 'NR == FNR {{ srcs[$0]; next }}
+        /^SF:/ {{
+            p = substr($0, 4); best = ""
+            for (s in srcs) if (length(s) > length(best) && (p == s || substr(p, length(p) - length(s)) == "/" s)) best = s
+            if (best != "") $0 = "SF:" best
+        }}
+        {{ print }}' "$COVERAGE_MANIFEST" "$SCRATCH/coverlet.info" > "$COVERAGE_DIR/coverlet.dat"
+else
+    "$TEST_BIN" "$@" || EXIT_CODE=$?
 fi
 
 rm -rf "$SCRATCH"
 exit $EXIT_CODE
 """.format(
+                coverlet_dll = coverlet_dll,
                 dotnet_bin = toolchain.dotnet_muxer.basename,
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
-                lcov_content = lcov_content,
                 main_dll_name = main_dll.basename,
                 target_type = target_type,
                 test_filter = test_filter,
@@ -441,7 +473,7 @@ exit $EXIT_CODE
             runfiles = runfiles,
         ),
         csharp_info,
-    ]
+    ] + [p for p in compile_providers if type(p) == "InstrumentedFilesInfo"]
 
     pack_ws = getattr(toolchain.host_pack.owner, "workspace_name", "") or getattr(toolchain.host_pack.owner, "repo_name", "")
     dotnet_root_rel = "../" + pack_ws if pack_ws else toolchain.dotnet_muxer.dirname
@@ -457,15 +489,6 @@ exit $EXIT_CODE
                 inherited_environment = list(getattr(ctx.attr, "env_inherit", [])),
             ),
         )
-        if hasattr(coverage_common, "instrumented_files_info"):
-            providers.append(
-                coverage_common.instrumented_files_info(
-                    ctx,
-                    source_attributes = ["srcs"],
-                    dependency_attributes = ["deps"],
-                    extensions = ["cs"],
-                ),
-            )
 
     return providers
 
@@ -583,6 +606,16 @@ csharp_binary = rule(
 
 _TEST_ATTRS = dict(_BINARY_ATTRS)
 _TEST_ATTRS.update({
+    "_coverlet": attr.label(
+        allow_files = True,
+        default = Label("//csharp/private:coverlet"),
+        doc = "Coverlet console files, empty unless collecting coverage.",
+    ),
+    "_lcov_merger": attr.label(
+        cfg = "exec",
+        default = configuration_field(fragment = "coverage", name = "output_generator"),
+        doc = "Bazel coverage output generator that merges LCOV reports.",
+    ),
     "data": attr.label_list(
         allow_files = True,
         default = [],
@@ -603,7 +636,12 @@ _TEST_ATTRS.update({
 })
 
 csharp_test = rule(
-    doc = "Compiles and executes a C# test binary under the Bazel test harness.",
+    doc = """Compiles and executes a C# test binary under the Bazel test harness.
+
+`bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. Coverage runs on
+Linux (macOS is not verified yet). Windows test runners report none.
+""",
     implementation = _csharp_test_impl,
     attrs = _TEST_ATTRS,
     executable = True,
