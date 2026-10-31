@@ -96,6 +96,6 @@ shell_test(
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",
-        "//csharp:docs",
+        "//docs",
     ],
 )

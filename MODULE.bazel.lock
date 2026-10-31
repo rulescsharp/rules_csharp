@@ -642,7 +642,7 @@
     "//csharp:extensions.bzl%nuget": {
       "general": {
         "bzlTransitiveDigest": "npW0f0EvpJ1mgOBzRmGsH/nxpY43c+Y8HovH1R5Xv1s=",
-        "usagesDigest": "g7K6MysKjmTiJinpHYROvDxW04kBl8C31a+zl39Vr5w=",
+        "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
           "FILE:@@//tests/integration/packages.lock.json f535a976fda18e781a27910b1fe92331a88845b99649dbd7fd513039ab1f015c"

@@ -1,5 +1,4 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 load("//csharp:defs.bzl", "csharp_binary")
 
 package(default_visibility = ["//visibility:public"])
@@ -60,32 +59,3 @@ bzl_library(
         "//csharp/private:nuget_repo_bzl",
     ],
 )
-
-stardoc(
-    name = "defs_doc",
-    out = "defs_doc.md",
-    input = "defs.bzl",
-    deps = [":defs_bzl"],
-)
-
-stardoc(
-    name = "toolchains_doc",
-    out = "toolchains_doc.md",
-    input = "toolchains.bzl",
-    deps = [":toolchains_bzl"],
-)
-
-stardoc(
-    name = "extensions_doc",
-    out = "extensions_doc.md",
-    input = "extensions.bzl",
-    deps = [":extensions_bzl"],
-)
-
-stardoc(
-    name = "docs",
-    out = "README.md",
-    input = "defs.bzl",
-    deps = [":defs_bzl"],
-)
-

@@ -1,0 +1,31 @@
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+package(default_visibility = ["//visibility:public"])
+
+stardoc(
+    name = "defs_doc",
+    out = "defs_doc.md",
+    input = "//csharp:defs.bzl",
+    deps = ["//csharp:defs_bzl"],
+)
+
+stardoc(
+    name = "toolchains_doc",
+    out = "toolchains_doc.md",
+    input = "//csharp:toolchains.bzl",
+    deps = ["//csharp:toolchains_bzl"],
+)
+
+stardoc(
+    name = "extensions_doc",
+    out = "extensions_doc.md",
+    input = "//csharp:extensions.bzl",
+    deps = ["//csharp:extensions_bzl"],
+)
+
+stardoc(
+    name = "docs",
+    out = "README.md",
+    input = "//csharp:defs.bzl",
+    deps = ["//csharp:defs_bzl"],
+)
