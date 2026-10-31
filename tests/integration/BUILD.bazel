@@ -50,6 +50,12 @@ shell_test(
     ],
 )
 
+shell_test(
+    name = "reproducible_paths_test",
+    src = "reproducible_paths_test.sh",
+    data = [":lib"],
+)
+
 # Invariant 5: Cross-compiled Linux ARM64 binary verification
 linux_binary_collector(
     name = "linux_arm64_app",

@@ -1,4 +1,9 @@
-"""Public API for rules_csharp."""
+"""Public API for rules_csharp.
+
+Compiled assemblies and pdbs record source paths under `/_/` instead of the absolute build path, so
+outputs are identical across machines and sandboxes. Map `/_/` to the workspace root in a debugger to
+step into sources.
+"""
 
 load("//csharp/private:binary.bzl", _csharp_binary = "csharp_binary", _csharp_test = "csharp_test")
 load(

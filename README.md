@@ -2,6 +2,10 @@
 
 Public API for rules_csharp.
 
+Compiled assemblies and pdbs record source paths under `/_/` instead of the absolute build path, so
+outputs are identical across machines and sandboxes. Map `/_/` to the workspace root in a debugger to
+step into sources.
+
 <a id="csharp_analyzer_import"></a>
 
 ## csharp_analyzer_import
