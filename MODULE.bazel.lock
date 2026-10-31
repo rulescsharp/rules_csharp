@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "npW0f0EvpJ1mgOBzRmGsH/nxpY43c+Y8HovH1R5Xv1s=",
+        "bzlTransitiveDigest": "pif3IzCmfu2eSbAHbkD7Iw0qLV1Xpj6csrYXJDijtfI=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -616,6 +616,17 @@
               ]
             }
           },
+          "csharp_coverlet": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "build_file_content": "filegroup(\n    name = \"files\",\n    srcs = glob([\"tools/net8.0/any/**\"]),\n    visibility = [\"//visibility:public\"],\n)\n",
+              "sha256": "b01e98cead98a7888745b5f2a48c4e71d4b5372e6c70e751b81cc8ccf4af0a76",
+              "type": "zip",
+              "urls": [
+                "https://api.nuget.org/v3-flatcontainer/coverlet.console/10.1.0/coverlet.console.10.1.0.nupkg"
+              ]
+            }
+          },
           "dotnet_toolchains": {
             "repoRuleId": "@@//csharp:toolchains.bzl%csharp_toolchains_hub",
             "attributes": {
@@ -641,7 +652,7 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "npW0f0EvpJ1mgOBzRmGsH/nxpY43c+Y8HovH1R5Xv1s=",
+        "bzlTransitiveDigest": "pif3IzCmfu2eSbAHbkD7Iw0qLV1Xpj6csrYXJDijtfI=",
         "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",

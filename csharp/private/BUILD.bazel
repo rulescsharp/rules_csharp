@@ -4,6 +4,22 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(glob(["*.bzl"]))
 
+config_setting(
+    name = "coverage_enabled",
+    values = {"collect_code_coverage": "true"},
+)
+
+# Fetched only under `bazel coverage`.
+alias(
+    name = "coverlet",
+    actual = select({
+        ":coverage_enabled": "@csharp_coverlet//:files",
+        "//conditions:default": ":empty",
+    }),
+)
+
+filegroup(name = "empty")
+
 filegroup(
     name = "bzl_srcs",
     srcs = glob(["*.bzl"]),

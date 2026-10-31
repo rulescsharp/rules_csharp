@@ -35,3 +35,11 @@ jobs:
       - name: Execute examples tests
         run: cd examples && bazel test //...
 
+      - name: Check examples coverage
+        working-directory: examples
+        run: |
+          bazel coverage //:greeter_test --combined_report=lcov
+          awk '/^SF:/ { f = substr($0, 4) }
+            f == "Greeter.cs" && /^DA:[0-9]+,[1-9]/ { hit = 1 }
+            f == "Greeter.cs" && /^DA:[0-9]+,0$/ { miss = 1 }
+            END { exit !(hit && miss) }' bazel-out/_coverage/_coverage_report.dat
