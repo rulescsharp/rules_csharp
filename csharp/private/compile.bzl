@@ -55,7 +55,6 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = []):
     args.add("-warn:" + str(warning_level))
     if getattr(ctx.attr, "warn_as_error", False):
         args.add("-warnaserror+")
-    args.add("-pathmap:.=/_/")
 
     for d in getattr(ctx.attr, "defines", []):
         args.add("-define:" + d)
