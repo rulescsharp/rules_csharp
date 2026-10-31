@@ -263,6 +263,8 @@ namespace RulesCsharp.Tools
                 }
                 processed.Add(arg);
             }
+            // csc applies -pathmap to the absolute paths it resolves, so `.` never matches. Map the real execroot or sandbox root.
+            processed.Add($"-pathmap:{Directory.GetCurrentDirectory()}=/_/");
             return processed.ToArray();
         }
 
