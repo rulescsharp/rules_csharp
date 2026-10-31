@@ -28,7 +28,7 @@ if not ref_readme:
     for root, dirs, files in os.walk("."):
         if "README.md" in files:
             p = pathlib.Path(root) / "README.md"
-            if "docs" not in str(p) and "external" not in str(p):
+            if p.parent.name != "docs" and "external" not in str(p):
                 ref_readme = p
                 break
 
@@ -41,7 +41,7 @@ if not gen_readme:
     for root, dirs, files in os.walk("."):
         if "README.md" in files:
             p = pathlib.Path(root) / "README.md"
-            if "docs" in str(p):
+            if p.parent.name == "docs":
                 gen_readme = p
                 break
 
