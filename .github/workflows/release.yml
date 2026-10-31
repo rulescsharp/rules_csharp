@@ -78,11 +78,7 @@ jobs:
   publish_to_bcr:
     name: Publish to Bazel Central Registry
     needs: [release]
-    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v0.2.2
+    uses: ./.github/workflows/publish.yml
     with:
       tag_name: ${{ github.ref_name }}
-      registry_fork: rulescsharp/bazel-central-registry
-      attest: true
-      draft: false
-    secrets:
-      publish_token: ${{ secrets.BCR_PUBLISH_TOKEN }}
+    secrets: inherit
