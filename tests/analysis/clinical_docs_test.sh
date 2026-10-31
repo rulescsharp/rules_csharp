@@ -28,11 +28,11 @@ if not ref_readme:
     for root, dirs, files in os.walk("."):
         if "README.md" in files:
             p = pathlib.Path(root) / "README.md"
-            if "csharp" not in str(p) and "external" not in str(p):
+            if p.parent.name != "docs" and "external" not in str(p):
                 ref_readme = p
                 break
 
-for candidate in ["csharp/README.md", "rules_csharp/csharp/README.md"]:
+for candidate in ["docs/README.md", "rules_csharp/docs/README.md"]:
     if os.path.exists(candidate):
         gen_readme = pathlib.Path(candidate)
         break
@@ -41,7 +41,7 @@ if not gen_readme:
     for root, dirs, files in os.walk("."):
         if "README.md" in files:
             p = pathlib.Path(root) / "README.md"
-            if "csharp" in str(p):
+            if p.parent.name == "docs":
                 gen_readme = p
                 break
 
