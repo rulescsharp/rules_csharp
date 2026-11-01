@@ -89,6 +89,10 @@ csharp_binary(<a href="#csharp_binary-name">name</a>, <a href="#csharp_binary-de
 
 Compiles a C# executable and stamps the native application host binary.
 
+`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
+Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
+default install location.
+
 **ATTRIBUTES**
 
 

@@ -489,6 +489,9 @@ exit $EXIT_CODE
                 inherited_environment = list(getattr(ctx.attr, "env_inherit", [])),
             ),
         )
+    else:
+        # The apphost finds the runtime through DOTNET_ROOT, so bazel run needs it too.
+        providers.append(RunEnvironmentInfo(environment = {"DOTNET_ROOT": dotnet_root_rel}))
 
     return providers
 
@@ -597,7 +600,12 @@ _BINARY_ATTRS = {
 }
 
 csharp_binary = rule(
-    doc = "Compiles a C# executable and stamps the native application host binary.",
+    doc = """Compiles a C# executable and stamps the native application host binary.
+
+`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
+Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
+default install location.
+""",
     implementation = _csharp_binary_impl,
     attrs = _BINARY_ATTRS,
     executable = True,
