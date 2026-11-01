@@ -1,4 +1,4 @@
-load("@rules_csharp//csharp:defs.bzl", "csharp_library", "csharp_test")
+load("@rules_csharp//csharp:defs.bzl", "csharp_binary", "csharp_library", "csharp_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -6,6 +6,12 @@ csharp_library(
     name = "greeter",
     srcs = ["Greeter.cs"],
     target_framework = "net8.0",
+)
+
+csharp_binary(
+    name = "hello",
+    srcs = ["Hello.cs"],
+    deps = [":greeter"],
 )
 
 csharp_test(
