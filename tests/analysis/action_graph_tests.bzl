@@ -184,33 +184,20 @@ def _msbuild_parity_action_test_impl(ctx):
 
 msbuild_parity_action_test = analysistest.make(_msbuild_parity_action_test_impl)
 
-def _proto_action_test_impl(ctx):
+def _proto_moved_test_impl(ctx):
     env = analysistest.begin(ctx)
 
-    actions = analysistest.target_actions(env)
-    proto_actions = [a for a in actions if a.mnemonic == "ProtocGenCSharp"]
-    asserts.equals(env, 1, len(proto_actions))
-    proto_action = proto_actions[0]
-
-    output_basenames = [f.basename for f in proto_action.outputs.to_list()]
-    asserts.true(
-        env,
-        "Greeter.cs" in output_basenames,
-        "Expected Greeter.cs in protoc outputs, got: %s" % output_basenames,
-    )
-
-    compile_actions = [a for a in actions if a.mnemonic == "CSharpCompile"]
-    asserts.equals(env, 1, len(compile_actions))
-    compile_inputs = [f.basename for f in compile_actions[0].inputs.to_list()]
-    asserts.true(
-        env,
-        "Greeter.cs" in compile_inputs,
-        "Expected generated Greeter.cs in CSharpCompile inputs, got: %s" % compile_inputs,
-    )
+    asserts.expect_failure(env, "%s moved to the rules_csharp_proto module" % ctx.attr.rule_name)
+    asserts.expect_failure(env, 'bazel_dep(name = "rules_csharp_proto", version = "0.4.0")')
+    asserts.expect_failure(env, 'load("@rules_csharp_proto//csharp:defs.bzl", "%s")' % ctx.attr.rule_name)
 
     return analysistest.end(env)
 
-proto_action_test = analysistest.make(_proto_action_test_impl)
+proto_moved_test = analysistest.make(
+    _proto_moved_test_impl,
+    attrs = {"rule_name": attr.string(mandatory = True)},
+    expect_failure = True,
+)
 
 def _hermetic_sandbox_action_test_impl(ctx):
     env = analysistest.begin(ctx)

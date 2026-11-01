@@ -1,0 +1,32 @@
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_csharp//tests/integration:test_helpers.bzl", "shell_test")
+load("//csharp:defs.bzl", "csharp_proto_library")
+load(":action_graph_tests.bzl", "proto_action_test")
+
+package(default_visibility = ["//visibility:public"])
+
+proto_library(
+    name = "greeter_proto",
+    srcs = ["greeter.proto"],
+)
+
+csharp_proto_library(
+    name = "greeter_cs_proto",
+    proto = ":greeter_proto",
+    tags = ["manual"],
+)
+
+proto_action_test(
+    name = "proto_action_test",
+    target_under_test = ":greeter_cs_proto",
+)
+
+shell_test(
+    name = "clinical_docs_test",
+    src = "@rules_csharp//tests/analysis:clinical_docs_test.sh",
+    data = [
+        "//:README.md",
+        "//csharp:bzl_srcs",
+        "//docs",
+    ],
+)

@@ -1,5 +1,4 @@
-load("@protobuf//bazel:proto_library.bzl", "proto_library")
-load("//csharp:defs.bzl", "csharp_binary", "csharp_library", "csharp_proto_library")
+load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library")
 load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
@@ -8,7 +7,7 @@ load(
     "csc_worker_action_test",
     "hermetic_sandbox_action_test",
     "msbuild_parity_action_test",
-    "proto_action_test",
+    "proto_moved_test",
     "target_framework_action_test",
     "web_sdk_action_test",
 )
@@ -43,14 +42,17 @@ csharp_binary(
     srcs = ["CrossApp.cs"],
 )
 
-proto_library(
-    name = "greeter_proto",
-    srcs = ["greeter.proto"],
+# The proto rules moved to rules_csharp_proto. Old call sites keep their attributes and fail
+# with the migration steps.
+csharp_proto_library(
+    name = "moved_cs_proto",
+    proto = ":unused_proto",
+    tags = ["manual"],
 )
 
-csharp_proto_library(
-    name = "greeter_cs_proto",
-    proto = ":greeter_proto",
+csharp_grpc_library(
+    name = "moved_cs_grpc",
+    proto = ":unused_proto",
     tags = ["manual"],
 )
 
@@ -84,9 +86,16 @@ msbuild_parity_action_test(
     target_under_test = ":lib_a",
 )
 
-proto_action_test(
-    name = "proto_action_test",
-    target_under_test = ":greeter_cs_proto",
+proto_moved_test(
+    name = "proto_moved_test",
+    rule_name = "csharp_proto_library",
+    target_under_test = ":moved_cs_proto",
+)
+
+proto_moved_test(
+    name = "grpc_moved_test",
+    rule_name = "csharp_grpc_library",
+    target_under_test = ":moved_cs_grpc",
 )
 
 hermetic_sandbox_action_test(

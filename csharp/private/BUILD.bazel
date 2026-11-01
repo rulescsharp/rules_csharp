@@ -65,6 +65,11 @@ bzl_library(
 )
 
 bzl_library(
+    name = "proto_moved_bzl",
+    srcs = ["proto_moved.bzl"],
+)
+
+bzl_library(
     name = "nuget_repo_bzl",
     srcs = ["nuget_repo.bzl"],
     deps = ["@bazel_tools//tools/build_defs/repo:utils.bzl"],

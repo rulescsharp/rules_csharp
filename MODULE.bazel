@@ -7,7 +7,6 @@ bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
 bazel_dep(name = "apple_support", version = "2.5.2", dev_dependency = True)
-bazel_dep(name = "protobuf", version = "33.4")
 
 csharp = use_extension("//csharp:extensions.bzl", "csharp")
 use_repo(csharp, "csharp_coverlet", "dotnet_toolchains")

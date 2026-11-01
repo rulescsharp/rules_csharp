@@ -1,0 +1,6 @@
+common --enable_bzlmod
+build --incompatible_strict_action_env
+test --test_output=errors
+
+# Build against the rules_csharp in this checkout instead of the registry release.
+common --override_module=rules_csharp=..

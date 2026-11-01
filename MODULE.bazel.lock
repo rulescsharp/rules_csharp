@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "pif3IzCmfu2eSbAHbkD7Iw0qLV1Xpj6csrYXJDijtfI=",
+        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -652,11 +652,11 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "pif3IzCmfu2eSbAHbkD7Iw0qLV1Xpj6csrYXJDijtfI=",
+        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
         "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json f535a976fda18e781a27910b1fe92331a88845b99649dbd7fd513039ab1f015c"
+          "FILE:@@//tests/integration/packages.lock.json 3875a1e8525c7b49be497ee6aebcc204cfbc88647ff08d4009430926a349b2ea"
         ],
         "generatedRepoSpecs": {
           "nuget_commandlineparser": {
@@ -669,18 +669,6 @@
               "local_package_dirs": [],
               "package_id": "CommandLineParser",
               "version": "2.9.1"
-            }
-          },
-          "nuget_google_protobuf": {
-            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
-            "attributes": {
-              "auth_patterns": {},
-              "content_hash": "MatzpUQ9/cQkLuWHDExAKQL1Zi9vPMCTkofm/vOuHyqIyBc9XvzZJV9ElW2fDw8DNkjW7MQOchSi8h7VZPxCzQ==",
-              "dependencies": [],
-              "feeds": [],
-              "local_package_dirs": [],
-              "package_id": "Google.Protobuf",
-              "version": "3.30.0"
             }
           },
           "nuget_polysharp": {
@@ -712,7 +700,6 @@
             "attributes": {
               "packages": {
                 "CommandLineParser": "nuget_commandlineparser",
-                "Google.Protobuf": "nuget_google_protobuf",
                 "PolySharp": "nuget_polysharp",
                 "Riok.Mapperly": "nuget_riok_mapperly"
               }

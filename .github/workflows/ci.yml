@@ -35,6 +35,10 @@ jobs:
       - name: Execute examples tests
         run: cd examples && bazel test //...
 
+      - name: Execute proto module tests
+        working-directory: proto
+        run: bazel test //...
+
       - name: Run examples binary
         working-directory: examples
         run: test "$(bazel run //:hello)" = "Hello, Bazel!"
