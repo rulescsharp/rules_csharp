@@ -621,9 +621,19 @@ def _csharp_toolchains_hub_impl(repository_ctx):
         "",
     ]
 
-    for version in repository_ctx.attr.dotnet_versions:
+    versions = repository_ctx.attr.dotnet_versions
+    newest = max(versions, key = lambda v: [int(p) for p in v.split(".")])
+    for tfm in [""] + [version_to_tfm(v) for v in versions]:
+        lines.append("""config_setting(
+    name = "target_framework_{name}",
+    flag_values = {{"@rules_csharp//csharp/settings:target_framework": "{tfm}"}},
+)
+""".format(name = tfm or "default", tfm = tfm))
+
+    for version in versions:
         v_slug = version.replace(".", "_")
         tfm = version_to_tfm(version)
+        target_settings = [tfm] + (["default"] if version == newest else [])
 
         for exec_p, exec_info in PLATFORMS.items():
             worker_name = "CscWorker.bat" if "win" in exec_info["rid"] else "CscWorker"
@@ -646,8 +656,19 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     host_rid = "{host_rid}",
     vstest_dll = "@dotnet_sdk_{v_slug}_{exec_p}//:vstest_dll",
 )
+""".format(
+                    exec_p = exec_p,
+                    host_rid = exec_info["rid"],
+                    impl_name = impl_name,
+                    target_p = target_p,
+                    target_rid = target_info["rid"],
+                    tfm = tfm,
+                    v_slug = v_slug,
+                    worker_name = worker_name,
+                ))
 
-toolchain(
+                for setting in target_settings:
+                    lines.append("""toolchain(
     name = "{tc_name}",
     toolchain_type = "@rules_csharp//csharp:toolchain_type",
     toolchain = ":{impl_name}",
@@ -659,22 +680,17 @@ toolchain(
         "{target_os}",
         "{target_cpu}",
     ],
+    target_settings = [":target_framework_{setting}"],
 )
 """.format(
-                    exec_cpu = exec_info["cpu"],
-                    exec_os = exec_info["os"],
-                    exec_p = exec_p,
-                    host_rid = exec_info["rid"],
-                    impl_name = impl_name,
-                    target_cpu = target_info["cpu"],
-                    target_os = target_info["os"],
-                    target_p = target_p,
-                    target_rid = target_info["rid"],
-                    tc_name = tc_name,
-                    tfm = tfm,
-                    v_slug = v_slug,
-                    worker_name = worker_name,
-                ))
+                        exec_cpu = exec_info["cpu"],
+                        exec_os = exec_info["os"],
+                        impl_name = impl_name,
+                        setting = setting,
+                        target_cpu = target_info["cpu"],
+                        target_os = target_info["os"],
+                        tc_name = tc_name if setting == tfm else tc_name + "_default",
+                    ))
 
     repository_ctx.file("BUILD.bazel", "\n".join(lines))
 

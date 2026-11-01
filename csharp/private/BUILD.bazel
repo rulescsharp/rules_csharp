@@ -27,6 +27,12 @@ filegroup(
 )
 
 bzl_library(
+    name = "common_bzl",
+    srcs = ["common.bzl"],
+    deps = ["//csharp:toolchains_bzl"],
+)
+
+bzl_library(
     name = "providers_bzl",
     srcs = ["providers.bzl"],
 )
@@ -41,6 +47,7 @@ bzl_library(
     name = "compile_bzl",
     srcs = ["compile.bzl"],
     deps = [
+        ":common_bzl",
         ":providers_bzl",
         ":toolchain_impl_bzl",
     ],
@@ -50,6 +57,7 @@ bzl_library(
     name = "binary_bzl",
     srcs = ["binary.bzl"],
     deps = [
+        ":common_bzl",
         ":compile_bzl",
         ":providers_bzl",
         ":toolchain_impl_bzl",

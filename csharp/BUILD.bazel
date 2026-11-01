@@ -26,6 +26,7 @@ bzl_library(
     name = "proto_bzl",
     srcs = ["proto.bzl"],
     deps = [
+        "//csharp/private:common_bzl",
         "//csharp/private:compile_bzl",
         "@protobuf//bazel/common:proto_info_bzl",
     ],

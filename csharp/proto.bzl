@@ -1,6 +1,7 @@
 """Protobuf and gRPC compilation rules for rules_csharp."""
 
 load("@protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
+load("//csharp/private:common.bzl", "target_framework_transition")
 load("//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl")
 
 def _proto_to_csharp_basename(proto_file):
@@ -129,6 +130,7 @@ csharp_proto_library = rule(
     doc = "Compiles Protocol Buffer definitions into a C# assembly library.",
     implementation = _csharp_proto_library_impl,
     attrs = _PROTO_ATTRS,
+    cfg = target_framework_transition,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],
 )
 
@@ -136,5 +138,6 @@ csharp_grpc_library = rule(
     doc = "Compiles Protocol Buffer and gRPC service definitions into a C# assembly library.",
     implementation = _csharp_grpc_library_impl,
     attrs = _GRPC_ATTRS,
+    cfg = target_framework_transition,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],
 )

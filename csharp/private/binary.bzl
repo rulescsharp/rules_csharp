@@ -1,5 +1,6 @@
 """Binary and test rules for rules_csharp."""
 
+load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
 load(":compile.bzl", "compile_impl")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
@@ -588,7 +589,8 @@ _BINARY_ATTRS = {
     ),
     "target_framework": attr.string(
         default = "",
-        doc = "Target framework moniker string.",
+        doc = TARGET_FRAMEWORK_DOC,
+        values = [""] + TARGET_FRAMEWORKS,
     ),
     "target_type": attr.string(
         default = "exe",
@@ -600,6 +602,7 @@ csharp_binary = rule(
     doc = "Compiles a C# executable and stamps the native application host binary.",
     implementation = _csharp_binary_impl,
     attrs = _BINARY_ATTRS,
+    cfg = target_framework_transition,
     executable = True,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],
 )
@@ -644,6 +647,7 @@ Linux (macOS is not verified yet). Windows test runners report none.
 """,
     implementation = _csharp_test_impl,
     attrs = _TEST_ATTRS,
+    cfg = target_framework_transition,
     executable = True,
     test = True,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],

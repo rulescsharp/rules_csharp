@@ -9,6 +9,7 @@ load(
     "hermetic_sandbox_action_test",
     "msbuild_parity_action_test",
     "proto_action_test",
+    "target_framework_action_test",
     "web_sdk_action_test",
 )
 
@@ -23,6 +24,12 @@ csharp_library(
     name = "lib_b",
     srcs = ["LibB.cs"],
     deps = [":lib_a"],
+)
+
+csharp_library(
+    name = "net8_lib",
+    srcs = ["LibA.cs"],
+    target_framework = "net8.0",
 )
 
 csharp_library(
@@ -84,6 +91,18 @@ proto_action_test(
 
 hermetic_sandbox_action_test(
     name = "hermetic_sandbox_action_test",
+    target_under_test = ":lib_a",
+)
+
+target_framework_action_test(
+    name = "net8_target_framework_action_test",
+    expected_tfm = "net8.0",
+    target_under_test = ":net8_lib",
+)
+
+target_framework_action_test(
+    name = "default_target_framework_action_test",
+    expected_tfm = "net10.0",
     target_under_test = ":lib_a",
 )
 
