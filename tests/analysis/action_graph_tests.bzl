@@ -241,3 +241,23 @@ hermetic_sandbox_action_test = analysistest.make(_hermetic_sandbox_action_test_i
 
 
 
+
+def _target_framework_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    ref_dirs = {f.dirname: None for f in compile_actions[0].inputs.to_list() if "/Microsoft.NETCore.App.Ref/" in f.path}
+    want = "/ref/" + ctx.attr.expected_tfm
+    asserts.true(
+        env,
+        ref_dirs and all([d.endswith(want) for d in ref_dirs]),
+        "Expected only %s reference assemblies, got: %s" % (want, ref_dirs.keys()),
+    )
+
+    return analysistest.end(env)
+
+target_framework_action_test = analysistest.make(
+    _target_framework_action_test_impl,
+    attrs = {"expected_tfm": attr.string(mandatory = True)},
+)

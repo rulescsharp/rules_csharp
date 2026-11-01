@@ -1,5 +1,6 @@
 """Compilation rules for rules_csharp."""
 
+load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -450,7 +451,8 @@ _COMMON_ATTRS = {
     ),
     "target_framework": attr.string(
         default = "",
-        doc = "Target framework moniker string.",
+        doc = TARGET_FRAMEWORK_DOC,
+        values = [""] + TARGET_FRAMEWORKS,
     ),
     "target_type": attr.string(
         default = "library",
@@ -511,6 +513,7 @@ csharp_library = rule(
     doc = "Compiles C# source files into reference and implementation assemblies.",
     implementation = _csharp_library_impl,
     attrs = _COMMON_ATTRS,
+    cfg = target_framework_transition,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],
 )
 
@@ -518,6 +521,7 @@ csharp_analyzer_library = rule(
     doc = "Compiles Roslyn analyzer or source generator assemblies.",
     implementation = _csharp_analyzer_library_impl,
     attrs = _COMMON_ATTRS,
+    cfg = target_framework_transition,
     toolchains = ["@rules_csharp//csharp:toolchain_type"],
 )
 

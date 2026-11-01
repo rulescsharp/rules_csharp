@@ -69,7 +69,7 @@ Compiles Roslyn analyzer or source generator assemblies.
 | <a id="csharp_analyzer_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_analyzer_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_analyzer_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_analyzer_library-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_analyzer_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_analyzer_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_analyzer_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_analyzer_library-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
@@ -109,7 +109,7 @@ Compiles a C# executable and stamps the native application host binary.
 | <a id="csharp_binary-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_binary-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_binary-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_binary-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_binary-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_binary-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"exe"`  |
 | <a id="csharp_binary-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_binary-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
@@ -157,7 +157,7 @@ Compiles Protocol Buffer and gRPC service definitions into a C# assembly library
 | <a id="csharp_grpc_library-proto"></a>proto |  Target providing ProtoInfo with proto sources.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 | <a id="csharp_grpc_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_grpc_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_grpc_library-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_grpc_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_grpc_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_grpc_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_grpc_library-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
@@ -233,7 +233,7 @@ Compiles C# source files into reference and implementation assemblies.
 | <a id="csharp_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_library-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_library-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
@@ -280,7 +280,7 @@ Compiles Protocol Buffer definitions into a C# assembly library.
 | <a id="csharp_proto_library-proto"></a>proto |  Target providing ProtoInfo with proto sources.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 | <a id="csharp_proto_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_proto_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_proto_library-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_proto_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_proto_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_proto_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_proto_library-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
@@ -328,7 +328,7 @@ Linux (macOS is not verified yet). Windows test runners report none.
 | <a id="csharp_test-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_test-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_test-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
-| <a id="csharp_test-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_test-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_test-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"exe"`  |
 | <a id="csharp_test-test_filter"></a>test_filter |  Default test filter expression.   | String | optional |  `""`  |
 | <a id="csharp_test-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
