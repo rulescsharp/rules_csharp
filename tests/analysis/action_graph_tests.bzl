@@ -146,8 +146,8 @@ def _csc_worker_action_test_impl(ctx):
     argv0 = compile_action.argv[0]
     asserts.true(
         env,
-        argv0.endswith("CscWorker") or argv0.endswith("CscWorker.exe"),
-        "Expected action.argv[0] to end with CscWorker or CscWorker.exe, got: %s" % argv0,
+        argv0.endswith("/CscWorker") or argv0.endswith("/CscWorker.bat"),
+        "Expected action.argv[0] to end with CscWorker or, on Windows, CscWorker.bat, got: %s" % argv0,
     )
     asserts.true(
         env,
