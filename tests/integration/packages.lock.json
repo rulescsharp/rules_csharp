@@ -1,27 +1,24 @@
 {
-  "version": 1,
+  "version": 2,
   "dependencies": {
     "net8.0": {
       "CommandLineParser": {
         "type": "Direct",
         "requested": "[2.9.1, )",
         "resolved": "2.9.1",
-        "contentHash": "TzZORclmjH58xqkitIjz+lIwM8INekMmlPCmrwXOUo6gSB2DdeL08QMsaZA0e0gDzpoOSAaMb+FexG+xJU8IXQ==",
-        "dependencies": {}
+        "contentHash": "OE0sl1/sQ37bjVsPKKtwQlWDgqaxWgtme3xZz7JssWUzg5JpMIyHgCTY9MVMxOg48fJ1AgGT3tgdH5m/kQ5xhA=="
       },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",
         "resolved": "1.14.1",
-        "contentHash": "EOgPDkmNZpfHDo407lseoTt2UYRXzuIErP5MjA9bbJcaVEymbzI8yBNldtM32uzszJgdpbJkfO5EtryMP+ZaMA==",
-        "dependencies": {}
+        "contentHash": "mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
       },
       "Riok.Mapperly": {
         "type": "Direct",
         "requested": "[3.6.0, )",
         "resolved": "3.6.0",
-        "contentHash": "BL3ZLJxNoGGagdsMfGLt1JBNxzpcx1Cx4H2d+ryS5d/s6pmydwkDBZyfag2B6knPfLS8xTchRvuJ2JA+9x48mA==",
-        "dependencies": {}
+        "contentHash": "eQkT3evicd5fdb8HgAJjJ+uvbhfA76ozZZsBtounFrOvk0mj+9tozv1hCYV0f0cTmXIZsxtU93FMWPzd76wSaw=="
       }
     }
   }

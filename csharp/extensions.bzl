@@ -2,7 +2,8 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//csharp:toolchains.bzl", "DOTNET_ARTIFACTS", "PLATFORMS", "csharp_toolchains_hub", "runtime_pack", "sdk_exec")
-load("//csharp/private:nuget_repo.bzl", "nuget_hub_repo", "nuget_package_repo")
+load("//csharp/private:nuget_repo.bzl", "nuget_hub_repo", "nuget_package_repo", "package_auth", "package_urls")
+load("//csharp/private:nupkg.bzl", "base64_to_hex", "sha512_files", "strip_signature")
 
 toolchain_tag = tag_class(
     doc = "Declares .NET SDK versions and remote mirror configurations.",
@@ -148,7 +149,23 @@ csharp = module_extension(
 )
 
 from_lock_tag = tag_class(
-    doc = "Configures NuGet package resolution from lockfile definitions.",
+    doc = """Configures NuGet package resolution from lockfile definitions.
+
+Takes a `packages.lock.json` exactly as `dotnet restore` writes it with
+`RestorePackagesWithLockFile` set. The extension downloads each package once
+and checks it against its `contentHash`, so a package that does not match its
+lock entry fails. For a signed package, which includes every package on
+nuget.org, the hash covers the package without its signature, the same way
+NuGet checks it. The extension then pins the sha256 of each downloaded file,
+which MODULE.bazel.lock records. Later fetches check that sha256 and are
+served from the repository cache.
+
+A package whose `contentHash` is empty, as `CsprojSync --bootstrap-lock` writes
+when restore fails, is not checked and is downloaded unverified.
+
+Feeds must use https or local directories. Bazel does not download over plain
+http without a known checksum.
+""",
     attrs = {
         "auth_patterns": attr.string_dict(
             doc = "Host to authentication pattern mappings.",
@@ -173,7 +190,7 @@ from_lock_tag = tag_class(
             doc = "Path to NuGet.Config XML configuration file.",
         ),
         "packages_lock_json": attr.label(
-            doc = "Path to packages.lock.json lockfile.",
+            doc = "Path to packages.lock.json lockfile written by `dotnet restore`.",
             mandatory = True,
         ),
     },
@@ -220,6 +237,55 @@ def _parse_nuget_config(content):
 
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
+
+def _pin_packages(module_ctx, packages, feeds, local_dirs, netrc, auth_patterns):
+    """Checks each package against its contentHash and returns its sha256 by id.
+
+    For a signed package, and every package on nuget.org is signed, the
+    contentHash covers the zip without its .signature.p7s entry, not the file
+    (https://learn.microsoft.com/en-us/nuget/reference/signed-packages-reference).
+    Bazel can only check and cache a download by the hash of the file. So
+    download each package once here, check it, and pin the file's sha256 on the
+    package repo. MODULE.bazel.lock records the pin, so later fetches are
+    checked by Bazel and served from the repository cache.
+    """
+    pending = []
+    for pkg_id, info in packages.items():
+        if not info["content_hash"]:
+            continue
+        urls = package_urls(pkg_id, info["version"], feeds, local_dirs)
+        output = "nupkg/{}.{}.nupkg".format(pkg_id, info["version"])
+        pending.append(struct(
+            pkg_id = pkg_id,
+            info = info,
+            output = output,
+            download = module_ctx.download(
+                url = urls,
+                output = output,
+                auth = package_auth(module_ctx, netrc, urls, auth_patterns),
+                block = False,
+            ),
+        ))
+
+    hashed = []
+    sha256 = {}
+    for p in pending:
+        sha256[p.pkg_id] = p.download.wait().sha256
+        data = module_ctx.read(p.output)
+        stripped = strip_signature(data)
+        path = p.output
+        if len(stripped) != len(data):
+            path = p.output + ".stripped"
+            module_ctx.file(path, stripped, executable = False, legacy_utf8 = False)
+        hashed.append(module_ctx.path(path))
+
+    for p, actual in zip(pending, sha512_files(module_ctx, hashed)):
+        if actual != base64_to_hex(p.info["content_hash"]):
+            fail("{} {}: the downloaded package does not match its contentHash in packages.lock.json".format(
+                p.pkg_id,
+                p.info["version"],
+            ))
+    return sha256
 
 def _nuget_impl(module_ctx):
     packages = {}
@@ -270,6 +336,8 @@ def _nuget_impl(module_ctx):
                             if d not in existing_deps:
                                 existing_deps.append(d)
 
+    sha256 = _pin_packages(module_ctx, packages, feeds, local_dirs, netrc, auth_patterns)
+
     hub_packages = {}
     for pkg_id, info in packages.items():
         repo_name = "nuget_" + _sanitize_name(pkg_id)
@@ -277,12 +345,12 @@ def _nuget_impl(module_ctx):
         nuget_package_repo(
             name = repo_name,
             auth_patterns = auth_patterns,
-            content_hash = info["content_hash"],
             dependencies = info["dependencies"],
             feeds = feeds,
             local_package_dirs = local_dirs,
             netrc = netrc,
             package_id = pkg_id,
+            sha256 = sha256.get(pkg_id, ""),
             version = info["version"],
         )
 

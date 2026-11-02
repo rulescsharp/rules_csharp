@@ -212,7 +212,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
+        "bzlTransitiveDigest": "lUXG6zwnDb2xwiur9YAFSckCV3eNMiAC7E7HDo0EoTs=",
         "usagesDigest": "XyoWHefLjk817Egbf3OorjKrjbwfXzWgn05KZWpw2zE=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools"
@@ -674,22 +674,22 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
+        "bzlTransitiveDigest": "lUXG6zwnDb2xwiur9YAFSckCV3eNMiAC7E7HDo0EoTs=",
         "usagesDigest": "psEk0bZi+vLZLnGdksNnTRwh5BLQ4zh2dV3FzPizzUk=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json d48f28ba5bc837f82052dcd3953c2ac3bfa370293c1b4fc37a5a345fda21f46b"
+          "FILE:@@//tests/integration/packages.lock.json 030468986c7486f268d552d10bf2ea70c1a1a222dd0ffad98a12e93009b1362e"
         ],
         "generatedRepoSpecs": {
           "nuget_google_protobuf": {
             "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
               "auth_patterns": {},
-              "content_hash": "MatzpUQ9/cQkLuWHDExAKQL1Zi9vPMCTkofm/vOuHyqIyBc9XvzZJV9ElW2fDw8DNkjW7MQOchSi8h7VZPxCzQ==",
               "dependencies": [],
               "feeds": [],
               "local_package_dirs": [],
               "package_id": "Google.Protobuf",
+              "sha256": "932c622f7786b53f8c8e60463ebdde04f0ff05b4558f7362abc40322b7749a19",
               "version": "3.30.0"
             }
           },
