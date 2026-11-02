@@ -2,6 +2,10 @@ load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 
 package(default_visibility = ["//visibility:public"])
 
+# defs.md is checked in so GitHub can render it. //tests/analysis:docs_test fails when it
+# drifts from the generated copy.
+exports_files(["defs.md"])
+
 stardoc(
     name = "defs_doc",
     out = "defs_doc.md",
@@ -25,7 +29,7 @@ stardoc(
 
 stardoc(
     name = "docs",
-    out = "README.md",
+    out = "defs_generated.md",
     input = "//csharp:defs.bzl",
     deps = ["//csharp:defs_bzl"],
 )

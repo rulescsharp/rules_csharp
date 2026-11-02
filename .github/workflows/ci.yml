@@ -17,7 +17,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      # Keep Git Bash on Windows from rewriting //labels as paths
+      MSYS_NO_PATHCONV: "1"
+      MSYS2_ARG_CONV_EXCL: "*"
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,7 +48,7 @@ jobs:
 
       - name: Run examples binary
         working-directory: examples
-        run: test "$(bazel run //:hello)" = "Hello, Bazel!"
+        run: test "$(bazel run //:hello | tr -d '\r')" = "Hello, Bazel!"
 
       - name: Check examples coverage
         working-directory: examples
@@ -51,3 +58,27 @@ jobs:
             f == "Greeter.cs" && /^DA:[0-9]+,[1-9]/ { hit = 1 }
             f == "Greeter.cs" && /^DA:[0-9]+,0$/ { miss = 1 }
             END { exit !(hit && miss) }' bazel-out/_coverage/_coverage_report.dat
+
+  bazel-versions:
+    name: Examples (Bazel ${{ matrix.bazel }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bazel: [7.x, 8.x, 9.x]
+    env:
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.bazel }}
+          repository-cache: true
+
+      - name: Execute examples tests
+        working-directory: examples
+        run: bazel test //...

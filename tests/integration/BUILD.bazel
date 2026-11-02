@@ -1,6 +1,5 @@
 load("//csharp:defs.bzl", "csharp_binary", "csharp_library", "csharp_test")
 load(":linux_cross_transition.bzl", "linux_binary_collector")
-load(":test_helpers.bzl", "shell_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -39,49 +38,49 @@ csharp_test(
     ],
 )
 
-# Invariant 2: ABI determinism proof
-shell_test(
+# Reference assemblies stay identical when only method bodies change.
+csharp_test(
     name = "abi_determinism_test",
-    src = "abi_determinism_test.sh",
+    srcs = ["AbiDeterminismTest.cs"],
     data = [
         "//tests/integration/abi_var1:lib",
         "//tests/integration/abi_var2:lib",
     ],
+    deps = ["//tests/support:runfiles"],
 )
 
-shell_test(
+csharp_test(
     name = "reproducible_paths_test",
-    src = "reproducible_paths_test.sh",
+    srcs = ["ReproduciblePathsTest.cs"],
     data = [":lib"],
+    deps = ["//tests/support:runfiles"],
 )
 
-# Invariant 5: Cross-compiled Linux ARM64 binary verification
+# A binary cross-compiled for Linux ARM64 is an ELF apphost.
 linux_binary_collector(
     name = "linux_arm64_app",
     binary = ":app",
 )
 
-shell_test(
+csharp_test(
     name = "linux_elf_test",
-    src = "linux_elf_test.sh",
+    srcs = ["LinuxElfTest.cs"],
     data = [":linux_arm64_app"],
+    deps = ["//tests/support:runfiles"],
 )
 
 # Task 6: Csproj and BUILD synchronization round-trip test
-shell_test(
+csharp_test(
     name = "sync_roundtrip_test",
-    src = "sync_roundtrip_test.sh",
+    srcs = ["SyncRoundtripTest.cs"],
     data = ["//csharp:sync"],
+    deps = ["//tests/support:runfiles"],
 )
 
-# Section 10: Air-Gapped and Offline Mirror Resolution Test
-shell_test(
+# NuGet packages resolve from an offline mirror.
+csharp_test(
     name = "offline_mirror_test",
-    src = "offline_mirror_test.sh",
-    data = [
-        "//tests/integration:Directory.Packages.props",
-        "//tests/integration:packages.lock.json",
-    ],
+    srcs = ["OfflineMirrorTest.cs"],
 )
 
 # Task 11: Enterprise Integration Tests

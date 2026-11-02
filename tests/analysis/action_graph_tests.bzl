@@ -11,14 +11,14 @@ def _abi_refout_action_test_impl(ctx):
     compile_action = compile_actions[0]
     input_basenames = [f.basename for f in compile_action.inputs.to_list()]
 
-    # Invariant 1: lib_a.ref.dll MUST be in inputs
+    # lib_a.ref.dll is an input
     asserts.true(
         env,
         "lib_a.ref.dll" in input_basenames,
         "Expected lib_a.ref.dll in compile inputs, got: %s" % input_basenames,
     )
 
-    # Invariant 1: lib_a.dll MUST NOT be in inputs
+    # lib_a.dll is not an input
     asserts.false(
         env,
         "lib_a.dll" in input_basenames,
@@ -37,7 +37,7 @@ def _cross_windows_action_test_impl(ctx):
     asserts.equals(env, 1, len(compile_actions))
     compile_action = compile_actions[0]
 
-    # Invariant 3: uses host csc.dll
+    # uses host csc.dll
     compile_input_basenames = [f.basename for f in compile_action.inputs.to_list()]
     asserts.true(
         env,
@@ -45,7 +45,7 @@ def _cross_windows_action_test_impl(ctx):
         "Expected host csc.dll in compile inputs",
     )
 
-    # Invariant 3: uses target apphost.exe template
+    # uses target apphost.exe template
     patch_actions = [a for a in actions if a.mnemonic == "CSharpAppHostPatch"]
     asserts.equals(env, 1, len(patch_actions))
     patch_action = patch_actions[0]
@@ -62,6 +62,24 @@ def _cross_windows_action_test_impl(ctx):
         env,
         any([out.endswith(".exe") for out in patch_outputs]),
         "Expected .exe output for Windows binary, got: %s" % patch_outputs,
+    )
+
+    # The apphost loads the app from its own directory, so it runs without a runfiles tree
+    asserts.true(
+        env,
+        "--assembly-name=cross_app_\\cross_app.dll" in patch_action.argv,
+        "Expected the apphost to point into cross_app_\\, got: %s" % patch_action.argv,
+    )
+
+    # bazel run reaches the runtime from <exe>.runfiles and from <exe>.runfiles/<workspace>
+    target = analysistest.target_under_test(env)
+    exe = target[DefaultInfo].files_to_run.executable
+    dotnet_root = target[RunEnvironmentInfo].environment["DOTNET_ROOT"]
+    up = ctx.workspace_name + "/" + "../" * (len(exe.path.split("/")) + 1)
+    asserts.true(
+        env,
+        dotnet_root.startswith(up + "external/") and "csharp_pack_" in dotnet_root,
+        "Expected DOTNET_ROOT to go from the run directory up to the runtime pack, got: %s" % dotnet_root,
     )
 
     return analysistest.end(env)
@@ -81,7 +99,7 @@ def _cross_linux_action_test_impl(ctx):
     asserts.equals(env, 1, len(compile_actions))
     compile_action = compile_actions[0]
 
-    # Invariant 3: uses host csc.dll
+    # uses host csc.dll
     compile_input_basenames = [f.basename for f in compile_action.inputs.to_list()]
     asserts.true(
         env,
@@ -89,7 +107,7 @@ def _cross_linux_action_test_impl(ctx):
         "Expected host csc.dll in compile inputs",
     )
 
-    # Invariant 3: uses Linux apphost template (non-.exe)
+    # uses Linux apphost template (non-.exe)
     patch_actions = [a for a in actions if a.mnemonic == "CSharpAppHostPatch"]
     asserts.equals(env, 1, len(patch_actions))
     patch_action = patch_actions[0]
@@ -128,8 +146,8 @@ def _csc_worker_action_test_impl(ctx):
     argv0 = compile_action.argv[0]
     asserts.true(
         env,
-        argv0.endswith("CscWorker") or argv0.endswith("CscWorker.exe"),
-        "Expected action.argv[0] to end with CscWorker or CscWorker.exe, got: %s" % argv0,
+        argv0.endswith("/CscWorker") or argv0.endswith("/CscWorker.bat"),
+        "Expected action.argv[0] to end with CscWorker or, on Windows, CscWorker.bat, got: %s" % argv0,
     )
     asserts.true(
         env,

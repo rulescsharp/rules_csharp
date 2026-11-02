@@ -1,11 +1,13 @@
 """Public API for rules_csharp.
 
+Works with Bazel 7, 8 and 9 with Bzlmod, on Linux, macOS and Windows.
+
 Compiled assemblies and pdbs record source paths under `/_/` instead of the absolute build path, so
 outputs are identical across machines and sandboxes. Map `/_/` to the workspace root in a debugger to
 step into sources.
 
 `csharp_proto_library` and `csharp_grpc_library` live in the separate `rules_csharp_proto` module, so
-the core module pulls in no protobuf. See [rules_csharp_proto](proto/README.md) for setup. The names
+the core module pulls in no protobuf. See [rules_csharp_proto](../proto/README.md) for setup. The names
 below remain as stubs that fail the build with migration steps.
 """
 

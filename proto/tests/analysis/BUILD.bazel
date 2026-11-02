@@ -1,5 +1,5 @@
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
-load("@rules_csharp//tests/integration:test_helpers.bzl", "shell_test")
+load("@rules_csharp//csharp:defs.bzl", "csharp_test")
 load("//csharp:defs.bzl", "csharp_proto_library")
 load(":action_graph_tests.bzl", "proto_action_test")
 
@@ -21,12 +21,17 @@ proto_action_test(
     target_under_test = ":greeter_cs_proto",
 )
 
-shell_test(
-    name = "clinical_docs_test",
-    src = "@rules_csharp//tests/analysis:clinical_docs_test.sh",
+csharp_test(
+    name = "docs_test",
+    srcs = ["@rules_csharp//tests/support:DocsTest.cs"],
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",
         "//docs",
     ],
+    env = {
+        "DOCS_GENERATED": "docs/README.md",
+        "DOCS_REFERENCE": "README.md",
+    },
+    deps = ["@rules_csharp//tests/support:runfiles"],
 )

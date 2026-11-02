@@ -1,4 +1,4 @@
-load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library")
+load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library", "csharp_test")
 load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
@@ -115,15 +115,21 @@ target_framework_action_test(
     target_under_test = ":lib_a",
 )
 
-load("//tests/integration:test_helpers.bzl", "shell_test")
 
-# Section 11: Clinical Documentation Standards and Anti-Slop Enforcement
-shell_test(
-    name = "clinical_docs_test",
-    src = "clinical_docs_test.sh",
+# The docs match the Stardoc output and avoid filler wording.
+csharp_test(
+    name = "docs_test",
+    srcs = ["//tests/support:DocsTest.cs"],
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",
         "//docs",
+        "//docs:defs.md",
     ],
+    env = {
+        "DOCS_GENERATED": "docs/defs_generated.md",
+        "DOCS_REFERENCE": "docs/defs.md",
+        "DOCS_SCAN": "README.md",
+    },
+    deps = ["//tests/support:runfiles"],
 )
