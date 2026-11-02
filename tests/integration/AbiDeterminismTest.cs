@@ -14,15 +14,15 @@ string Hash(string variant, string file)
 
 if (Hash("abi_var1", "lib.ref.dll") != Hash("abi_var2", "lib.ref.dll"))
 {
-    Console.WriteLine("FAILED: .ref.dll hashes differ! Expected identical refouts for identical public APIs.");
+    Console.WriteLine("FAILED: .ref.dll hashes differ. Expected identical refouts for identical public APIs.");
     return 1;
 }
 
 if (Hash("abi_var1", "lib.dll") == Hash("abi_var2", "lib.dll"))
 {
-    Console.WriteLine("FAILED: .dll hashes match! Expected different implementation dlls for different method bodies.");
+    Console.WriteLine("FAILED: .dll hashes match. Expected different implementation dlls for different method bodies.");
     return 1;
 }
 
-Console.WriteLine("PASSED: Invariant 2 verified. Byte-identical .ref.dll outputs with differing implementation .dlls.");
+Console.WriteLine("PASSED: .ref.dll outputs are identical and the .dlls differ.");
 return 0;

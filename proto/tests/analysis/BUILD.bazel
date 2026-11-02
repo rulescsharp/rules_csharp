@@ -22,8 +22,8 @@ proto_action_test(
 )
 
 csharp_test(
-    name = "clinical_docs_test",
-    srcs = ["@rules_csharp//tests/support:ClinicalDocsTest.cs"],
+    name = "docs_test",
+    srcs = ["@rules_csharp//tests/support:DocsTest.cs"],
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",

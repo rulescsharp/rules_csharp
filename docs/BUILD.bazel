@@ -2,7 +2,7 @@ load("@stardoc//stardoc:stardoc.bzl", "stardoc")
 
 package(default_visibility = ["//visibility:public"])
 
-# defs.md is checked in so GitHub can render it. //tests/analysis:clinical_docs_test fails when it
+# defs.md is checked in so GitHub can render it. //tests/analysis:docs_test fails when it
 # drifts from the generated copy.
 exports_files(["defs.md"])
 

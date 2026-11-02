@@ -38,7 +38,7 @@ csharp_test(
     ],
 )
 
-# Invariant 2: ABI determinism proof
+# Reference assemblies stay identical when only method bodies change.
 csharp_test(
     name = "abi_determinism_test",
     srcs = ["AbiDeterminismTest.cs"],
@@ -56,7 +56,7 @@ csharp_test(
     deps = ["//tests/support:runfiles"],
 )
 
-# Invariant 5: Cross-compiled Linux ARM64 binary verification
+# A binary cross-compiled for Linux ARM64 is an ELF apphost.
 linux_binary_collector(
     name = "linux_arm64_app",
     binary = ":app",
@@ -77,7 +77,7 @@ csharp_test(
     deps = ["//tests/support:runfiles"],
 )
 
-# Section 10: Air-Gapped and Offline Mirror Resolution Test
+# NuGet packages resolve from an offline mirror.
 csharp_test(
     name = "offline_mirror_test",
     srcs = ["OfflineMirrorTest.cs"],

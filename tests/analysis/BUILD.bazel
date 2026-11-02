@@ -116,10 +116,10 @@ target_framework_action_test(
 )
 
 
-# Section 11: Clinical Documentation Standards and Anti-Slop Enforcement
+# The docs match the Stardoc output and avoid filler wording.
 csharp_test(
-    name = "clinical_docs_test",
-    srcs = ["//tests/support:ClinicalDocsTest.cs"],
+    name = "docs_test",
+    srcs = ["//tests/support:DocsTest.cs"],
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",

@@ -23,5 +23,5 @@ if (bytes.AsSpan().IndexOf(Encoding.UTF8.GetBytes("app.dll")) < 0)
     return 1;
 }
 
-Console.WriteLine("PASSED: Invariant 5 verified. ELF header and patched assembly name 'app.dll' found.");
+Console.WriteLine("PASSED: ELF header and patched assembly name 'app.dll' found.");
 return 0;

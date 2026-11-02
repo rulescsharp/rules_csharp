@@ -7,4 +7,4 @@ csharp_library(
     srcs = ["Runfiles.cs"],
 )
 
-exports_files(["ClinicalDocsTest.cs"])
+exports_files(["DocsTest.cs"])

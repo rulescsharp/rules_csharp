@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using RulesCsharp.Tests;
 
 // DOCS_REFERENCE is the checked-in doc and DOCS_GENERATED the Stardoc output, both as paths in the
-// main repository. DOCS_SCAN optionally names one more checked-in doc for the anti-slop scan.
+// main repository. DOCS_SCAN optionally names one more checked-in doc for the wording check.
 var workspace = Environment.GetEnvironmentVariable("TEST_WORKSPACE") ?? "_main";
 string Doc(string variable)
 {
@@ -73,10 +73,10 @@ foreach (var path in scanned.Distinct().OrderBy(p => p, StringComparer.Ordinal))
 
 if (violations.Count > 0)
 {
-    Console.WriteLine($"FAILED: Found {violations.Count} anti-slop violations:");
+    Console.WriteLine($"FAILED: Found {violations.Count} wording problems:");
     violations.ForEach(Console.WriteLine);
     return 1;
 }
 
-Console.WriteLine($"Anti-slop compliance verified: zero forbidden tokens or em-dashes found across {scanned.Distinct().Count()} files.");
+Console.WriteLine($"Wording check passed for {scanned.Distinct().Count()} files.");
 return 0;
