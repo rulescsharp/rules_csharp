@@ -37,16 +37,12 @@ jobs:
           repository-cache: true
 
       - name: Execute all tests
-        # shortcut: root tests include sh tests, run them on Windows once they are ported
-        if: runner.os != 'Windows'
         run: bazel test //...
 
       - name: Execute examples tests
         run: cd examples && bazel test //...
 
       - name: Execute proto module tests
-        # shortcut: proto tests include sh tests and build protoc from source, run them on Windows once ported
-        if: runner.os != 'Windows'
         working-directory: proto
         run: bazel test //...
 
@@ -55,7 +51,6 @@ jobs:
         run: test "$(bazel run //:hello | tr -d '\r')" = "Hello, Bazel!"
 
       - name: Check examples coverage
-        if: runner.os != 'Windows'
         working-directory: examples
         run: |
           bazel coverage //:greeter_test --combined_report=lcov

@@ -1,4 +1,4 @@
-load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library")
+load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library", "csharp_test")
 load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
@@ -115,15 +115,19 @@ target_framework_action_test(
     target_under_test = ":lib_a",
 )
 
-load("//tests/integration:test_helpers.bzl", "shell_test")
 
 # Section 11: Clinical Documentation Standards and Anti-Slop Enforcement
-shell_test(
+csharp_test(
     name = "clinical_docs_test",
-    src = "clinical_docs_test.sh",
+    srcs = ["//tests/support:ClinicalDocsTest.cs"],
     data = [
         "//:README.md",
         "//csharp:bzl_srcs",
         "//docs",
     ],
+    env = {
+        "DOCS_GENERATED": "docs/README.md",
+        "DOCS_REFERENCE": "README.md",
+    },
+    deps = ["//tests/support:runfiles"],
 )

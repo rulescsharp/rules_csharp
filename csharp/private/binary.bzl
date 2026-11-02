@@ -243,15 +243,23 @@ def _binary_common_impl(ctx, is_test = False):
     coverlet_dll = ""
     if is_test and ctx.configuration.coverage_enabled:
         # Coverlet finds symbols next to each assembly. Only instrumented targets carry a pdb here.
+        # The app dir gets them too, since Windows runs tests without a runfiles tree by default.
+        coverage_files = {}
         for dep in ctx.attr.deps:
             if InstrumentedFilesInfo in dep:
                 for f in dep[InstrumentedFilesInfo].metadata_files.to_list():
-                    runfiles_symlinks[prefix + f.basename] = f
+                    coverage_files[f.basename] = f
         for f in ctx.files._coverlet:
             # Keep the package layout so runtimes/<rid> copies never shadow the portable ones.
-            runfiles_symlinks[prefix + "coverlet/" + f.short_path.split("tools/net8.0/any/", 1)[1]] = f
+            coverage_files["coverlet/" + f.short_path.split("tools/net8.0/any/", 1)[1]] = f
             if f.basename == "coverlet.console.dll":
                 coverlet_dll = "coverlet/" + f.basename
+        for dest, f in coverage_files.items():
+            runfiles_symlinks[prefix + dest] = f
+            if dest not in app_files:
+                declared = ctx.actions.declare_file(app_dir + dest)
+                ctx.actions.symlink(output = declared, target_file = f)
+                extra_output_files.append(declared)
 
     data_files = ctx.files.data if hasattr(ctx.files, "data") else []
     runfiles_files.extend(data_files)
@@ -264,6 +272,14 @@ def _binary_common_impl(ctx, is_test = False):
         vstest_path = toolchain.vstest_dll.path if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll else ""
         dotnet_path = toolchain.dotnet_muxer.path
         test_filter = getattr(ctx.attr, "test_filter", "")
+
+        coverage_script = None
+        if is_windows and coverlet_dll:
+            # cmd can't rewrite the LCOV paths, so a PowerShell script next to the runner runs Coverlet.
+            coverage_script = ctx.actions.declare_file(ctx.label.name + "_coverage.ps1")
+            ctx.actions.write(output = coverage_script, content = _WINDOWS_COVERAGE_PS1)
+            runfiles_files.append(coverage_script)
+            extra_output_files.append(coverage_script)
 
         if is_windows:
             runner_content = """@echo off
@@ -322,6 +338,12 @@ for %%I in ("!DOTNET_BIN!") do (
 
 set FILTER=%TESTBRIDGE_TEST_ONLY%
 if "%FILTER%"=="" set FILTER={test_filter}
+if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverlet_dll}"=="" (
+    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "{target_type}" "%FILTER%" %*
+    set EXIT_CODE=!ERRORLEVEL!
+    rmdir /s /q "%SCRATCH%" 2>nul
+    exit /b !EXIT_CODE!
+)
 if "{target_type}"=="library" (
     if not "%FILTER%"=="" (
         "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console --TestCaseFilter:"%FILTER%" %*
@@ -336,6 +358,8 @@ set EXIT_CODE=%ERRORLEVEL%
 rmdir /s /q "%SCRATCH%" 2>nul
 exit /b %EXIT_CODE%
 """.format(
+                coverage_script = coverage_script.basename if coverage_script else "",
+                coverlet_dll = coverlet_dll,
                 dotnet_bin = toolchain.dotnet_muxer.basename,
                 dotnet_bin_len = len(toolchain.dotnet_muxer.basename),
                 dotnet_path = dotnet_path,
@@ -515,6 +539,65 @@ exit $EXIT_CODE
 
     return providers
 
+# Runs a test under Coverlet on Windows and writes Bazel's coverlet.dat. Mirrors the sh runner.
+_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $TargetType, $Filter)
+$ErrorActionPreference = "Stop"
+
+function Quote([string]$a) {
+    '"' + ($a -replace '(\\\\*)"', '$1$1\\"' -replace '(\\\\+)$', '$1$1') + '"'
+}
+
+# Coverlet instruments assemblies in place, so run from a writable copy.
+$src = Split-Path -Parent $MainDll
+$app = Join-Path $env:SCRATCH "app"
+New-Item -ItemType Directory -Force -Path $app | Out-Null
+Get-ChildItem -LiteralPath $src -File | Where-Object { (".dll", ".pdb", ".json" -contains $_.Extension) -and $_.Name -ne "vstest.console.dll" } | ForEach-Object {
+    $dest = Join-Path $app $_.Name
+    Copy-Item -LiteralPath $_.FullName -Destination $dest
+    (Get-Item -LiteralPath $dest).IsReadOnly = $false
+}
+$appDll = Join-Path $app (Split-Path -Leaf $MainDll)
+
+$target = @("exec")
+if ($TargetType -eq "library") {
+    $target += @($Vstest, $appDll, "--logger:console")
+    if ($Filter) { $target += "--TestCaseFilter:$Filter" }
+} else {
+    if ($Filter) { $env:TESTBRIDGE_TEST_ONLY = $Filter }
+    $target += $appDll
+}
+$target += $args
+
+$info = Join-Path $env:SCRATCH "coverlet.info"
+$coverlet = @(
+    "exec", "--roll-forward", "LatestMajor", (Join-Path $src "coverlet\\coverlet.console.dll"), $appDll,
+    "--target", $Dotnet, "--targetargs", (($target | ForEach-Object { Quote $_ }) -join " "),
+    "--exclude-assemblies-without-sources", "None", "--include-test-assembly",
+    "--format", "lcov", "--output", $info
+)
+$psi = New-Object System.Diagnostics.ProcessStartInfo $Dotnet
+$psi.Arguments = ($coverlet | ForEach-Object { Quote $_ }) -join " "
+$psi.UseShellExecute = $false
+$process = [System.Diagnostics.Process]::Start($psi)
+$process.WaitForExit()
+
+# Coverlet reports the absolute paths the compiler saw. Map each to its exec path in the manifest.
+$srcs = @(Get-Content -LiteralPath $env:COVERAGE_MANIFEST | Where-Object { $_ })
+$lines = foreach ($line in [System.IO.File]::ReadAllLines($info)) {
+    if ($line.StartsWith("SF:")) {
+        $p = $line.Substring(3).Replace("\\", "/")
+        $best = ""
+        foreach ($s in $srcs) {
+            if ($s.Length -gt $best.Length -and ($p -eq $s -or $p.EndsWith("/" + $s))) { $best = $s }
+        }
+        if ($best) { $line = "SF:" + $best }
+    }
+    $line
+}
+[System.IO.File]::WriteAllText((Join-Path $env:COVERAGE_DIR "coverlet.dat"), (($lines -join "`n") + "`n"))
+exit $process.ExitCode
+"""
+
 def _csharp_binary_impl(ctx):
     return _binary_common_impl(ctx, is_test = False)
 
@@ -669,8 +752,9 @@ csharp_test = rule(
     doc = """Compiles and executes a C# test binary under the Bazel test harness.
 
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. Coverage runs on
-Linux (macOS is not verified yet). Windows test runners report none.
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
+Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+coverage wrapper there.
 """,
     implementation = _csharp_test_impl,
     attrs = _TEST_ATTRS,

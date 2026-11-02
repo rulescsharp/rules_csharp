@@ -217,8 +217,9 @@ csharp_test(<a href="#csharp_test-name">name</a>, <a href="#csharp_test-deps">de
 Compiles and executes a C# test binary under the Bazel test harness.
 
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. Coverage runs on
-Linux (macOS is not verified yet). Windows test runners report none.
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
+Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+coverage wrapper there.
 
 **ATTRIBUTES**
 
