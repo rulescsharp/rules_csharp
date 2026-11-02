@@ -64,6 +64,24 @@ def _cross_windows_action_test_impl(ctx):
         "Expected .exe output for Windows binary, got: %s" % patch_outputs,
     )
 
+    # The apphost loads the app from its own directory, so it runs without a runfiles tree
+    asserts.true(
+        env,
+        "--assembly-name=cross_app_\\cross_app.dll" in patch_action.argv,
+        "Expected the apphost to point into cross_app_\\, got: %s" % patch_action.argv,
+    )
+
+    # bazel run reaches the runtime from <exe>.runfiles and from <exe>.runfiles/<workspace>
+    target = analysistest.target_under_test(env)
+    exe = target[DefaultInfo].files_to_run.executable
+    dotnet_root = target[RunEnvironmentInfo].environment["DOTNET_ROOT"]
+    up = ctx.workspace_name + "/" + "../" * (len(exe.path.split("/")) + 1)
+    asserts.true(
+        env,
+        dotnet_root.startswith(up + "external/") and "csharp_pack_" in dotnet_root,
+        "Expected DOTNET_ROOT to go from the run directory up to the runtime pack, got: %s" % dotnet_root,
+    )
+
     return analysistest.end(env)
 
 cross_windows_action_test = analysistest.make(

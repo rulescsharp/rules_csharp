@@ -8,8 +8,13 @@ load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 def _binary_common_impl(ctx, is_test = False):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
+    # The app and everything it loads sit together in their own directory, so the host finds them
+    # with or without a runfiles tree (Windows has none by default). The host resolves symlinks on
+    # the app dll, so the dll is compiled there rather than linked in.
+    app_dir = ctx.label.name + "_/"
+
     # Compile the assembly
-    compile_providers = compile_impl(ctx, is_analyzer = False)
+    compile_providers = compile_impl(ctx, is_analyzer = False, out_dir = app_dir)
     csharp_info = compile_providers[0]
     main_dll = csharp_info.runtime_dll
     pdb = csharp_info.pdb
@@ -27,7 +32,7 @@ def _binary_common_impl(ctx, is_test = False):
     probing_paths_str = ", ".join(probing_paths)
 
     # 1. Synthesize <name>.runtimeconfig.json
-    runtimeconfig_json = ctx.actions.declare_file(ctx.label.name + ".runtimeconfig.json")
+    runtimeconfig_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".runtimeconfig.json")
     sdk_flavor = getattr(ctx.attr, "sdk", "Microsoft.NET.Sdk")
     if sdk_flavor == "Microsoft.NET.Sdk.Web":
         framework_section = """    "frameworks": [
@@ -71,7 +76,7 @@ def _binary_common_impl(ctx, is_test = False):
     )
 
     # 2. Synthesize <name>.deps.json
-    deps_json = ctx.actions.declare_file(ctx.label.name + ".deps.json")
+    deps_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".deps.json")
 
     main_deps = {}
     target_entries = []
@@ -168,7 +173,7 @@ def _binary_common_impl(ctx, is_test = False):
             patcher_dll.path,
             "--apphost-template=" + toolchain.host_pack.path,
             "--output=" + exe_file.path,
-            "--assembly-name=" + main_dll.basename,
+            "--assembly-name=" + (app_dir.replace("/", "\\") if is_windows else app_dir) + main_dll.basename,
         ],
         outputs = [exe_file],
         env = patch_env,
@@ -213,16 +218,24 @@ def _binary_common_impl(ctx, is_test = False):
         runfiles_symlinks[prefix + "vstest.console.dll"] = toolchain.vstest_dll
 
     extra_output_files = []
+    app_files = {main_dll.basename: True}
+    for f in csharp_info.transitive_runtime_dlls.to_list() + csharp_info.transitive_native_libs.to_list():
+        if f.basename not in app_files:
+            app_files[f.basename] = True
+            declared = ctx.actions.declare_file(app_dir + f.basename)
+            ctx.actions.symlink(output = declared, target_file = f)
+            extra_output_files.append(declared)
+
     for f in getattr(ctx.files, "content", []):
         runfiles_symlinks[prefix + f.basename] = f
-        declared = ctx.actions.declare_file(f.basename)
+        declared = ctx.actions.declare_file(app_dir + f.basename)
         ctx.actions.symlink(output = declared, target_file = f)
         extra_output_files.append(declared)
 
     for target, dest_path in getattr(ctx.attr, "copy_to_output", {}).items():
         dest = dest_path if dest_path else target.files.to_list()[0].basename
         for f in target.files.to_list():
-            declared = ctx.actions.declare_file(dest)
+            declared = ctx.actions.declare_file(app_dir + dest)
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
             runfiles_symlinks[prefix + dest] = f
@@ -492,7 +505,13 @@ exit $EXIT_CODE
         )
     else:
         # The apphost finds the runtime through DOTNET_ROOT, so bazel run needs it too.
-        providers.append(RunEnvironmentInfo(environment = {"DOTNET_ROOT": dotnet_root_rel}))
+        run_dotnet_root = dotnet_root_rel
+        if is_windows:
+            # Windows has no runfiles tree by default, and then bazel run starts in <exe>.runfiles
+            # instead of <exe>.runfiles/<workspace>. Windows resolves ".." without touching the disk,
+            # so going through <workspace>/.. reaches the execroot from either one.
+            run_dotnet_root = ctx.workspace_name + "/" + "../" * (len(exe_file.path.split("/")) + 1) + toolchain.host_pack.owner.workspace_root
+        providers.append(RunEnvironmentInfo(environment = {"DOTNET_ROOT": run_dotnet_root}))
 
     return providers
 

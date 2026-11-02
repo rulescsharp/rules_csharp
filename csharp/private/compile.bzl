@@ -4,12 +4,12 @@ load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framewo
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
-def _compile_impl(ctx, is_analyzer = False, extra_srcs = []):
+def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
-    out_dll = ctx.actions.declare_file(ctx.label.name + ".dll")
-    refout_dll = ctx.actions.declare_file(ctx.label.name + ".ref.dll")
-    pdb = ctx.actions.declare_file(ctx.label.name + ".pdb")
+    out_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".dll")
+    refout_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".ref.dll")
+    pdb = ctx.actions.declare_file(out_dir + ctx.label.name + ".pdb")
 
     direct_deps_and_exports = list(ctx.attr.deps) + list(getattr(ctx.attr, "exports", []))
 
