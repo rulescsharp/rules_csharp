@@ -1,0 +1,10 @@
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+package(default_visibility = ["//visibility:public"])
+
+stardoc(
+    name = "docs",
+    out = "README.md",
+    input = "//csharp:defs.bzl",
+    deps = ["//csharp:defs_bzl"],
+)

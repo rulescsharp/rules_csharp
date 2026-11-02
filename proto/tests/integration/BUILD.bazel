@@ -1,0 +1,22 @@
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_csharp//csharp:defs.bzl", "csharp_test")
+load("//csharp:defs.bzl", "csharp_grpc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+proto_library(
+    name = "service_proto",
+    srcs = ["service.proto"],
+)
+
+csharp_grpc_library(
+    name = "service_cs_grpc",
+    proto = ":service_proto",
+    deps = ["@nuget//:Google.Protobuf"],
+)
+
+csharp_test(
+    name = "grpc_test",
+    srcs = ["GrpcTest.cs"],
+    deps = [":service_cs_grpc"],
+)

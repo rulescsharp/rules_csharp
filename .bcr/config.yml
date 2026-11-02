@@ -4,3 +4,4 @@ fixedReleaser:
 fixedSelfHostedRunner: false
 moduleRoots:
   - "."
+  - "proto"

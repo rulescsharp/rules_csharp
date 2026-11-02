@@ -9,13 +9,6 @@
         "contentHash": "TzZORclmjH58xqkitIjz+lIwM8INekMmlPCmrwXOUo6gSB2DdeL08QMsaZA0e0gDzpoOSAaMb+FexG+xJU8IXQ==",
         "dependencies": {}
       },
-      "Google.Protobuf": {
-        "type": "Direct",
-        "requested": "[3.30.0, )",
-        "resolved": "3.30.0",
-        "contentHash": "MatzpUQ9/cQkLuWHDExAKQL1Zi9vPMCTkofm/vOuHyqIyBc9XvzZJV9ElW2fDw8DNkjW7MQOchSi8h7VZPxCzQ==",
-        "dependencies": {}
-      },
       "PolySharp": {
         "type": "Direct",
         "requested": "[1.14.1, )",

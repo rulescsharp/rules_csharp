@@ -1,8 +1,23 @@
-"""Protobuf and gRPC compilation rules for rules_csharp."""
+"""Protobuf and gRPC rules for rules_csharp.
+
+These rules live in the `rules_csharp_proto` module so the core `rules_csharp` module carries no
+protobuf dependency. Add both modules to `MODULE.bazel`:
+
+```starlark
+bazel_dep(name = "rules_csharp", version = "0.4.0")
+bazel_dep(name = "rules_csharp_proto", version = "0.4.0")
+```
+
+Then load the rules from this file:
+
+```starlark
+load("@rules_csharp_proto//csharp:defs.bzl", "csharp_grpc_library", "csharp_proto_library")
+```
+"""
 
 load("@protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
-load("//csharp/private:common.bzl", "target_framework_transition")
-load("//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl")
+load("@rules_csharp//csharp/private:common.bzl", "target_framework_transition")
+load("@rules_csharp//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl")
 
 def _proto_to_csharp_basename(proto_file):
     base = proto_file.basename
