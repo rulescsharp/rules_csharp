@@ -124,10 +124,12 @@ csharp_test(
         "//:README.md",
         "//csharp:bzl_srcs",
         "//docs",
+        "//docs:defs.md",
     ],
     env = {
-        "DOCS_GENERATED": "docs/README.md",
-        "DOCS_REFERENCE": "README.md",
+        "DOCS_GENERATED": "docs/defs_generated.md",
+        "DOCS_REFERENCE": "docs/defs.md",
+        "DOCS_SCAN": "README.md",
     },
     deps = ["//tests/support:runfiles"],
 )

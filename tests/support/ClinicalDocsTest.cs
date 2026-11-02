@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using RulesCsharp.Tests;
 
 // DOCS_REFERENCE is the checked-in doc and DOCS_GENERATED the Stardoc output, both as paths in the
-// main repository.
+// main repository. DOCS_SCAN optionally names one more checked-in doc for the anti-slop scan.
 var workspace = Environment.GetEnvironmentVariable("TEST_WORKSPACE") ?? "_main";
 string Doc(string variable)
 {
@@ -46,6 +46,10 @@ var forbidden = new (Regex Pattern, string Category)[]
 };
 
 var scanned = new List<string> { reference };
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOCS_SCAN")))
+{
+    scanned.Add(Doc("DOCS_SCAN"));
+}
 scanned.AddRange(Runfiles.All
     .Where(e => e.Key.StartsWith(workspace + "/csharp/", StringComparison.Ordinal) && e.Key.EndsWith(".bzl", StringComparison.Ordinal))
     .Select(e => e.Value));
