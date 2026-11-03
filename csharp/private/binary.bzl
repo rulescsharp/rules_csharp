@@ -226,7 +226,12 @@ def _binary_common_impl(ctx, is_test = False):
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
 
+    launcher_dll = None
     if is_test and getattr(ctx.attr, "target_type", "exe") == "library":
+        launcher_dll = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll
+        runfiles_files.append(launcher_dll)
+        runfiles_symlinks[prefix + launcher_dll.basename] = launcher_dll
+
         # The testhost only loads *TestAdapter.dll files from the test dll's own dir. A runtime dll
         # with the same name wins, as MSTest ships some dlls in both lib/ and build/.
         for f in csharp_info.transitive_test_runtime_dlls.to_list():
@@ -315,6 +320,8 @@ set DOTNET_BIN=%SCRIPT_DIR%{dotnet_bin}
 set VSTEST_DLL=%SCRIPT_DIR%vstest.console.dll
 set EXE_PATH=%SCRIPT_DIR%{exe_name}
 set MAIN_DLL_PATH=%SCRIPT_DIR%{main_dll_name}
+set LAUNCHER_DLL=%SCRIPT_DIR%{launcher_name}
+set RUNTIMECONFIG=%SCRIPT_DIR%{runtimeconfig_name}
 
 if not exist "!DOTNET_BIN!" (
     if defined RUNFILES_MANIFEST_FILE if exist "%RUNFILES_MANIFEST_FILE%" (
@@ -331,6 +338,12 @@ if not exist "!DOTNET_BIN!" (
             )
             if "!R_KEY:~-{main_dll_len}!"=="{main_dll_name}" (
                 if exist "%%B" set "MAIN_DLL_PATH=%%B"
+            )
+            if "!R_KEY:~-{launcher_len}!"=="{launcher_name}" (
+                if exist "%%B" set "LAUNCHER_DLL=%%B"
+            )
+            if "!R_KEY:~-{runtimeconfig_len}!"=="{runtimeconfig_name}" (
+                if exist "%%B" set "RUNTIMECONFIG=%%B"
             )
         )
     )
@@ -350,17 +363,13 @@ for %%I in ("!DOTNET_BIN!") do (
 set FILTER=%TESTBRIDGE_TEST_ONLY%
 if "%FILTER%"=="" set FILTER={test_filter}
 if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverlet_dll}"=="" (
-    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "{target_type}" "%FILTER%" %*
+    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" "%FILTER%" %*
     set EXIT_CODE=!ERRORLEVEL!
     rmdir /s /q "%SCRATCH%" 2>nul
     exit /b !EXIT_CODE!
 )
 if "{target_type}"=="library" (
-    if not "%FILTER%"=="" (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console --TestCaseFilter:"%FILTER%" %* -- RunConfiguration.TreatNoTestsAsError=true
-    ) else (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console %* -- RunConfiguration.TreatNoTestsAsError=true
-    )
+    "!DOTNET_BIN!" exec --runtimeconfig "!RUNTIMECONFIG!" "!LAUNCHER_DLL!" "!VSTEST_DLL!" "!MAIN_DLL_PATH!" "%FILTER%" %*
 ) else (
     if not "%FILTER%"=="" set TESTBRIDGE_TEST_ONLY=%FILTER%
     "!EXE_PATH!" %*
@@ -376,8 +385,12 @@ exit /b %EXIT_CODE%
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
                 exe_name_len = len(exe_file.basename),
+                launcher_len = len(ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename),
+                launcher_name = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename,
                 main_dll_len = len(main_dll.basename),
                 main_dll_name = main_dll.basename,
+                runtimeconfig_len = len(runtimeconfig_json.basename),
+                runtimeconfig_name = runtimeconfig_json.basename,
                 target_type = target_type,
                 test_filter = test_filter,
                 vstest_path = vstest_path,
@@ -408,6 +421,8 @@ DOTNET_BIN="$DIR/{dotnet_bin}"
 VSTEST_DLL="$DIR/vstest.console.dll"
 EXE_PATH="$DIR/{exe_name}"
 MAIN_DLL_PATH="$DIR/{main_dll_name}"
+LAUNCHER_DLL="$DIR/{launcher_name}"
+RUNTIMECONFIG="$DIR/{runtimeconfig_name}"
 
 if [ ! -f "$DOTNET_BIN" ] && [ -n "${{RUNFILES_MANIFEST_FILE:-}}" ] && [ -f "$RUNFILES_MANIFEST_FILE" ]; then
     while read -r rpath target; do
@@ -416,6 +431,8 @@ if [ ! -f "$DOTNET_BIN" ] && [ -n "${{RUNFILES_MANIFEST_FILE:-}}" ] && [ -f "$RU
             *vstest.console.dll) [ -f "$target" ] && VSTEST_DLL="$target" ;;
             *{exe_name}) [ -f "$target" ] && EXE_PATH="$target" ;;
             *{main_dll_name}) [ -f "$target" ] && MAIN_DLL_PATH="$target" ;;
+            *{launcher_name}) [ -f "$target" ] && LAUNCHER_DLL="$target" ;;
+            *{runtimeconfig_name}) [ -f "$target" ] && RUNTIMECONFIG="$target" ;;
         esac
     done < "$RUNFILES_MANIFEST_FILE"
     if [ -f "$DOTNET_BIN" ]; then
@@ -445,8 +462,7 @@ if [ -n "${{COVERAGE_DIR:-}}" ] && [ -f "$COVERLET_DLL" ]; then
 fi
 
 if [ "{target_type}" = "library" ]; then
-    # vstest exits 0 when it finds no tests, so a missing adapter or a filter that matches nothing would pass.
-    set -- exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console ${{FILTER:+--TestCaseFilter:"$FILTER"}} "$@" -- RunConfiguration.TreatNoTestsAsError=true
+    set -- exec --runtimeconfig "$RUNTIMECONFIG" "$LAUNCHER_DLL" "$VSTEST_DLL" "$MAIN_DLL_PATH" "$FILTER" "$@"
     TEST_BIN="$DOTNET_BIN"
 else
     if [ -n "$FILTER" ]; then
@@ -491,7 +507,9 @@ exit $EXIT_CODE
                 dotnet_bin = toolchain.dotnet_muxer.basename,
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
+                launcher_name = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename,
                 main_dll_name = main_dll.basename,
+                runtimeconfig_name = runtimeconfig_json.basename,
                 target_type = target_type,
                 test_filter = test_filter,
                 vstest_path = vstest_path,
@@ -552,7 +570,7 @@ exit $EXIT_CODE
     return providers
 
 # Runs a test under Coverlet on Windows and writes Bazel's coverlet.dat. Mirrors the sh runner.
-_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $TargetType, $Filter)
+_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $Launcher, $RuntimeConfig, $TargetType, $Filter)
 $ErrorActionPreference = "Stop"
 
 function Quote([string]$a) {
@@ -572,10 +590,8 @@ $appDll = Join-Path $app (Split-Path -Leaf $MainDll)
 
 $target = @("exec")
 if ($TargetType -eq "library") {
-    $target += @($Vstest, $appDll, "--logger:console")
-    if ($Filter) { $target += "--TestCaseFilter:$Filter" }
+    $target += @("--runtimeconfig", $RuntimeConfig, $Launcher, $Vstest, $appDll, $Filter)
     $target += $args
-    $target += @("--", "RunConfiguration.TreatNoTestsAsError=true")
 } else {
     if ($Filter) { $env:TESTBRIDGE_TEST_ONLY = $Filter }
     $target += $appDll
@@ -733,6 +749,11 @@ default install location.
 
 _TEST_ATTRS = dict(_BINARY_ATTRS)
 _TEST_ATTRS.update({
+    "_vstest_launcher": attr.label(
+        default = Label("//csharp/private/tools:vstest_launcher"),
+        doc = "Runs library mode tests under vstest, sharded, with JUnit results.",
+        providers = [CSharpInfo],
+    ),
     "_coverlet": attr.label(
         allow_files = True,
         default = Label("//csharp/private:coverlet"),

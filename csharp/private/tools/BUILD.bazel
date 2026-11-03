@@ -28,3 +28,10 @@ genrule(
 EOF""",
     visibility = ["//visibility:public"],
 )
+
+csharp_library(
+    name = "vstest_launcher",
+    srcs = ["VstestLauncher.cs"],
+    target_type = "exe",
+    visibility = ["//visibility:public"],
+)
