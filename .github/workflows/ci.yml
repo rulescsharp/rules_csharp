@@ -39,6 +39,17 @@ jobs:
       - name: Execute all tests
         run: bazel test //...
 
+      - name: Check library test filters and results
+        run: |
+          # The ! reaches VSTest, so the Slow test that always fails stays out.
+          bazel test //tests/integration:mstest_sharded --test_filter='TestCategory!=Slow'
+          # A filter that matches nothing fails, sharded or not.
+          if bazel test //tests/integration:mstest_sharded --test_filter=TestCategory=NoSuchCategory; then exit 1; fi
+          if bazel test //tests/integration:mstest_suite --test_filter=TestCategory=NoSuchCategory; then exit 1; fi
+          # A failing case shows up in test.xml with its message.
+          if bazel test //tests/integration:mstest_suite --test_filter=TestCategory=Slow; then exit 1; fi
+          grep -q '<failure message="Assert.Fail failed. test_filter should leave this out' "$(find "$(bazel info output_path)" -path '*/testlogs/tests/integration/mstest_suite/test.xml')"
+
       - name: Execute examples tests
         run: cd examples && bazel test //...
 

@@ -1,4 +1,5 @@
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
+load("//csharp:defs.bzl", "CSharpInfo")
 
 
 def _abi_refout_action_test_impl(ctx):
@@ -266,3 +267,28 @@ target_framework_action_test = analysistest.make(
     _target_framework_action_test_impl,
     attrs = {"expected_tfm": attr.string(mandatory = True)},
 )
+
+def _older_csharp_info_impl(ctx):
+    info = ctx.attr.lib[CSharpInfo]
+    return [CSharpInfo(
+        target_framework = info.target_framework,
+        compile_ref = info.compile_ref,
+        runtime_dll = info.runtime_dll,
+        pdb = info.pdb,
+        transitive_compile_refs = info.transitive_compile_refs,
+        transitive_runtime_dlls = info.transitive_runtime_dlls,
+        transitive_native_libs = info.transitive_native_libs,
+    )]
+
+# Rewraps a library's CSharpInfo with only the fields 0.4.0 had, like a rule written against it.
+older_csharp_info = rule(
+    implementation = _older_csharp_info_impl,
+    attrs = {"lib": attr.label(providers = [CSharpInfo], mandatory = True)},
+)
+
+def _older_csharp_info_dep_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    asserts.true(env, CSharpInfo in analysistest.target_under_test(env))
+    return analysistest.end(env)
+
+older_csharp_info_dep_test = analysistest.make(_older_csharp_info_dep_test_impl)

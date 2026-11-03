@@ -243,6 +243,7 @@ def _nuget_package_repo_impl(repository_ctx):
 
     # 6. build/<tfm>/*.dll: MSBuild targets copy these next to a test, like the VSTest adapters.
     # The ones the package's own props or targets add as a <Reference> are compile and runtime dlls too.
+    # Other build/ dlls, such as MSBuild tasks, also land next to library tests, where nothing loads them.
     test_runtime_dir = _find_best_tfm_dir(repository_ctx, "build")
     build_refs = []
     if test_runtime_dir:

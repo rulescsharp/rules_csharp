@@ -82,10 +82,10 @@ failing.
 
 Each library test writes one `<testcase>` per test, with the failure message and stack trace, to the
 `test.xml` Bazel collects, so CI and result viewers that read JUnit XML show every case. The TRX report
-VSTest writes is in the test's undeclared outputs (`test.outputs/`). `csharp_test` builds in a
-configuration for its `target_framework`, so these files are under `bazel-out/<config>-ST-<hash>/testlogs/`
-and not behind the `bazel-testlogs` link. Tools that read Bazel's build event protocol find them either
-way.
+VSTest writes is in the test's undeclared outputs (`test.outputs/`). A test that sets
+`target_framework` builds in a configuration for it, so its files are under
+`bazel-out/<config>-ST-<hash>/testlogs/` instead of behind the `bazel-testlogs` link. Tools that read
+Bazel's build event protocol find them either way.
 
 An exe test (the default `target_type`) runs its own `Main`. It owns sharding and `test.xml` itself
 through Bazel's [test environment](https://bazel.build/reference/test-encyclopedia).

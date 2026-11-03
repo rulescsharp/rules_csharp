@@ -307,7 +307,7 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 | <a id="CSharpInfo-transitive_compile_refs"></a>transitive_compile_refs |  Depset of reference assembly Files for compilation.    |
 | <a id="CSharpInfo-transitive_native_libs"></a>transitive_native_libs |  Depset of target platform unmanaged shared libraries.    |
 | <a id="CSharpInfo-transitive_runtime_dlls"></a>transitive_runtime_dlls |  Depset of runtime assembly Files for execution.    |
-| <a id="CSharpInfo-transitive_test_runtime_dlls"></a>transitive_test_runtime_dlls |  Depset of Files that a library csharp_test stages next to the test assembly, such as VSTest adapters.    |
+| <a id="CSharpInfo-transitive_test_runtime_dlls"></a>transitive_test_runtime_dlls |  Depset of Files that a library csharp_test stages next to the test assembly, such as VSTest adapters. Optional, treated as empty when unset.    |
 
 
 <a id="CSharpToolchainInfo"></a>

@@ -211,7 +211,8 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     )
 
     transitive_test_runtime_dlls = depset(
-        transitive = [dep[CSharpInfo].transitive_test_runtime_dlls for dep in direct_deps_and_exports if CSharpInfo in dep],
+        # CSharpInfo from rules written against 0.4.0 lacks this field.
+        transitive = [getattr(dep[CSharpInfo], "transitive_test_runtime_dlls", None) or depset() for dep in direct_deps_and_exports if CSharpInfo in dep],
     )
 
     csharp_info = CSharpInfo(
@@ -298,7 +299,7 @@ def _csharp_import_impl(ctx):
             transitive_compile_depsets.append(dep[CSharpInfo].transitive_compile_refs)
             transitive_runtime_depsets.append(dep[CSharpInfo].transitive_runtime_dlls)
             transitive_native_depsets.append(dep[CSharpInfo].transitive_native_libs)
-            transitive_test_runtime_depsets.append(dep[CSharpInfo].transitive_test_runtime_dlls)
+            transitive_test_runtime_depsets.append(getattr(dep[CSharpInfo], "transitive_test_runtime_dlls", None) or depset())
         if CSharpAnalyzerInfo in dep:
             analyzer_depsets.append(dep[CSharpAnalyzerInfo].analyzers)
 

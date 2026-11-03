@@ -7,6 +7,8 @@ load(
     "csc_worker_action_test",
     "hermetic_sandbox_action_test",
     "msbuild_parity_action_test",
+    "older_csharp_info",
+    "older_csharp_info_dep_test",
     "proto_moved_test",
     "target_framework_action_test",
     "web_sdk_action_test",
@@ -40,6 +42,23 @@ csharp_library(
 csharp_binary(
     name = "cross_app",
     srcs = ["CrossApp.cs"],
+)
+
+# A dep that returns CSharpInfo without the fields added after 0.4.0 still works.
+older_csharp_info(
+    name = "older_info",
+    lib = ":lib_a",
+)
+
+csharp_library(
+    name = "on_older_info",
+    srcs = ["LibB.cs"],
+    deps = [":older_info"],
+)
+
+older_csharp_info_dep_test(
+    name = "older_csharp_info_dep_test",
+    target_under_test = ":on_older_info",
 )
 
 # The proto rules moved to rules_csharp_proto. Old call sites keep their attributes and fail

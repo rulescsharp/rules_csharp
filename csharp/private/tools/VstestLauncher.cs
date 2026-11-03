@@ -55,12 +55,13 @@ namespace RulesCsharp.Tools
                 var names = List(vstest, testDll, filter, work, out int code);
                 if (code != 0)
                     return code;
-                if (names.Count == 0 && filter.Length > 0)
+                // xUnit v2 matches traits only while running, not while listing, so its filtered list
+                // comes back empty. Split every test then and let the run apply the filter. No shard
+                // sees the others, so a trait filter that matches nothing passes. Drop this once
+                // xunit.runner.visualstudio applies traits while listing.
+                bool xunit = File.Exists(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(testDll))!, "xunit.runner.visualstudio.testadapter.dll"));
+                if (names.Count == 0 && filter.Length > 0 && xunit)
                 {
-                    // xUnit v2 can't match traits while discovering, only while running, so its
-                    // filtered list comes back empty. Split every test then and let the run filter
-                    // them. shortcut: a trait filter that matches nothing passes when sharded, revisit
-                    // once xunit.runner.visualstudio filters traits in discovery.
                     names = List(vstest, testDll, "", work, out code);
                     if (code != 0)
                         return code;
@@ -95,12 +96,14 @@ namespace RulesCsharp.Tools
             run.Add("RunConfiguration.TreatNoTestsAsError=" + (requireTests ? "true" : "false"));
             int exit = Vstest(run);
 
-            if (!string.IsNullOrEmpty(xmlOutput))
-                (File.Exists(trx) ? ToJUnit(XDocument.Load(trx), Path.GetFileNameWithoutExtension(testDll)) : new XDocument(new XElement("testsuites"))).Save(xmlOutput);
+            // Without a TRX, vstest crashed, so leave test.xml to Bazel, which keeps the log.
+            if (!string.IsNullOrEmpty(xmlOutput) && File.Exists(trx))
+                ToJUnit(XDocument.Load(trx), Path.GetFileNameWithoutExtension(testDll)).Save(xmlOutput);
             return exit;
         }
 
-        // Data rows and theory cases share a name, so they stay in one shard.
+        // Data rows and theory cases share a name, so they stay in one shard. Names that differ
+        // only by case count once, since vstest matches FullyQualifiedName ignoring case.
         static List<string> List(string vstest, string testDll, string filter, string work, out int code)
         {
             string listFile = Path.Combine(work, "tests.txt");
@@ -111,17 +114,19 @@ namespace RulesCsharp.Tools
             code = Vstest(list);
             if (code != 0 || !File.Exists(listFile))
                 return new List<string>();
-            return File.ReadAllLines(listFile).Where(n => n.Length > 0).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
+            return File.ReadAllLines(listFile).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ThenBy(n => n, StringComparer.Ordinal).ToList();
         }
 
         static int EnvInt(string name, int fallback) =>
             int.TryParse(Environment.GetEnvironmentVariable(name), out int v) ? v : fallback;
 
-        // A response file keeps a long filter clear of the Windows command line limit.
+        // A response file keeps a long filter clear of the Windows command line limit. vstest reads
+        // \\ as \ and \" as " in it.
         static string Rsp(string work, string name, string line)
         {
             string path = Path.Combine(work, name);
-            File.WriteAllText(path, "\"" + line.Replace("\"", "\\\"") + "\"" + Environment.NewLine);
+            File.WriteAllText(path, "\"" + line.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"" + Environment.NewLine);
             return "@" + path;
         }
 

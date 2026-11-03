@@ -360,18 +360,19 @@ for %%I in ("!DOTNET_BIN!") do (
     )
 )
 
-set FILTER=%TESTBRIDGE_TEST_ONLY%
-if "%FILTER%"=="" set FILTER={test_filter}
+rem Read the filter with delayed expansion so an exclamation mark in it stays put.
+set "FILTER=!TESTBRIDGE_TEST_ONLY!"
+if "!FILTER!"=="" set "FILTER={test_filter}"
 if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverlet_dll}"=="" (
-    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" "%FILTER%" %*
+    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" "!FILTER!" %*
     set EXIT_CODE=!ERRORLEVEL!
     rmdir /s /q "%SCRATCH%" 2>nul
     exit /b !EXIT_CODE!
 )
 if "{target_type}"=="library" (
-    "!DOTNET_BIN!" exec --runtimeconfig "!RUNTIMECONFIG!" "!LAUNCHER_DLL!" "!VSTEST_DLL!" "!MAIN_DLL_PATH!" "%FILTER%" %*
+    "!DOTNET_BIN!" exec --runtimeconfig "!RUNTIMECONFIG!" "!LAUNCHER_DLL!" "!VSTEST_DLL!" "!MAIN_DLL_PATH!" "!FILTER!" %*
 ) else (
-    if not "%FILTER%"=="" set TESTBRIDGE_TEST_ONLY=%FILTER%
+    if not "!FILTER!"=="" set "TESTBRIDGE_TEST_ONLY=!FILTER!"
     "!EXE_PATH!" %*
 )
 set EXIT_CODE=%ERRORLEVEL%
@@ -392,7 +393,8 @@ exit /b %EXIT_CODE%
                 runtimeconfig_len = len(runtimeconfig_json.basename),
                 runtimeconfig_name = runtimeconfig_json.basename,
                 target_type = target_type,
-                test_filter = test_filter,
+                # The line also expands !FILTER!, so cmd reads ^ and ! as escapes in it.
+                test_filter = test_filter.replace("%", "%%").replace("^", "^^").replace("!", "^!"),
                 vstest_path = vstest_path,
             )
         else:
