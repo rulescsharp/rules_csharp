@@ -1,7 +1,7 @@
 """Unit tests for the NuGet package helpers."""
 
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
-load("//csharp/private:nupkg.bzl", "base64_to_hex", "build_references", "file_url", "strip_signature")
+load("//csharp/private:nupkg.bzl", "base64_to_hex", "build_references", "file_url", "hex_to_sri", "strip_signature")
 
 # Stored zips written by Python's zipfile. UNSIGNED holds lib/a.txt and
 # lib/b.txt. The signed ones add a .signature.p7s entry after or between them,
@@ -53,6 +53,17 @@ def _base64_to_hex_impl(ctx):
     return unittest.end(env)
 
 base64_to_hex_test = unittest.make(_base64_to_hex_impl)
+
+def _hex_to_sri_impl(ctx):
+    env = unittest.begin(ctx)
+
+    # sha256 and sha512 of "abc"
+    asserts.equals(env, "sha256-ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=", hex_to_sri("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"))
+    asserts.equals(env, "sha512-3a81oZNherrMQXNJriBBMRLm+k6JqX6iCp7u5ktV05ohkpkqJ0/BqDa6PCOj/uu9RU1EI2Q86A4qmslPpUyknw==", hex_to_sri("DDAF35A193617ABACC417349AE20413112E6FA4E89A97EA20A9EEEE64B55D39A2192992A274FC1A836BA3C23A3FEEBBD454D4423643CE80E2A9AC94FA54CA49F"))
+    asserts.equals(env, "sha256-abc=", hex_to_sri("sha256-abc="))
+    return unittest.end(env)
+
+hex_to_sri_test = unittest.make(_hex_to_sri_impl)
 
 def _file_url_impl(ctx):
     env = unittest.begin(ctx)
@@ -111,6 +122,7 @@ def nupkg_test_suite(name):
         signature_middle_test,
         archive_comment_test,
         base64_to_hex_test,
+        hex_to_sri_test,
         file_url_test,
         build_references_test,
     )

@@ -7,192 +7,28 @@ load(
     "use_netrc",
 )
 
+# SRI integrity of each built-in SDK archive, by version and runtime identifier.
 DOTNET_ARTIFACTS = {
     "8.0.403": {
-        "linux-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.AspNetCore.App.Runtime.linux-arm64": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.NETCore.App.Host": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.NETCore.App.Host.linux-arm64": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.NETCore.App.Ref": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.NETCore.App.Runtime": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "Microsoft.NETCore.App.Runtime.linux-arm64": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "sdk": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
-            "sha256": "e6b539de634b5c40d86631e5e35488af6dbe682229e367375261c635ad5e8cb0",
-        },
-        "linux-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.AspNetCore.App.Runtime.linux-x64": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.NETCore.App.Host": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.NETCore.App.Host.linux-x64": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.NETCore.App.Ref": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.NETCore.App.Runtime": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "Microsoft.NETCore.App.Runtime.linux-x64": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "sdk": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
-            "sha256": "f7c31f1397444aab91afbef8d8a46e36531443faced60fa9d4070cf15a81b256",
-        },
-        "osx-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.AspNetCore.App.Runtime.osx-arm64": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.NETCore.App.Host": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.NETCore.App.Host.osx-arm64": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.NETCore.App.Ref": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.NETCore.App.Runtime": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "Microsoft.NETCore.App.Runtime.osx-arm64": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "sdk": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
-            "sha256": "f225575b44b1f49acc0c58be92ad3f4ff6e7b8f4f4349794478c2b26d751cb05",
-        },
-        "osx-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.AspNetCore.App.Runtime.osx-x64": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.NETCore.App.Host": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.NETCore.App.Host.osx-x64": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.NETCore.App.Ref": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.NETCore.App.Runtime": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "Microsoft.NETCore.App.Runtime.osx-x64": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "sdk": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
-            "sha256": "74cb047ea84fd717d03796b49e6af2e19e58d976fae6157109851106cfe99c5e",
-        },
-        "win-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.AspNetCore.App.Runtime.win-x64": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.NETCore.App.Host": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.NETCore.App.Host.win-x64": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.NETCore.App.Ref": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.NETCore.App.Runtime": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "Microsoft.NETCore.App.Runtime.win-x64": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "sdk": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
-            "sha256": "c459550a3dc77e3a2af36d5bf8836746603f72fca0e6c142cbf253d4bc1f0bc7",
-        },
+        "linux-arm64": "sha256-5rU53mNLXEDYZjHl41SIr22+aCIp42c3UmHGNa1ejLA=",
+        "linux-x64": "sha256-98MfE5dESquRr7742KRuNlMUQ/rO1g+p1AcM8VqBslY=",
+        "osx-arm64": "sha256-8iVXW0Sx9JrMDFi+kq0/T/bnuPT0NJeUR4wrJtdRywU=",
+        "osx-x64": "sha256-dMsEfqhP1xfQN5a0nmry4Z5Y2Xb65hVxCYURBs/pnF4=",
+        "win-x64": "sha256-xFlVCj3Hfjoq821b+INnRmA/cvyg5sFCy/JT1LwfC8c=",
     },
     "9.0.200": {
-        "linux-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.AspNetCore.App.Runtime.linux-arm64": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.NETCore.App.Host": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.NETCore.App.Host.linux-arm64": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.NETCore.App.Ref": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.NETCore.App.Runtime": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "Microsoft.NETCore.App.Runtime.linux-arm64": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "sdk": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
-            "sha256": "3266045a9b8a5362dca0e148a263385e9ae94920d6f2f56802ad2d5996988bab",
-        },
-        "linux-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.AspNetCore.App.Runtime.linux-x64": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.NETCore.App.Host": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.NETCore.App.Host.linux-x64": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.NETCore.App.Ref": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.NETCore.App.Runtime": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "Microsoft.NETCore.App.Runtime.linux-x64": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "sdk": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
-            "sha256": "c07281a0abbd2c3200e70fc94d374baeadfbb43c9c3fe90c6038253555b84335",
-        },
-        "osx-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.AspNetCore.App.Runtime.osx-arm64": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.NETCore.App.Host": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.NETCore.App.Host.osx-arm64": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.NETCore.App.Ref": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.NETCore.App.Runtime": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "Microsoft.NETCore.App.Runtime.osx-arm64": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "sdk": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
-            "sha256": "3f3ef3eb457f408528ce3624c1083a35d32d30a43e570e2ecdb5f2188c3a3576",
-        },
-        "osx-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.AspNetCore.App.Runtime.osx-x64": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.NETCore.App.Host": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.NETCore.App.Host.osx-x64": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.NETCore.App.Ref": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.NETCore.App.Runtime": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "Microsoft.NETCore.App.Runtime.osx-x64": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "sdk": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
-            "sha256": "9c71da3ffcc9be29273072cae3827c01c8b8142af6a1322fc8e0e11c0932d2c4",
-        },
-        "win-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.AspNetCore.App.Runtime.win-x64": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.NETCore.App.Host": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.NETCore.App.Host.win-x64": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.NETCore.App.Ref": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.NETCore.App.Runtime": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "Microsoft.NETCore.App.Runtime.win-x64": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "sdk": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
-            "sha256": "e493ca7e8051772cab47afbed5381b55ed50019d044f9111c84bf6e830062d88",
-        },
+        "linux-arm64": "sha256-MmYEWpuKU2LcoOFIomM4XprpSSDW8vVoAq0tWZaYi6s=",
+        "linux-x64": "sha256-wHKBoKu9LDIA5w/JTTdLrq37tDycP+kMYDglNVW4QzU=",
+        "osx-arm64": "sha256-Pz7z60V/QIUozjYkwQg6NdMtMKQ+Vw4uzbXyGIw6NXY=",
+        "osx-x64": "sha256-nHHaP/zJviknMHLK44J8Aci4FCr2oTIvyODhHAky0sQ=",
+        "win-x64": "sha256-5JPKfoBRdyyrR6++1TgbVe1QAZ0ET5ERyEv26DAGLYg=",
     },
     "10.0.100": {
-        "linux-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.AspNetCore.App.Runtime.linux-arm64": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.NETCore.App.Host": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.NETCore.App.Host.linux-arm64": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.NETCore.App.Ref": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.NETCore.App.Runtime": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "Microsoft.NETCore.App.Runtime.linux-arm64": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "sdk": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
-            "sha256": "b6425aeef6009a2d427bf600a2cd02f9dd6ac608e6bad021fd2f82f685914793",
-        },
-        "linux-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.AspNetCore.App.Runtime.linux-x64": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.NETCore.App.Host": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.NETCore.App.Host.linux-x64": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.NETCore.App.Ref": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.NETCore.App.Runtime": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "Microsoft.NETCore.App.Runtime.linux-x64": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "sdk": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
-            "sha256": "a9631cc6bfad0ef167383ac654b54254bad95a6fb4b6f4309fa78f558055e637",
-        },
-        "osx-arm64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.AspNetCore.App.Runtime.osx-arm64": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.NETCore.App.Host": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.NETCore.App.Host.osx-arm64": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.NETCore.App.Ref": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.NETCore.App.Runtime": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "Microsoft.NETCore.App.Runtime.osx-arm64": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "sdk": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
-            "sha256": "71b3815ef8d83a6bbebf8627a56639600193f22d4ea6a6de2f71855c4b3e63fd",
-        },
-        "osx-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.AspNetCore.App.Runtime.osx-x64": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.NETCore.App.Host": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.NETCore.App.Host.osx-x64": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.NETCore.App.Ref": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.NETCore.App.Runtime": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "Microsoft.NETCore.App.Runtime.osx-x64": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "sdk": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
-            "sha256": "d8fd6e3f2e393cad300794d43ae26d01f9db31356c95381bcfb9d3d7f66d187e",
-        },
-        "win-x64": {
-            "Microsoft.AspNetCore.App.Ref": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.AspNetCore.App.Runtime": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.AspNetCore.App.Runtime.win-x64": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.NETCore.App.Host": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.NETCore.App.Host.win-x64": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.NETCore.App.Ref": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.NETCore.App.Runtime": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "Microsoft.NETCore.App.Runtime.win-x64": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "sdk": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
-            "sha256": "ce09b60637c525a5ccd3368962dc936df10141d397e305f5406318f61da66709",
-        },
+        "linux-arm64": "sha256-tkJa7vYAmi1Ce/YAos0C+d1qxgjmutAh/S+C9oWRR5M=",
+        "linux-x64": "sha256-qWMcxr+tDvFnODrGVLVCVLrZWm+0tvQwn6ePVYBV5jc=",
+        "osx-arm64": "sha256-cbOBXvjYOmu+v4YnpWY5YAGT8i1OpqbeL3GFXEs+Y/0=",
+        "osx-x64": "sha256-2P1uPy45PK0wB5TUOuJtAfnbMTVslTgbz7nT1/ZtGH4=",
+        "win-x64": "sha256-zgm2BjfFJaXM0zaJYtyTbfEBQdOX4wX1QGMY9h2mZwk=",
     },
 }
 
@@ -266,11 +102,10 @@ def _sdk_exec_impl(repository_ctx):
     sha256 = repository_ctx.attr.sha256 if hasattr(repository_ctx.attr, "sha256") and repository_ctx.attr.sha256 else ""
 
     if not integrity and not sha256:
-        if version in DOTNET_ARTIFACTS and rid in DOTNET_ARTIFACTS[version]:
-            integrity = DOTNET_ARTIFACTS[version][rid].get("sdk", "")
+        integrity = DOTNET_ARTIFACTS.get(version, {}).get(rid, "")
 
     if not integrity and not sha256:
-        fail("Missing sha256 or integrity parameter for sdk_exec repository '{}'".format(repository_ctx.name))
+        fail("No checksum for {}. Add it to sdk_checksums on the csharp.toolchain tag.".format(archive))
 
     download_kwargs = {
         "auth": auth,
@@ -525,11 +360,10 @@ def _runtime_pack_impl(repository_ctx):
     sha256 = repository_ctx.attr.sha256 if hasattr(repository_ctx.attr, "sha256") and repository_ctx.attr.sha256 else ""
 
     if not integrity and not sha256:
-        if version in DOTNET_ARTIFACTS and rid in DOTNET_ARTIFACTS[version]:
-            integrity = DOTNET_ARTIFACTS[version][rid].get("sdk", "")
+        integrity = DOTNET_ARTIFACTS.get(version, {}).get(rid, "")
 
     if not integrity and not sha256:
-        fail("Missing sha256 or integrity parameter for runtime_pack repository '{}'".format(repository_ctx.name))
+        fail("No checksum for {}. Add it to sdk_checksums on the csharp.toolchain tag.".format(archive))
 
     download_kwargs = {
         "auth": auth,

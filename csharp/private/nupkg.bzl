@@ -162,6 +162,31 @@ def build_references(text):
             conditioned.append(here)
     return names
 
+
+def hex_to_sri(value):
+    """Returns the SRI form of a sha256 or sha512 hex digest, or value if it is already SRI."""
+    if "-" in value:
+        return value
+    algo = {64: "sha256", 128: "sha512"}.get(len(value))
+    if not algo:
+        fail("not a sha256 or sha512 hex digest or SRI value: " + value)
+    out = []
+    bits = 0
+    width = 0
+    for c in value.lower().elems():
+        digit = _HEX.find(c)
+        if digit < 0:
+            fail("not a sha256 or sha512 hex digest or SRI value: " + value)
+        bits = bits << 4 | digit
+        width += 4
+        if width >= 6:
+            width -= 6
+            out.append(_BASE64[bits >> width & 0x3f])
+            bits = bits & ((1 << width) - 1)
+    if width:
+        out.append(_BASE64[bits << (6 - width) & 0x3f])
+    return algo + "-" + "".join(out) + "=" * (-len(out) % 4)
+
 def sha512_files(ctx, paths):
     """Returns the lowercase hex sha512 of each file, in order.
 
