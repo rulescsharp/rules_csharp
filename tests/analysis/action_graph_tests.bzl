@@ -347,3 +347,47 @@ expect_failure_test = analysistest.make(
     attrs = {"message": attr.string(mandatory = True)},
     expect_failure = True,
 )
+
+def _analyzes_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    return analysistest.end(env)
+
+analyzes_test = analysistest.make(_analyzes_test_impl)
+
+def _output_assembly_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    actions = analysistest.target_actions(env)
+    compile_actions = [a for a in actions if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    outputs = sorted([f.basename for f in compile_actions[0].outputs.to_list()])
+    asserts.equals(env, ["Contoso.App.dll", "Contoso.App.pdb", "Contoso.App.ref.dll"], outputs)
+
+    input_basenames = [f.basename for f in compile_actions[0].inputs.to_list()]
+    asserts.true(env, "Contoso.Greeting.ref.dll" in input_basenames, "Expected the renamed library in compile inputs, got: %s" % input_basenames)
+
+    assembly_info = _written_content(actions, ".AssemblyInfo.g.cs")
+    asserts.true(env, 'AssemblyTitle("Contoso.App")' in assembly_info, "Expected the assembly title to follow output_assembly, got: %s" % assembly_info)
+
+    asserts.true(env, _written_content(actions, "Contoso.App.runtimeconfig.json") != None, "Expected Contoso.App.runtimeconfig.json")
+    deps_json = _written_content(actions, "Contoso.App.deps.json")
+    asserts.true(
+        env,
+        deps_json and '"Contoso.App/1.0.0"' in deps_json and '"Contoso.Greeting.dll"' in deps_json,
+        "Expected deps.json to name both renamed assemblies, got: %s" % deps_json,
+    )
+
+    target = analysistest.target_under_test(env)
+    exe = target[DefaultInfo].files_to_run.executable
+    asserts.true(env, exe.basename in ("renamed_app", "renamed_app.exe"), "Expected the executable to keep the target name, got: %s" % exe.basename)
+
+    patch_actions = [a for a in actions if a.mnemonic == "CSharpAppHostPatch"]
+    asserts.true(
+        env,
+        [arg for arg in patch_actions[0].argv if arg.endswith("Contoso.App.dll")],
+        "Expected the apphost to load Contoso.App.dll, got: %s" % patch_actions[0].argv,
+    )
+
+    return analysistest.end(env)
+
+output_assembly_action_test = analysistest.make(_output_assembly_action_test_impl)

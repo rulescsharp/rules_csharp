@@ -106,6 +106,19 @@ csharp_test(
     sdk = "Microsoft.NET.Sdk.Worker",
 )
 
+csharp_library(
+    name = "renamed_lib",
+    srcs = ["Lib.cs"],
+    output_assembly = "Contoso.Renamed",
+)
+
+csharp_test(
+    name = "output_assembly_test",
+    srcs = ["OutputAssemblyTest.cs"],
+    output_assembly = "Contoso.Renamed.Tests",
+    deps = [":renamed_lib"],
+)
+
 # A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",

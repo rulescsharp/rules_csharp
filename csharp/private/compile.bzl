@@ -20,6 +20,28 @@ ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microso
 Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs \
 `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package."""
 
+OUTPUT_ASSEMBLY_DOC = """Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target \
+name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it \
+is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with \
+the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and \
+one of them is built from sources."""
+
+def output_assembly(ctx):
+    """Returns the assembly name a target compiles to.
+
+    Args:
+      ctx: The rule context.
+
+    Returns:
+      The assembly name, without an extension.
+    """
+    name = getattr(ctx.attr, "output_assembly", "")
+    if not name:
+        return ctx.label.name
+    if "/" in name or "\\" in name or name.lower().endswith((".dll", ".exe")):
+        fail("output_assembly of {} is \"{}\". Use an assembly name without a directory or extension.".format(ctx.label, name))
+    return name
+
 def framework_references(ctx, deps):
     """Returns the shared frameworks a target and its dependencies use.
 
@@ -49,9 +71,13 @@ def framework_references(ctx, deps):
 def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
-    out_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".dll")
-    refout_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".ref.dll")
-    pdb = ctx.actions.declare_file(out_dir + ctx.label.name + ".pdb")
+    assembly = output_assembly(ctx)
+    if assembly != ctx.label.name and not out_dir:
+        # Keeps two libraries in one package from writing the same file.
+        out_dir = ctx.label.name + "_/"
+    out_dll = ctx.actions.declare_file(out_dir + assembly + ".dll")
+    refout_dll = ctx.actions.declare_file(out_dir + assembly + ".ref.dll")
+    pdb = ctx.actions.declare_file(out_dir + assembly + ".pdb")
 
     direct_deps_and_exports = list(ctx.attr.deps) + list(getattr(ctx.attr, "exports", []))
 
@@ -183,8 +209,8 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     internals_visible_to = getattr(ctx.attr, "internals_visible_to", [])
     if generate_assembly_info or internals_visible_to:
         info_lines += [
-            "[assembly: global::System.Reflection.AssemblyTitle(\"%s\")]" % ctx.label.name,
-            "[assembly: global::System.Reflection.AssemblyProduct(\"%s\")]" % ctx.label.name,
+            "[assembly: global::System.Reflection.AssemblyTitle(\"%s\")]" % assembly,
+            "[assembly: global::System.Reflection.AssemblyProduct(\"%s\")]" % assembly,
             "[assembly: global::System.Reflection.AssemblyVersion(\"1.0.0.0\")]",
             "[assembly: global::System.Reflection.AssemblyFileVersion(\"1.0.0.0\")]",
         ]
@@ -204,7 +230,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
             for res_target, logical_name in ctx.attr.resources.items():
                 for f in res_target.files.to_list():
                     resource_files.append(f)
-                    log_name = logical_name if logical_name else (ctx.label.name + "." + f.basename)
+                    log_name = logical_name if logical_name else (assembly + "." + f.basename)
                     args.add("-resource:" + f.path.replace("\\", "/") + "," + log_name)
         else:
             for f in ctx.files.resources:
@@ -491,6 +517,10 @@ _COMMON_ATTRS = {
     "langversion": attr.string(
         default = "latest",
         doc = "Target C# language version specification.",
+    ),
+    "output_assembly": attr.string(
+        default = "",
+        doc = OUTPUT_ASSEMBLY_DOC,
     ),
     "plugins": attr.label_list(
         default = [],

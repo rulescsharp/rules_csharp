@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "FRAMEWORK_REFERENCES_DOC", "SDK_DOC", "compile_impl")
+load(":compile.bzl", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -18,6 +18,18 @@ def _binary_common_impl(ctx, is_test = False):
     csharp_info = compile_providers[0]
     main_dll = csharp_info.runtime_dll
     pdb = csharp_info.pdb
+    assembly = output_assembly(ctx)
+
+    # The host loads one assembly per name, so a second one with the same name would silently go missing.
+    # One target built for two frameworks is still one assembly. Prebuilt packages often ship the same
+    # dll, like Microsoft.TestPlatform.CoreUtilities in both test platform packages, and MSBuild keeps
+    # one of those too, so only a clash with an assembly built here fails.
+    assembly_owners = {}
+    for f in csharp_info.transitive_runtime_dlls.to_list():
+        other = assembly_owners.setdefault(f.basename.lower(), f)
+        if other.owner != f.owner and not (other.is_source and f.is_source):
+            fail("""{} loads two assemblies named {}, from {} and {}. Set output_assembly on one of \
+them so each name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owner, f.owner))
 
     #monikers
     tfm = csharp_info.target_framework or "net8.0"
@@ -32,7 +44,7 @@ def _binary_common_impl(ctx, is_test = False):
     probing_paths_str = ", ".join(probing_paths)
 
     # 1. Synthesize <name>.runtimeconfig.json
-    runtimeconfig_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".runtimeconfig.json")
+    runtimeconfig_json = ctx.actions.declare_file(app_dir + assembly + ".runtimeconfig.json")
     frameworks = csharp_info.framework_references.to_list()
     if frameworks:
         framework_section = """    "frameworks": [
@@ -75,13 +87,13 @@ def _binary_common_impl(ctx, is_test = False):
     )
 
     # 2. Synthesize <name>.deps.json
-    deps_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".deps.json")
+    deps_json = ctx.actions.declare_file(app_dir + assembly + ".deps.json")
 
     main_deps = {}
     target_entries = []
     library_entries = []
 
-    seen_dep_names = {ctx.label.name: True}
+    seen_dep_names = {assembly: True}
     for dep_file in csharp_info.transitive_runtime_dlls.to_list():
         if dep_file.basename != main_dll.basename:
             dep_name = dep_file.basename[:-4] if dep_file.basename.endswith(".dll") else dep_file.basename
@@ -111,7 +123,7 @@ def _binary_common_impl(ctx, is_test = False):
           "{dll_name}": {{}}
         }}
       }}""".format(
-        name = ctx.label.name,
+        name = assembly,
         dll_name = main_dll.basename,
         main_deps_str = main_deps_str,
     )
@@ -120,7 +132,7 @@ def _binary_common_impl(ctx, is_test = False):
       "type": "project",
       "serviceable": false,
       "sha512": ""
-    }}""".format(name = ctx.label.name)
+    }}""".format(name = assembly)
 
     all_target_entries = [root_target_entry] + target_entries
     all_library_entries = [root_library_entry] + library_entries
@@ -704,6 +716,10 @@ _BINARY_ATTRS = {
     "langversion": attr.string(
         default = "latest",
         doc = "Target C# language version specification.",
+    ),
+    "output_assembly": attr.string(
+        default = "",
+        doc = OUTPUT_ASSEMBLY_DOC,
     ),
     "plugins": attr.label_list(
         default = [],
