@@ -20,3 +20,19 @@ csharp_test(
     target_framework = "net8.0",
     deps = [":greeter"],
 )
+
+# An MSTest suite run by vstest. Bazel splits its test cases across two
+# shards, and each shard's test.xml lists the cases it ran.
+csharp_test(
+    name = "greeter_mstest",
+    srcs = ["GreeterMSTest.cs"],
+    shard_count = 2,
+    target_framework = "net8.0",
+    target_type = "library",
+    deps = [
+        ":greeter",
+        "@nuget//:MSTest.TestAdapter",
+        "@nuget//:MSTest.TestFramework",
+        "@nuget//:Microsoft.NET.Test.Sdk",
+    ],
+)

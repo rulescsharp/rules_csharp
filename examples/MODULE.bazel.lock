@@ -212,7 +212,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "lUXG6zwnDb2xwiur9YAFSckCV3eNMiAC7E7HDo0EoTs=",
+        "bzlTransitiveDigest": "xs+A7zAgcMBVIiWK11N5r5slrvYxRF1qhrKUQFyvi4M=",
         "usagesDigest": "c2LakH3bpMum/Zp8SZPnpBf/N2oIYLYoZfAfC9YndJU=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools"
@@ -667,6 +667,246 @@
                 "9.0.200",
                 "10.0.100"
               ]
+            }
+          }
+        }
+      }
+    },
+    "@@rules_csharp+//csharp:extensions.bzl%nuget": {
+      "general": {
+        "bzlTransitiveDigest": "xs+A7zAgcMBVIiWK11N5r5slrvYxRF1qhrKUQFyvi4M=",
+        "usagesDigest": "IjoYjMqlvKwm0U72hL5w0nN0kQ+WHbho0yoCZ5qiHgA=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools",
+          "FILE:@@//packages.lock.json 50870f26bcf78e16424c0f467e1363e63570e0ca2805aa5cabf413d69467498b"
+        ],
+        "generatedRepoSpecs": {
+          "nuget_microsoft_net_test_sdk": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.CodeCoverage",
+                "Microsoft.TestPlatform.TestHost"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.NET.Test.Sdk",
+              "sha256": "d09504b9c43697368f824ae39bf3452c14dba94d5d7e1be13774e5de6a04ea62",
+              "version": "17.11.1"
+            }
+          },
+          "nuget_mstest_testadapter": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Extensions.VSTestBridge",
+                "Microsoft.Testing.Platform.MSBuild"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "MSTest.TestAdapter",
+              "sha256": "ca669e1fda5813c3b50a195f27886fa55f4a3fd795242126e318461e781aa506",
+              "version": "3.6.4"
+            }
+          },
+          "nuget_mstest_testframework": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "MSTest.TestFramework",
+              "sha256": "a5a081540e57b62001f0ec246c949bc3bbfe1ef4c52cdf6a1d182f41a789282d",
+              "version": "3.6.4"
+            }
+          },
+          "nuget_microsoft_applicationinsights": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "System.Diagnostics.DiagnosticSource"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.ApplicationInsights",
+              "sha256": "99443addab694f4d2be3d71ae74b99bb660288b837c9deabdc7cd3af2a9cb840",
+              "version": "2.22.0"
+            }
+          },
+          "nuget_microsoft_codecoverage": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.CodeCoverage",
+              "sha256": "d5d2e52b734687cf0fb85619898a53fa2cc0f7a7adc61537052822c4381db460",
+              "version": "17.11.1"
+            }
+          },
+          "nuget_microsoft_testing_extensions_telemetry": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.ApplicationInsights",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.Telemetry",
+              "sha256": "a19f80b3219d8d60e8631fa792f7ae9e2538c81d436776e380e827b9c12d6e77",
+              "version": "1.4.3"
+            }
+          },
+          "nuget_microsoft_testing_extensions_trxreport_abstractions": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+              "sha256": "437136b1f4cbe95bee2b55f6250b0da944d2f40b699c7f667f6697323d3d6f3f",
+              "version": "1.4.3"
+            }
+          },
+          "nuget_microsoft_testing_extensions_vstestbridge": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.ApplicationInsights",
+                "Microsoft.TestPlatform.ObjectModel",
+                "Microsoft.Testing.Extensions.Telemetry",
+                "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.VSTestBridge",
+              "sha256": "4a3c7b18180b62d5f49e68e65626475951f02199cbf1a8fe8af0cae7c19b03c9",
+              "version": "1.4.3"
+            }
+          },
+          "nuget_microsoft_testing_platform": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Platform",
+              "sha256": "2aa077fae04697479da5a1a5e90ca4b9b6f73ab553b3a21c3d6739f5443f230c",
+              "version": "1.4.3"
+            }
+          },
+          "nuget_microsoft_testing_platform_msbuild": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Platform.MSBuild",
+              "sha256": "dbcf6185b954e79903bf36e24900054b13b286dd4c9574f87be6c443242a8a5b",
+              "version": "1.4.3"
+            }
+          },
+          "nuget_microsoft_testplatform_objectmodel": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "System.Reflection.Metadata"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.TestPlatform.ObjectModel",
+              "sha256": "e6f5febc2cc56374bbc5f31522ff0e94c305b5d79d5bd50827373458473ebe6e",
+              "version": "17.11.1"
+            }
+          },
+          "nuget_microsoft_testplatform_testhost": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.TestPlatform.ObjectModel",
+                "Newtonsoft.Json"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Microsoft.TestPlatform.TestHost",
+              "sha256": "c12918d07d5f400ab41f72dc293e2eed8e51ce10003daeb2b9e54df3883c1f15",
+              "version": "17.11.1"
+            }
+          },
+          "nuget_newtonsoft_json": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "Newtonsoft.Json",
+              "sha256": "2b6b52556e27e1b7913f33eedeb95568110c746bd64afff74357f1683878323a",
+              "version": "13.0.1"
+            }
+          },
+          "nuget_system_diagnostics_diagnosticsource": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "System.Diagnostics.DiagnosticSource",
+              "sha256": "ea65b737a16f71d347fe9079f2997ea4548219683268fe217d5b42fd23160d5e",
+              "version": "5.0.0"
+            }
+          },
+          "nuget_system_reflection_metadata": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "System.Reflection.Metadata",
+              "sha256": "2497e068f6afed47c4878c9101074684b645d5baebd2d5163e5eaa99f356abf1",
+              "version": "1.6.0"
+            }
+          },
+          "nuget": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_hub_repo",
+            "attributes": {
+              "packages": {
+                "Microsoft.NET.Test.Sdk": "nuget_microsoft_net_test_sdk",
+                "MSTest.TestAdapter": "nuget_mstest_testadapter",
+                "MSTest.TestFramework": "nuget_mstest_testframework",
+                "Microsoft.ApplicationInsights": "nuget_microsoft_applicationinsights",
+                "Microsoft.CodeCoverage": "nuget_microsoft_codecoverage",
+                "Microsoft.Testing.Extensions.Telemetry": "nuget_microsoft_testing_extensions_telemetry",
+                "Microsoft.Testing.Extensions.TrxReport.Abstractions": "nuget_microsoft_testing_extensions_trxreport_abstractions",
+                "Microsoft.Testing.Extensions.VSTestBridge": "nuget_microsoft_testing_extensions_vstestbridge",
+                "Microsoft.Testing.Platform": "nuget_microsoft_testing_platform",
+                "Microsoft.Testing.Platform.MSBuild": "nuget_microsoft_testing_platform_msbuild",
+                "Microsoft.TestPlatform.ObjectModel": "nuget_microsoft_testplatform_objectmodel",
+                "Microsoft.TestPlatform.TestHost": "nuget_microsoft_testplatform_testhost",
+                "Newtonsoft.Json": "nuget_newtonsoft_json",
+                "System.Diagnostics.DiagnosticSource": "nuget_system_diagnostics_diagnosticsource",
+                "System.Reflection.Metadata": "nuget_system_reflection_metadata"
+              }
             }
           }
         }

@@ -13,3 +13,10 @@ csharp = use_extension("@rules_csharp//csharp:extensions.bzl", "csharp")
 use_repo(csharp, "dotnet_toolchains")
 
 register_toolchains("@dotnet_toolchains//:all")
+
+nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget")
+nuget.from_lock(
+    packages_lock_json = "//:packages.lock.json",
+    directory_packages_props = "//:Directory.Packages.props",
+)
+use_repo(nuget, "nuget")

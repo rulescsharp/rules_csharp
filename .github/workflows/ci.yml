@@ -42,6 +42,15 @@ jobs:
       - name: Execute examples tests
         run: cd examples && bazel test //...
 
+      - name: Check examples per-test results
+        working-directory: examples
+        run: |
+          xml=$(find "$(bazel info output_path)" -path '*/testlogs/greeter_mstest/shard_*_of_2/test.xml')
+          test "$(echo "$xml" | wc -l)" -eq 2
+          cat $xml | grep -o '<testcase name="[^"]*"' | sort | uniq -c
+          test "$(cat $xml | grep -o '<testcase name="[^"]*"' | sort -u | wc -l)" -eq 3
+          test "$(cat $xml | grep -c '<testcase ')" -eq 3
+
       - name: Execute proto module tests
         working-directory: proto
         run: bazel test //...
