@@ -1,22 +1,15 @@
-using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RulesCsharp.IntegrationTests;
 
-public static class MSTestSuite
+[TestClass]
+public class MSTestSuite
 {
-    public static int Main()
-    {
-        string? filter = Environment.GetEnvironmentVariable("TESTBRIDGE_TEST_ONLY");
-        Console.WriteLine($"MSTest runner started. Active filter: '{filter}'");
-        bool passed = true;
-        if (string.IsNullOrEmpty(filter) || filter.Contains("Unit") || filter.Contains("TestCategory=Unit"))
-        {
-            Console.WriteLine("[TestMethod] TestMethod_Addition: PASSED");
-        }
-        else
-        {
-            Console.WriteLine("Filtered out TestMethod_Addition");
-        }
-        return passed ? 0 : 1;
-    }
+    [TestMethod]
+    [TestCategory("Unit")]
+    public void Addition() => Assert.AreEqual(4, 2 + 2);
+
+    [TestMethod]
+    [TestCategory("Slow")]
+    public void SkippedByFilter() => Assert.Fail("test_filter should leave this out");
 }

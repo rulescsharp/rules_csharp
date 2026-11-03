@@ -226,6 +226,17 @@ def _binary_common_impl(ctx, is_test = False):
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
 
+    if is_test and getattr(ctx.attr, "target_type", "exe") == "library":
+        # The testhost only loads *TestAdapter.dll files from the test dll's own dir. A runtime dll
+        # with the same name wins, as MSTest ships some dlls in both lib/ and build/.
+        for f in csharp_info.transitive_test_runtime_dlls.to_list():
+            if f.basename not in app_files:
+                app_files[f.basename] = True
+                runfiles_symlinks[prefix + f.basename] = f
+                declared = ctx.actions.declare_file(app_dir + f.basename)
+                ctx.actions.symlink(output = declared, target_file = f)
+                extra_output_files.append(declared)
+
     for f in getattr(ctx.files, "content", []):
         runfiles_symlinks[prefix + f.basename] = f
         declared = ctx.actions.declare_file(app_dir + f.basename)

@@ -133,7 +133,7 @@ default install location.
 load("@rules_csharp//csharp:defs.bzl", "csharp_import")
 
 csharp_import(<a href="#csharp_import-name">name</a>, <a href="#csharp_import-deps">deps</a>, <a href="#csharp_import-analyzers">analyzers</a>, <a href="#csharp_import-compile_refs">compile_refs</a>, <a href="#csharp_import-dlls">dlls</a>, <a href="#csharp_import-exports">exports</a>, <a href="#csharp_import-native_libs">native_libs</a>, <a href="#csharp_import-plugins">plugins</a>,
-              <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-target_framework">target_framework</a>)
+              <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-target_framework">target_framework</a>, <a href="#csharp_import-test_runtime_dlls">test_runtime_dlls</a>)
 </pre>
 
 Imports precompiled reference and implementation assemblies.
@@ -153,6 +153,7 @@ Imports precompiled reference and implementation assemblies.
 | <a id="csharp_import-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_import-test_runtime_dlls"></a>test_runtime_dlls |  DLL files that restore copies next to a test, such as VSTest adapters. A `csharp_test` with `target_type = "library"` stages them next to the test assembly.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 
 
 <a id="csharp_library"></a>
@@ -278,7 +279,7 @@ Propagates Roslyn analyzer and source generator assembly files.
 load("@rules_csharp//csharp:defs.bzl", "CSharpInfo")
 
 CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-pdb">pdb</a>, <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>, <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>,
-           <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>)
+           <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>, <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>)
 </pre>
 
 Propagates compilation references, runtime assemblies, and unmanaged libraries.
@@ -294,6 +295,7 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 | <a id="CSharpInfo-transitive_compile_refs"></a>transitive_compile_refs |  Depset of reference assembly Files for compilation.    |
 | <a id="CSharpInfo-transitive_native_libs"></a>transitive_native_libs |  Depset of target platform unmanaged shared libraries.    |
 | <a id="CSharpInfo-transitive_runtime_dlls"></a>transitive_runtime_dlls |  Depset of runtime assembly Files for execution.    |
+| <a id="CSharpInfo-transitive_test_runtime_dlls"></a>transitive_test_runtime_dlls |  Depset of Files that a library csharp_test stages next to the test assembly, such as VSTest adapters.    |
 
 
 <a id="CSharpToolchainInfo"></a>

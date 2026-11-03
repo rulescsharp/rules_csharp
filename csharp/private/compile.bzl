@@ -210,6 +210,10 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         order = "preorder",
     )
 
+    transitive_test_runtime_dlls = depset(
+        transitive = [dep[CSharpInfo].transitive_test_runtime_dlls for dep in direct_deps_and_exports if CSharpInfo in dep],
+    )
+
     csharp_info = CSharpInfo(
         target_framework = getattr(ctx.attr, "target_framework", "") or toolchain.target_framework,
         compile_ref = refout_dll,
@@ -218,6 +222,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         transitive_compile_refs = transitive_compile_refs,
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
+        transitive_test_runtime_dlls = transitive_test_runtime_dlls,
     )
 
     default_info = DefaultInfo(
@@ -253,6 +258,7 @@ def _csharp_import_impl(ctx):
     dlls = list(ctx.files.dlls) if hasattr(ctx.files, "dlls") else []
     native_libs = list(ctx.files.native_libs) if hasattr(ctx.files, "native_libs") else []
     analyzers = list(ctx.files.analyzers) if hasattr(ctx.files, "analyzers") else []
+    test_runtime_dlls = list(ctx.files.test_runtime_dlls) if hasattr(ctx.files, "test_runtime_dlls") else []
 
     if not compile_refs and dlls:
         compile_refs = dlls
@@ -277,6 +283,8 @@ def _csharp_import_impl(ctx):
     if native_libs:
         transitive_native_depsets.append(depset(native_libs, order = "preorder"))
 
+    transitive_test_runtime_depsets = [depset(test_runtime_dlls)]
+
     analyzer_depsets = []
     if analyzers:
         analyzer_depsets.append(depset(analyzers))
@@ -290,6 +298,7 @@ def _csharp_import_impl(ctx):
             transitive_compile_depsets.append(dep[CSharpInfo].transitive_compile_refs)
             transitive_runtime_depsets.append(dep[CSharpInfo].transitive_runtime_dlls)
             transitive_native_depsets.append(dep[CSharpInfo].transitive_native_libs)
+            transitive_test_runtime_depsets.append(dep[CSharpInfo].transitive_test_runtime_dlls)
         if CSharpAnalyzerInfo in dep:
             analyzer_depsets.append(dep[CSharpAnalyzerInfo].analyzers)
 
@@ -309,6 +318,7 @@ def _csharp_import_impl(ctx):
         transitive_compile_refs = transitive_compile_refs,
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
+        transitive_test_runtime_dlls = depset(transitive = transitive_test_runtime_depsets),
     )
 
     all_files = list(compile_refs) + list(runtime_dlls) + list(native_libs) + list(analyzers)
@@ -500,6 +510,11 @@ _IMPORT_ATTRS = {
         allow_files = [".dll"],
         default = [],
         doc = "Precompiled runtime implementation assembly DLL files.",
+    ),
+    "test_runtime_dlls": attr.label_list(
+        allow_files = [".dll"],
+        default = [],
+        doc = "DLL files that restore copies next to a test, such as VSTest adapters. A `csharp_test` with `target_type = \"library\"` stages them next to the test assembly.",
     ),
     "target_framework": attr.string(
         default = "",

@@ -241,6 +241,9 @@ def _nuget_package_repo_impl(repository_ctx):
     # 5. Analyzers
     analyzer_dir = _find_analyzer_dir(repository_ctx)
 
+    # 6. build/<tfm>/*.dll: MSBuild targets copy these next to a test, like the VSTest adapters.
+    test_runtime_dir = _find_best_tfm_dir(repository_ctx, "build")
+
     # Build file generation
     lines = [
         '"""Generated BUILD.bazel for NuGet package: {}"""'.format(pkg_id),
@@ -310,6 +313,8 @@ def _nuget_package_repo_impl(repository_ctx):
     lines.append('    compile_refs = {},'.format(compile_refs_expr))
     lines.append('    runtime_dlls = {},'.format(runtime_dlls_expr))
     lines.append('    native_libs = {},'.format(native_libs_expr))
+    if test_runtime_dir:
+        lines.append('    test_runtime_dlls = glob(["{}/*.dll"]),'.format(test_runtime_dir))
     lines.append('    deps = {},'.format(deps_expr))
     lines.append('    plugins = {},'.format(plugins_expr))
     lines.append(')')
