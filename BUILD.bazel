@@ -1,6 +1,3 @@
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "PLAN.md",
-    "README.md",
-])
+exports_files(["README.md"])

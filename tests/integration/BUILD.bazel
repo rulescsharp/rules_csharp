@@ -69,7 +69,8 @@ csharp_test(
     deps = ["//tests/support:runfiles"],
 )
 
-# Task 6: Csproj and BUILD synchronization round-trip test
+# The sync tool writes a .csproj from a BUILD file, a second sync changes
+# nothing, and --check fails once a new source is added.
 csharp_test(
     name = "sync_roundtrip_test",
     srcs = ["SyncRoundtripTest.cs"],
@@ -83,7 +84,7 @@ csharp_test(
     srcs = ["OfflineMirrorTest.cs"],
 )
 
-# Task 11: Enterprise Integration Tests
+# A Microsoft.NET.Sdk.Web app compiles and starts.
 csharp_test(
     name = "web_test",
     srcs = ["WebTest.cs"],
