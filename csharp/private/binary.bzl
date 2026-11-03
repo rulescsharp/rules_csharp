@@ -749,6 +749,10 @@ default install location.
 
 _TEST_ATTRS = dict(_BINARY_ATTRS)
 _TEST_ATTRS.update({
+    "target_type": attr.string(
+        default = "exe",
+        doc = "`\"exe\"` runs the program's `Main` as the test. `\"library\"` runs the assembly's tests under VSTest.",
+    ),
     "_vstest_launcher": attr.label(
         default = Label("//csharp/private/tools:vstest_launcher"),
         doc = "Runs library mode tests under vstest, sharded, with JUnit results.",
@@ -779,12 +783,26 @@ _TEST_ATTRS.update({
     ),
     "test_filter": attr.string(
         default = "",
-        doc = "Default test filter expression.",
+        doc = "Default test filter, overridden by `--test_filter`. In library mode it is a VSTest " +
+              "[filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests), such as " +
+              "`TestCategory=Fast` or `FullyQualifiedName~Parser`.",
     ),
 })
 
 csharp_test = rule(
     doc = """Compiles and executes a C# test binary under the Bazel test harness.
+
+A test runs in one of two ways, picked by `target_type`:
+
+- `"exe"` (the default) builds a program and runs its `Main`. A nonzero exit code fails the test.
+  The program owns everything else: it gets `test_filter` in `TESTBRIDGE_TEST_ONLY`, and with
+  `shard_count` it reads `TEST_TOTAL_SHARDS` and `TEST_SHARD_INDEX` and must touch
+  `TEST_SHARD_STATUS_FILE`. It may write JUnit XML to `XML_OUTPUT_FILE`.
+- `"library"` builds a test assembly and runs it under VSTest, the runner behind `dotnet test`.
+  Depend on `Microsoft.NET.Test.Sdk` and a test framework with its adapter from NuGet, such as
+  `MSTest.TestFramework` with `MSTest.TestAdapter` or `xunit` with `xunit.runner.visualstudio`.
+  The rule finds the adapter, fails when no test runs, splits the test cases across `shard_count`
+  shards, and writes one `<testcase>` per test to `test.xml`.
 
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
 [Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
