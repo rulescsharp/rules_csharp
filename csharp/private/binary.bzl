@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "output_assembly")
+load(":compile.bzl", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -677,6 +677,11 @@ _BINARY_ATTRS = {
         default = [],
         doc = "Direct dependency libraries.",
         providers = [[CSharpInfo]],
+    ),
+    "editorconfig_files": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = EDITORCONFIG_FILES_DOC,
     ),
     "exports": attr.label_list(
         default = [],

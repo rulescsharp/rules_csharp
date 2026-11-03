@@ -391,3 +391,22 @@ def _output_assembly_action_test_impl(ctx):
     return analysistest.end(env)
 
 output_assembly_action_test = analysistest.make(_output_assembly_action_test_impl)
+
+def _editorconfig_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    compile_action = compile_actions[0]
+
+    path = "tests/integration/editorconfig/.editorconfig"
+    asserts.true(env, "-analyzerconfig:" + path in compile_action.argv, "Expected -analyzerconfig:%s, got: %s" % (path, compile_action.argv))
+    asserts.true(
+        env,
+        path in [f.short_path for f in compile_action.inputs.to_list()],
+        "Expected %s in compile inputs" % path,
+    )
+
+    return analysistest.end(env)
+
+editorconfig_action_test = analysistest.make(_editorconfig_action_test_impl)

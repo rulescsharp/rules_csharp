@@ -1,0 +1,6 @@
+root = true
+
+# Warns.cs declares a variable it never uses (CS0168), and its library treats warnings as errors.
+# It builds only when this section matches the source.
+[*.cs]
+dotnet_diagnostic.CS0168.severity = none

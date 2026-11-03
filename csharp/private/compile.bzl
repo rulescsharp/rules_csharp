@@ -26,6 +26,12 @@ is the default prefix of embedded resource names. The executable Bazel runs keep
 the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and \
 one of them is built from sources."""
 
+EDITORCONFIG_FILES_DOC = """`.editorconfig` and global analyzer config files passed to the compiler with \
+`-analyzerconfig`, the same as MSBuild `EditorConfigFiles` items. Sections such as `[*.cs]` match source paths \
+under the directory of the file, so keep a `.editorconfig` next to or above the sources it covers. Severity settings \
+such as `dotnet_diagnostic.CS8618.severity = none` apply to compiler warnings. CA and IDE rules come from analyzers, so \
+they take effect only when the analyzer package is in `plugins` or `deps`."""
+
 def output_assembly(ctx):
     """Returns the assembly name a target compiles to.
 
@@ -152,6 +158,10 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     for analyzer in analyzers_depset.to_list():
         args.add("-analyzer:" + analyzer.path.replace("\\", "/"))
 
+    editorconfig_files = getattr(ctx.files, "editorconfig_files", [])
+    for f in editorconfig_files:
+        args.add("-analyzerconfig:" + f.path.replace("\\", "/"))
+
     # Synthesized GlobalUsings
     synthesized_srcs = []
     if getattr(ctx.attr, "implicit_usings", True):
@@ -243,7 +253,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         args.add(s.path.replace("\\", "/"))
 
     # Inputs strictly limited to srcs, resources, toolchain ref_pack, analyzers, and transitive_compile_refs
-    direct_inputs = [toolchain.csc_dll] + all_srcs + resource_files
+    direct_inputs = [toolchain.csc_dll] + all_srcs + resource_files + editorconfig_files
     worker_depsets = []
     if toolchain.csc_worker:
         direct_inputs.append(toolchain.csc_worker)
@@ -473,6 +483,11 @@ _COMMON_ATTRS = {
         allow_files = [".dll"],
         default = [],
         doc = "Precompiled implementation assembly DLL files.",
+    ),
+    "editorconfig_files": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = EDITORCONFIG_FILES_DOC,
     ),
     "exports": attr.label_list(
         default = [],

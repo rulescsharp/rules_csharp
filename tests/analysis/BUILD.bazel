@@ -6,6 +6,7 @@ load(
     "cross_linux_action_test",
     "cross_windows_action_test",
     "csc_worker_action_test",
+    "editorconfig_action_test",
     "expect_failure_test",
     "framework_reference_action_test",
     "hermetic_sandbox_action_test",
@@ -184,6 +185,11 @@ csc_worker_action_test(
 web_sdk_action_test(
     name = "web_sdk_action_test",
     target_under_test = ":web_lib",
+)
+
+editorconfig_action_test(
+    name = "editorconfig_action_test",
+    target_under_test = "//tests/integration/editorconfig:editorconfig_lib",
 )
 
 framework_reference_action_test(
