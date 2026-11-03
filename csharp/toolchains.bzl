@@ -347,8 +347,12 @@ set DOTNET_NOLOGO=1
 set VBCSCOMPILER_TTL=0
 set MSBUILDDISABLENODEREUSE=1
 set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+rem Processes started in the same second draw the same %RANDOM%, so retry until mkdir makes a new directory.
+set SCRATCH_TRIES=0
+:make_scratch
+set /a SCRATCH_TRIES+=1
 set SCRATCH=%TEMP%\\.dotnet_scratch_%RANDOM%
-if not exist "%SCRATCH%" mkdir "%SCRATCH%"
+mkdir "%SCRATCH%" 2>nul || if !SCRATCH_TRIES! lss 100 goto make_scratch
 set DOTNET_CLI_HOME=%SCRATCH%
 set HOME=%SCRATCH%
 set USERPROFILE=%SCRATCH%
