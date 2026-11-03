@@ -30,6 +30,12 @@ namespace RulesCsharp.Tools
             if (!string.IsNullOrEmpty(statusFile))
                 File.WriteAllText(statusFile, "");
 
+            // Coverlet writes its hits as the testhost exits, and vstest kills a testhost that takes over 100 ms
+            // to exit, so a busy machine loses them. vstest still moves on as soon as the testhost exits.
+            if (Environment.GetEnvironmentVariable("COVERAGE_DIR") is { Length: > 0 } &&
+                string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VSTEST_TESTHOST_SHUTDOWN_TIMEOUT")))
+                Environment.SetEnvironmentVariable("VSTEST_TESTHOST_SHUTDOWN_TIMEOUT", "60000");
+
             string tmp = Environment.GetEnvironmentVariable("TEST_TMPDIR") is { Length: > 0 } t ? t : Path.GetTempPath();
             string work = Path.Combine(tmp, "vstest_launcher_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(work);
