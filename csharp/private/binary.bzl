@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "output_assembly")
+load(":compile.bzl", "DATA_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -292,9 +292,6 @@ them so each name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"
                 ctx.actions.symlink(output = declared, target_file = f)
                 extra_output_files.append(declared)
 
-    data_files = ctx.files.data if hasattr(ctx.files, "data") else []
-    runfiles_files.extend(data_files)
-
     target_type = getattr(ctx.attr, "target_type", "exe")
     executable_file = exe_file
     if is_test:
@@ -553,7 +550,7 @@ exit $EXIT_CODE
             csharp_info.transitive_runtime_dlls.to_list() +
             csharp_info.transitive_native_libs.to_list(),
         ),
-    )
+    ).merge(library_runfiles(ctx, list(ctx.attr.deps) + list(ctx.attr.exports)))
 
     providers = [
         DefaultInfo(
@@ -570,7 +567,7 @@ exit $EXIT_CODE
     if is_test:
         test_env = dict(toolchain.dotnet_env) if hasattr(toolchain, "dotnet_env") and toolchain.dotnet_env else dict(SEALED_DOTNET_ENV)
         for k, v in getattr(ctx.attr, "env", {}).items():
-            test_env[k] = v
+            test_env[k] = ctx.expand_location(v, targets = ctx.attr.data + ctx.attr.deps)
         test_env["DOTNET_ROOT"] = dotnet_root_rel
         providers.append(
             testing.TestEnvironment(
@@ -668,6 +665,11 @@ _BINARY_ATTRS = {
         cfg = "exec",
         default = Label("//csharp/private/tools:apphost_patcher_runtimeconfig"),
         doc = "Runtime configuration file for patcher executable.",
+    ),
+    "data": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = DATA_DOC,
     ),
     "defines": attr.string_list(
         default = [],
@@ -804,14 +806,9 @@ _TEST_ATTRS.update({
         default = configuration_field(fragment = "coverage", name = "output_generator"),
         doc = "Bazel coverage output generator that merges LCOV reports.",
     ),
-    "data": attr.label_list(
-        allow_files = True,
-        default = [],
-        doc = "Runtime data files for test execution.",
-    ),
     "env": attr.string_dict(
         default = {},
-        doc = "Environment variables for test execution.",
+        doc = "Environment variables for test execution. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`.",
     ),
     "env_inherit": attr.string_list(
         default = [],

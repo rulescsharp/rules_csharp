@@ -1,0 +1,17 @@
+load("//csharp:defs.bzl", "csharp_library")
+
+package(default_visibility = ["//tests/integration/runfiles:__pkg__"])
+
+csharp_library(
+    name = "base",
+    srcs = ["Base.cs"],
+    data = ["base.txt"],
+)
+
+csharp_library(
+    name = "lib",
+    srcs = ["Lib.cs"],
+    content = ["libdata.txt"],
+    data = ["libextra.txt"],
+    deps = [":base"],
+)

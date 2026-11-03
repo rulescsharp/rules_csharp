@@ -1,0 +1,23 @@
+load("//csharp:defs.bzl", "csharp_test")
+
+filegroup(
+    name = "tool",
+    srcs = ["tool.sh"],
+    data = ["tool_helper.txt"],
+)
+
+# Runfiles of a test hold its own data, the runfiles of data targets, and the data and content of
+# the libraries it depends on directly and transitively.
+csharp_test(
+    name = "runfiles_test",
+    srcs = ["RunfilesTest.cs"],
+    data = [
+        "greeting.txt",
+        ":tool",
+    ],
+    env = {"GREETING": "$(rlocationpath :greeting.txt)"},
+    deps = [
+        "//tests/integration/runfiles/lib",
+        "//tests/support:runfiles",
+    ],
+)

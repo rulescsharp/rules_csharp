@@ -32,6 +32,24 @@ under the directory of the file, so keep a `.editorconfig` next to or above the 
 such as `dotnet_diagnostic.CS8618.severity = none` apply to compiler warnings. CA and IDE rules come from analyzers, so \
 they take effect only when the analyzer package is in `plugins` or `deps`."""
 
+DATA_DOC = """Files and targets needed at run time. Their files and runfiles join the runfiles of this target and of \
+every executable that depends on it, along with the `content` of libraries it depends on."""
+
+def library_runfiles(ctx, deps):
+    """Returns the runfiles of a target's data and of the targets it depends on.
+
+    Args:
+      ctx: The rule context.
+      deps: Targets whose runfiles an executable needs alongside this target.
+
+    Returns:
+      A runfiles object.
+    """
+    data = getattr(ctx.attr, "data", [])
+    return ctx.runfiles(files = getattr(ctx.files, "data", [])).merge_all(
+        [t[DefaultInfo].default_runfiles for t in data] + [d[DefaultInfo].default_runfiles for d in deps],
+    )
+
 def output_assembly(ctx):
     """Returns the assembly name a target compiles to.
 
@@ -331,7 +349,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         runfiles = ctx.runfiles(
             files = [out_dll, pdb] + resource_files + getattr(ctx.files, "content", []),
             transitive_files = depset(transitive_runtime_dlls.to_list()),
-        ),
+        ).merge(library_runfiles(ctx, direct_deps_and_exports)),
     )
 
     providers = [csharp_info, default_info]
@@ -429,7 +447,7 @@ def _csharp_import_impl(ctx):
         runfiles = ctx.runfiles(
             files = runtime_dlls + native_libs,
             transitive_files = depset(transitive = [transitive_runtime_dlls, transitive_native_libs]),
-        ),
+        ).merge(library_runfiles(ctx, direct_deps)),
     )
 
     providers = [csharp_info, default_info]
@@ -469,6 +487,11 @@ _COMMON_ATTRS = {
         allow_files = [".dll"],
         default = [],
         doc = "Precompiled reference assembly DLL files.",
+    ),
+    "data": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = DATA_DOC,
     ),
     "defines": attr.string_list(
         default = [],
