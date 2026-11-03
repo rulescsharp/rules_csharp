@@ -103,11 +103,11 @@ csharp_test(
     ],
 )
 
-# Three shards for two tests, so one shard runs nothing and still passes.
+# Four shards for three tests, so one shard runs nothing and still passes.
 csharp_test(
     name = "mstest_sharded",
     srcs = ["MSTestSuite.cs"],
-    shard_count = 3,
+    shard_count = 4,
     target_type = "library",
     test_filter = "TestCategory=Unit",
     deps = [
