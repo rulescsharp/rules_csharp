@@ -292,3 +292,58 @@ def _older_csharp_info_dep_test_impl(ctx):
     return analysistest.end(env)
 
 older_csharp_info_dep_test = analysistest.make(_older_csharp_info_dep_test_impl)
+def _written_content(actions, suffix):
+    for a in actions:
+        if a.mnemonic == "FileWrite" and a.outputs.to_list()[0].basename.endswith(suffix):
+            return a.content
+    return None
+
+def _framework_reference_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    target = analysistest.target_under_test(env)
+    asserts.equals(env, ["Microsoft.AspNetCore.App"], target[CSharpInfo].framework_references.to_list())
+
+    actions = analysistest.target_actions(env)
+    compile_actions = [a for a in actions if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    input_paths = [f.path for f in compile_actions[0].inputs.to_list()]
+    asserts.true(
+        env,
+        any(["Microsoft.AspNetCore.App.Ref" in p for p in input_paths]),
+        "Expected the ASP.NET Core reference assemblies from the library in compile inputs, got: %s" % input_paths,
+    )
+
+    runtimeconfig = _written_content(actions, ".runtimeconfig.json")
+    asserts.true(
+        env,
+        runtimeconfig and '"name": "Microsoft.NETCore.App"' in runtimeconfig and '"name": "Microsoft.AspNetCore.App"' in runtimeconfig,
+        "Expected runtimeconfig.json to list both shared frameworks, got: %s" % runtimeconfig,
+    )
+
+    return analysistest.end(env)
+
+framework_reference_action_test = analysistest.make(_framework_reference_action_test_impl)
+
+def _worker_sdk_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    usings = _written_content(analysistest.target_actions(env), ".GlobalUsings.g.cs")
+    for ns in ["Microsoft.Extensions.Configuration", "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.Hosting", "Microsoft.Extensions.Logging"]:
+        asserts.true(env, "global using global::%s;" % ns in usings, "Expected a global using for %s, got: %s" % (ns, usings))
+    asserts.false(env, "Microsoft.AspNetCore" in usings, "Expected no ASP.NET Core usings for the Worker SDK, got: %s" % usings)
+
+    return analysistest.end(env)
+
+worker_sdk_action_test = analysistest.make(_worker_sdk_action_test_impl)
+
+def _expect_failure_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    asserts.expect_failure(env, ctx.attr.message)
+    return analysistest.end(env)
+
+expect_failure_test = analysistest.make(
+    _expect_failure_test_impl,
+    attrs = {"message": attr.string(mandatory = True)},
+    expect_failure = True,
+)

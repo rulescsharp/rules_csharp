@@ -5,6 +5,8 @@ load(
     "cross_linux_action_test",
     "cross_windows_action_test",
     "csc_worker_action_test",
+    "expect_failure_test",
+    "framework_reference_action_test",
     "hermetic_sandbox_action_test",
     "msbuild_parity_action_test",
     "older_csharp_info",
@@ -12,6 +14,7 @@ load(
     "proto_moved_test",
     "target_framework_action_test",
     "web_sdk_action_test",
+    "worker_sdk_action_test",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -37,6 +40,40 @@ csharp_library(
     name = "web_lib",
     srcs = ["LibA.cs"],
     sdk = "Microsoft.NET.Sdk.Web",
+)
+
+csharp_library(
+    name = "aspnetcore_lib",
+    srcs = ["LibA.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+)
+
+# Depends on the ASP.NET Core shared framework only through :aspnetcore_lib.
+csharp_binary(
+    name = "aspnetcore_dependent_app",
+    srcs = ["CrossApp.cs"],
+    deps = [":aspnetcore_lib"],
+)
+
+csharp_library(
+    name = "worker_lib",
+    srcs = ["LibA.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    sdk = "Microsoft.NET.Sdk.Worker",
+)
+
+csharp_library(
+    name = "worker_without_hosting_lib",
+    srcs = ["LibA.cs"],
+    sdk = "Microsoft.NET.Sdk.Worker",
+    tags = ["manual"],
+)
+
+csharp_library(
+    name = "unknown_framework_lib",
+    srcs = ["LibA.cs"],
+    framework_references = ["Microsoft.WindowsDesktop.App"],
+    tags = ["manual"],
 )
 
 csharp_binary(
@@ -108,6 +145,28 @@ csc_worker_action_test(
 web_sdk_action_test(
     name = "web_sdk_action_test",
     target_under_test = ":web_lib",
+)
+
+framework_reference_action_test(
+    name = "framework_reference_action_test",
+    target_under_test = ":aspnetcore_dependent_app",
+)
+
+worker_sdk_action_test(
+    name = "worker_sdk_action_test",
+    target_under_test = ":worker_lib",
+)
+
+expect_failure_test(
+    name = "worker_without_hosting_test",
+    message = "whose implicit usings need the Microsoft.Extensions",
+    target_under_test = ":worker_without_hosting_lib",
+)
+
+expect_failure_test(
+    name = "unknown_framework_test",
+    message = "is not a shared framework the toolchain provides",
+    target_under_test = ":unknown_framework_lib",
 )
 
 msbuild_parity_action_test(

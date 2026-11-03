@@ -42,10 +42,10 @@ Imports precompiled Roslyn analyzer and source generator assemblies.
 load("@rules_csharp//csharp:defs.bzl", "csharp_analyzer_library")
 
 csharp_analyzer_library(<a href="#csharp_analyzer_library-name">name</a>, <a href="#csharp_analyzer_library-deps">deps</a>, <a href="#csharp_analyzer_library-srcs">srcs</a>, <a href="#csharp_analyzer_library-resources">resources</a>, <a href="#csharp_analyzer_library-analyzers">analyzers</a>, <a href="#csharp_analyzer_library-compile_refs">compile_refs</a>, <a href="#csharp_analyzer_library-content">content</a>,
-                        <a href="#csharp_analyzer_library-copy_to_output">copy_to_output</a>, <a href="#csharp_analyzer_library-defines">defines</a>, <a href="#csharp_analyzer_library-dlls">dlls</a>, <a href="#csharp_analyzer_library-exports">exports</a>, <a href="#csharp_analyzer_library-generate_assembly_info">generate_assembly_info</a>,
-                        <a href="#csharp_analyzer_library-implicit_usings">implicit_usings</a>, <a href="#csharp_analyzer_library-internals_visible_to">internals_visible_to</a>, <a href="#csharp_analyzer_library-langversion">langversion</a>, <a href="#csharp_analyzer_library-native_libs">native_libs</a>, <a href="#csharp_analyzer_library-nowarn">nowarn</a>,
-                        <a href="#csharp_analyzer_library-plugins">plugins</a>, <a href="#csharp_analyzer_library-runtime_dlls">runtime_dlls</a>, <a href="#csharp_analyzer_library-sdk">sdk</a>, <a href="#csharp_analyzer_library-target_framework">target_framework</a>, <a href="#csharp_analyzer_library-target_type">target_type</a>, <a href="#csharp_analyzer_library-warn_as_error">warn_as_error</a>,
-                        <a href="#csharp_analyzer_library-warning_level">warning_level</a>)
+                        <a href="#csharp_analyzer_library-copy_to_output">copy_to_output</a>, <a href="#csharp_analyzer_library-defines">defines</a>, <a href="#csharp_analyzer_library-dlls">dlls</a>, <a href="#csharp_analyzer_library-exports">exports</a>, <a href="#csharp_analyzer_library-framework_references">framework_references</a>,
+                        <a href="#csharp_analyzer_library-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_analyzer_library-implicit_usings">implicit_usings</a>, <a href="#csharp_analyzer_library-internals_visible_to">internals_visible_to</a>, <a href="#csharp_analyzer_library-langversion">langversion</a>,
+                        <a href="#csharp_analyzer_library-native_libs">native_libs</a>, <a href="#csharp_analyzer_library-nowarn">nowarn</a>, <a href="#csharp_analyzer_library-plugins">plugins</a>, <a href="#csharp_analyzer_library-runtime_dlls">runtime_dlls</a>, <a href="#csharp_analyzer_library-sdk">sdk</a>, <a href="#csharp_analyzer_library-target_framework">target_framework</a>,
+                        <a href="#csharp_analyzer_library-target_type">target_type</a>, <a href="#csharp_analyzer_library-warn_as_error">warn_as_error</a>, <a href="#csharp_analyzer_library-warning_level">warning_level</a>)
 </pre>
 
 Compiles Roslyn analyzer or source generator assemblies.
@@ -66,6 +66,7 @@ Compiles Roslyn analyzer or source generator assemblies.
 | <a id="csharp_analyzer_library-defines"></a>defines |  Preprocessor symbols to define during compilation.   | List of strings | optional |  `[]`  |
 | <a id="csharp_analyzer_library-dlls"></a>dlls |  Precompiled implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_analyzer_library-exports"></a>exports |  Dependencies exported to downstream consumers.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="csharp_analyzer_library-framework_references"></a>framework_references |  Shared frameworks this target uses, the same as MSBuild `FrameworkReference` items. The only supported value is `"Microsoft.AspNetCore.App"`, since `Microsoft.NETCore.App` is always referenced. A target gets the framework's reference assemblies at compile time, and everything that depends on it gets them too, so an executable lists the framework in its runtimeconfig.json and the runtime loads it. `sdk = "Microsoft.NET.Sdk.Web"` implies `"Microsoft.AspNetCore.App"`.   | List of strings | optional |  `[]`  |
 | <a id="csharp_analyzer_library-generate_assembly_info"></a>generate_assembly_info |  Synthesize assembly information attributes.   | Boolean | optional |  `True`  |
 | <a id="csharp_analyzer_library-implicit_usings"></a>implicit_usings |  Synthesize implicit global usings namespace imports.   | Boolean | optional |  `True`  |
 | <a id="csharp_analyzer_library-internals_visible_to"></a>internals_visible_to |  Friend assembly names for InternalsVisibleTo.   | List of strings | optional |  `[]`  |
@@ -74,7 +75,7 @@ Compiles Roslyn analyzer or source generator assemblies.
 | <a id="csharp_analyzer_library-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_analyzer_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_analyzer_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_analyzer_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
+| <a id="csharp_analyzer_library-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_analyzer_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_analyzer_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_analyzer_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
@@ -89,8 +90,9 @@ Compiles Roslyn analyzer or source generator assemblies.
 load("@rules_csharp//csharp:defs.bzl", "csharp_binary")
 
 csharp_binary(<a href="#csharp_binary-name">name</a>, <a href="#csharp_binary-deps">deps</a>, <a href="#csharp_binary-srcs">srcs</a>, <a href="#csharp_binary-resources">resources</a>, <a href="#csharp_binary-content">content</a>, <a href="#csharp_binary-copy_to_output">copy_to_output</a>, <a href="#csharp_binary-defines">defines</a>, <a href="#csharp_binary-exports">exports</a>,
-              <a href="#csharp_binary-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_binary-implicit_usings">implicit_usings</a>, <a href="#csharp_binary-internals_visible_to">internals_visible_to</a>, <a href="#csharp_binary-langversion">langversion</a>, <a href="#csharp_binary-nowarn">nowarn</a>,
-              <a href="#csharp_binary-plugins">plugins</a>, <a href="#csharp_binary-sdk">sdk</a>, <a href="#csharp_binary-target_framework">target_framework</a>, <a href="#csharp_binary-target_type">target_type</a>, <a href="#csharp_binary-warn_as_error">warn_as_error</a>, <a href="#csharp_binary-warning_level">warning_level</a>)
+              <a href="#csharp_binary-framework_references">framework_references</a>, <a href="#csharp_binary-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_binary-implicit_usings">implicit_usings</a>, <a href="#csharp_binary-internals_visible_to">internals_visible_to</a>,
+              <a href="#csharp_binary-langversion">langversion</a>, <a href="#csharp_binary-nowarn">nowarn</a>, <a href="#csharp_binary-plugins">plugins</a>, <a href="#csharp_binary-sdk">sdk</a>, <a href="#csharp_binary-target_framework">target_framework</a>, <a href="#csharp_binary-target_type">target_type</a>, <a href="#csharp_binary-warn_as_error">warn_as_error</a>,
+              <a href="#csharp_binary-warning_level">warning_level</a>)
 </pre>
 
 Compiles a C# executable and stamps the native application host binary.
@@ -112,13 +114,14 @@ default install location.
 | <a id="csharp_binary-copy_to_output"></a>copy_to_output |  Files mapped to destination output paths.   | <a href="https://bazel.build/rules/lib/dict">Dictionary: Label -> String</a> | optional |  `{}`  |
 | <a id="csharp_binary-defines"></a>defines |  Preprocessor symbols to define during compilation.   | List of strings | optional |  `[]`  |
 | <a id="csharp_binary-exports"></a>exports |  Dependencies exported to downstream consumers.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="csharp_binary-framework_references"></a>framework_references |  Shared frameworks this target uses, the same as MSBuild `FrameworkReference` items. The only supported value is `"Microsoft.AspNetCore.App"`, since `Microsoft.NETCore.App` is always referenced. A target gets the framework's reference assemblies at compile time, and everything that depends on it gets them too, so an executable lists the framework in its runtimeconfig.json and the runtime loads it. `sdk = "Microsoft.NET.Sdk.Web"` implies `"Microsoft.AspNetCore.App"`.   | List of strings | optional |  `[]`  |
 | <a id="csharp_binary-generate_assembly_info"></a>generate_assembly_info |  Synthesize assembly information attributes.   | Boolean | optional |  `True`  |
 | <a id="csharp_binary-implicit_usings"></a>implicit_usings |  Synthesize implicit global usings namespace imports.   | Boolean | optional |  `True`  |
 | <a id="csharp_binary-internals_visible_to"></a>internals_visible_to |  Friend assembly names for InternalsVisibleTo.   | List of strings | optional |  `[]`  |
 | <a id="csharp_binary-langversion"></a>langversion |  Target C# language version specification.   | String | optional |  `"latest"`  |
 | <a id="csharp_binary-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_binary-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_binary-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
+| <a id="csharp_binary-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_binary-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_binary-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"exe"`  |
 | <a id="csharp_binary-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
@@ -164,9 +167,9 @@ Imports precompiled reference and implementation assemblies.
 load("@rules_csharp//csharp:defs.bzl", "csharp_library")
 
 csharp_library(<a href="#csharp_library-name">name</a>, <a href="#csharp_library-deps">deps</a>, <a href="#csharp_library-srcs">srcs</a>, <a href="#csharp_library-resources">resources</a>, <a href="#csharp_library-analyzers">analyzers</a>, <a href="#csharp_library-compile_refs">compile_refs</a>, <a href="#csharp_library-content">content</a>, <a href="#csharp_library-copy_to_output">copy_to_output</a>,
-               <a href="#csharp_library-defines">defines</a>, <a href="#csharp_library-dlls">dlls</a>, <a href="#csharp_library-exports">exports</a>, <a href="#csharp_library-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_library-implicit_usings">implicit_usings</a>, <a href="#csharp_library-internals_visible_to">internals_visible_to</a>,
-               <a href="#csharp_library-langversion">langversion</a>, <a href="#csharp_library-native_libs">native_libs</a>, <a href="#csharp_library-nowarn">nowarn</a>, <a href="#csharp_library-plugins">plugins</a>, <a href="#csharp_library-runtime_dlls">runtime_dlls</a>, <a href="#csharp_library-sdk">sdk</a>, <a href="#csharp_library-target_framework">target_framework</a>,
-               <a href="#csharp_library-target_type">target_type</a>, <a href="#csharp_library-warn_as_error">warn_as_error</a>, <a href="#csharp_library-warning_level">warning_level</a>)
+               <a href="#csharp_library-defines">defines</a>, <a href="#csharp_library-dlls">dlls</a>, <a href="#csharp_library-exports">exports</a>, <a href="#csharp_library-framework_references">framework_references</a>, <a href="#csharp_library-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_library-implicit_usings">implicit_usings</a>,
+               <a href="#csharp_library-internals_visible_to">internals_visible_to</a>, <a href="#csharp_library-langversion">langversion</a>, <a href="#csharp_library-native_libs">native_libs</a>, <a href="#csharp_library-nowarn">nowarn</a>, <a href="#csharp_library-plugins">plugins</a>, <a href="#csharp_library-runtime_dlls">runtime_dlls</a>, <a href="#csharp_library-sdk">sdk</a>,
+               <a href="#csharp_library-target_framework">target_framework</a>, <a href="#csharp_library-target_type">target_type</a>, <a href="#csharp_library-warn_as_error">warn_as_error</a>, <a href="#csharp_library-warning_level">warning_level</a>)
 </pre>
 
 Compiles C# source files into reference and implementation assemblies.
@@ -187,6 +190,7 @@ Compiles C# source files into reference and implementation assemblies.
 | <a id="csharp_library-defines"></a>defines |  Preprocessor symbols to define during compilation.   | List of strings | optional |  `[]`  |
 | <a id="csharp_library-dlls"></a>dlls |  Precompiled implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_library-exports"></a>exports |  Dependencies exported to downstream consumers.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="csharp_library-framework_references"></a>framework_references |  Shared frameworks this target uses, the same as MSBuild `FrameworkReference` items. The only supported value is `"Microsoft.AspNetCore.App"`, since `Microsoft.NETCore.App` is always referenced. A target gets the framework's reference assemblies at compile time, and everything that depends on it gets them too, so an executable lists the framework in its runtimeconfig.json and the runtime loads it. `sdk = "Microsoft.NET.Sdk.Web"` implies `"Microsoft.AspNetCore.App"`.   | List of strings | optional |  `[]`  |
 | <a id="csharp_library-generate_assembly_info"></a>generate_assembly_info |  Synthesize assembly information attributes.   | Boolean | optional |  `True`  |
 | <a id="csharp_library-implicit_usings"></a>implicit_usings |  Synthesize implicit global usings namespace imports.   | Boolean | optional |  `True`  |
 | <a id="csharp_library-internals_visible_to"></a>internals_visible_to |  Friend assembly names for InternalsVisibleTo.   | List of strings | optional |  `[]`  |
@@ -195,7 +199,7 @@ Compiles C# source files into reference and implementation assemblies.
 | <a id="csharp_library-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_library-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
+| <a id="csharp_library-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_library-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"library"`  |
 | <a id="csharp_library-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
@@ -210,9 +214,9 @@ Compiles C# source files into reference and implementation assemblies.
 load("@rules_csharp//csharp:defs.bzl", "csharp_test")
 
 csharp_test(<a href="#csharp_test-name">name</a>, <a href="#csharp_test-deps">deps</a>, <a href="#csharp_test-srcs">srcs</a>, <a href="#csharp_test-data">data</a>, <a href="#csharp_test-resources">resources</a>, <a href="#csharp_test-content">content</a>, <a href="#csharp_test-copy_to_output">copy_to_output</a>, <a href="#csharp_test-defines">defines</a>, <a href="#csharp_test-env">env</a>, <a href="#csharp_test-env_inherit">env_inherit</a>,
-            <a href="#csharp_test-exports">exports</a>, <a href="#csharp_test-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_test-implicit_usings">implicit_usings</a>, <a href="#csharp_test-internals_visible_to">internals_visible_to</a>, <a href="#csharp_test-langversion">langversion</a>,
-            <a href="#csharp_test-nowarn">nowarn</a>, <a href="#csharp_test-plugins">plugins</a>, <a href="#csharp_test-sdk">sdk</a>, <a href="#csharp_test-target_framework">target_framework</a>, <a href="#csharp_test-target_type">target_type</a>, <a href="#csharp_test-test_filter">test_filter</a>, <a href="#csharp_test-warn_as_error">warn_as_error</a>,
-            <a href="#csharp_test-warning_level">warning_level</a>)
+            <a href="#csharp_test-exports">exports</a>, <a href="#csharp_test-framework_references">framework_references</a>, <a href="#csharp_test-generate_assembly_info">generate_assembly_info</a>, <a href="#csharp_test-implicit_usings">implicit_usings</a>,
+            <a href="#csharp_test-internals_visible_to">internals_visible_to</a>, <a href="#csharp_test-langversion">langversion</a>, <a href="#csharp_test-nowarn">nowarn</a>, <a href="#csharp_test-plugins">plugins</a>, <a href="#csharp_test-sdk">sdk</a>, <a href="#csharp_test-target_framework">target_framework</a>, <a href="#csharp_test-target_type">target_type</a>,
+            <a href="#csharp_test-test_filter">test_filter</a>, <a href="#csharp_test-warn_as_error">warn_as_error</a>, <a href="#csharp_test-warning_level">warning_level</a>)
 </pre>
 
 Compiles and executes a C# test binary under the Bazel test harness.
@@ -251,13 +255,14 @@ coverage wrapper there.
 | <a id="csharp_test-env"></a>env |  Environment variables for test execution.   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional |  `{}`  |
 | <a id="csharp_test-env_inherit"></a>env_inherit |  Environment variables inherited from client environment.   | List of strings | optional |  `[]`  |
 | <a id="csharp_test-exports"></a>exports |  Dependencies exported to downstream consumers.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="csharp_test-framework_references"></a>framework_references |  Shared frameworks this target uses, the same as MSBuild `FrameworkReference` items. The only supported value is `"Microsoft.AspNetCore.App"`, since `Microsoft.NETCore.App` is always referenced. A target gets the framework's reference assemblies at compile time, and everything that depends on it gets them too, so an executable lists the framework in its runtimeconfig.json and the runtime loads it. `sdk = "Microsoft.NET.Sdk.Web"` implies `"Microsoft.AspNetCore.App"`.   | List of strings | optional |  `[]`  |
 | <a id="csharp_test-generate_assembly_info"></a>generate_assembly_info |  Synthesize assembly information attributes.   | Boolean | optional |  `True`  |
 | <a id="csharp_test-implicit_usings"></a>implicit_usings |  Synthesize implicit global usings namespace imports.   | Boolean | optional |  `True`  |
 | <a id="csharp_test-internals_visible_to"></a>internals_visible_to |  Friend assembly names for InternalsVisibleTo.   | List of strings | optional |  `[]`  |
 | <a id="csharp_test-langversion"></a>langversion |  Target C# language version specification.   | String | optional |  `"latest"`  |
 | <a id="csharp_test-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_test-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_test-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
+| <a id="csharp_test-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_test-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
 | <a id="csharp_test-target_type"></a>target_type |  `"exe"` runs the program's `Main` as the test. `"library"` runs the assembly's tests under VSTest.   | String | optional |  `"exe"`  |
 | <a id="csharp_test-test_filter"></a>test_filter |  Default test filter, overridden by `--test_filter`. In library mode it is a VSTest [filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests), such as `TestCategory=Fast` or `FullyQualifiedName~Parser`.   | String | optional |  `""`  |
@@ -291,8 +296,9 @@ Propagates Roslyn analyzer and source generator assembly files.
 <pre>
 load("@rules_csharp//csharp:defs.bzl", "CSharpInfo")
 
-CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-pdb">pdb</a>, <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>, <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>,
-           <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>, <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>)
+CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-framework_references">framework_references</a>, <a href="#CSharpInfo-pdb">pdb</a>, <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>,
+           <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>, <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>,
+           <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>)
 </pre>
 
 Propagates compilation references, runtime assemblies, and unmanaged libraries.
@@ -302,6 +308,7 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="CSharpInfo-compile_ref"></a>compile_ref |  Metadata-only reference assembly File produced by -refout.    |
+| <a id="CSharpInfo-framework_references"></a>framework_references |  Depset of shared framework names (for example Microsoft.AspNetCore.App) this target and its dependencies need at compile time and run time. Providers created before this field existed lack it, so read it with getattr.    |
 | <a id="CSharpInfo-pdb"></a>pdb |  Portable program database symbol File.    |
 | <a id="CSharpInfo-runtime_dll"></a>runtime_dll |  Implementation assembly File.    |
 | <a id="CSharpInfo-target_framework"></a>target_framework |  Target framework moniker string (for example net8.0).    |

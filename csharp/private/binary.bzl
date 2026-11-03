@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "compile_impl")
+load(":compile.bzl", "FRAMEWORK_REFERENCES_DOC", "SDK_DOC", "compile_impl")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -33,18 +33,17 @@ def _binary_common_impl(ctx, is_test = False):
 
     # 1. Synthesize <name>.runtimeconfig.json
     runtimeconfig_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".runtimeconfig.json")
-    sdk_flavor = getattr(ctx.attr, "sdk", "Microsoft.NET.Sdk")
-    if sdk_flavor == "Microsoft.NET.Sdk.Web":
+    frameworks = csharp_info.framework_references.to_list()
+    if frameworks:
         framework_section = """    "frameworks": [
-      {
-        "name": "Microsoft.NETCore.App",
+%s
+    ],""" % ",\n".join([
+            """      {
+        "name": "%s",
         "version": "%s"
-      },
-      {
-        "name": "Microsoft.AspNetCore.App",
-        "version": "%s"
-      }
-    ],""" % (framework_version, framework_version)
+      }""" % (name, framework_version)
+            for name in ["Microsoft.NETCore.App"] + sorted(frameworks)
+        ])
     else:
         framework_section = """    "framework": {
       "name": "Microsoft.NETCore.App",
@@ -686,6 +685,10 @@ _BINARY_ATTRS = {
         default = {},
         doc = "Files mapped to destination output paths.",
     ),
+    "framework_references": attr.string_list(
+        default = [],
+        doc = FRAMEWORK_REFERENCES_DOC,
+    ),
     "generate_assembly_info": attr.bool(
         default = True,
         doc = "Synthesize assembly information attributes.",
@@ -722,7 +725,7 @@ _BINARY_ATTRS = {
     ),
     "sdk": attr.string(
         default = "Microsoft.NET.Sdk",
-        doc = "Target .NET SDK project flavor.",
+        doc = SDK_DOC,
         values = [
             "Microsoft.NET.Sdk",
             "Microsoft.NET.Sdk.Web",
