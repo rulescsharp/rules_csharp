@@ -7,7 +7,7 @@ Bazel rules that build, run and test C# with a hermetic .NET SDK.
 Add this to `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "rules_csharp", version = "0.3.0")
+bazel_dep(name = "rules_csharp", version = "0.4.0")
 
 csharp = use_extension("@rules_csharp//csharp:extensions.bzl", "csharp")
 use_repo(csharp, "dotnet_toolchains")
@@ -16,7 +16,6 @@ register_toolchains("@dotnet_toolchains//:all")
 ```
 
 The extension downloads a hermetic .NET SDK, so nothing needs to be installed on the machine.
-Windows support and the separate proto module ship in the next release.
 
 ## Example
 

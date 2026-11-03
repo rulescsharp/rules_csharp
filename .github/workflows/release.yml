@@ -33,6 +33,9 @@ jobs:
           # 2. Stamp version into the module() call of MODULE.bazel
           sed -i.bak -E "/^module\(/,/^\)/s/version = \"[^\"]+\"/version = \"${VERSION}\"/" MODULE.bazel
           rm -f MODULE.bazel.bak
+          # Fail if the stamp changed anything but the module() version line
+          test "$(git diff -U0 MODULE.bazel | grep -c '^+[^+]')" -le 1
+          grep -q "^    version = \"${VERSION}\",$" MODULE.bazel
 
           # 3. Compute archive SRI hash
           INTEGRITY="sha256-$(openssl dgst -sha256 -binary "${ARCHIVE}" | base64 | tr -d '\n')"
