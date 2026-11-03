@@ -16,6 +16,17 @@ Then load the rules from this file:
 load("@rules_csharp_proto//csharp:defs.bzl", "csharp_grpc_library", "csharp_proto_library")
 ```
 
+The rules run protoc from protobuf's proto toolchain. By default that's protoc built from source,
+which needs a C++17 compiler. To use the prebuilt protoc that protobuf publishes, add this to
+`.bazelrc`:
+
+```
+common --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
+```
+
+On Bazel 7 and 8 also add `common --incompatible_enable_proto_toolchain_resolution`, or
+`proto_library` keeps building protoc from source. Bazel 7's default C++ toolchain can't build it.
+
 <a id="csharp_grpc_library"></a>
 
 ## csharp_grpc_library

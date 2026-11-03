@@ -8,6 +8,14 @@ def _proto_action_test_impl(ctx):
     asserts.equals(env, 1, len(proto_actions))
     proto_action = proto_actions[0]
 
+    # .bazelrc prefers the prebuilt protoc, so the action must not run one built from source
+    protoc = proto_action.argv[0]
+    asserts.true(
+        env,
+        "prebuilt_protoc" in protoc,
+        "Expected protoc from the prebuilt proto toolchain, got: %s" % protoc,
+    )
+
     output_basenames = [f.basename for f in proto_action.outputs.to_list()]
     asserts.true(
         env,
