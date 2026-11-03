@@ -46,6 +46,18 @@ csharp_test(
 
 `bazel run //:hello` prints `Hello, Bazel!`, and `bazel test //:greeter_test` runs the test.
 
+[examples/web](examples/web/) uses ASP.NET Core from a library through `framework_references`, checks
+that library against an `.editorconfig` through `editorconfig_files`, names the app assembly with
+`output_assembly` and reads a `data` file at run time. `bazel run //web` prints `200 Hello, web!`.
+
+These attributes do the same job as the MSBuild items and properties of a `.csproj`:
+
+| MSBuild | rules_csharp |
+| --- | --- |
+| `<FrameworkReference Include="Microsoft.AspNetCore.App" />` | `framework_references = ["Microsoft.AspNetCore.App"]` |
+| `<AssemblyName>` | `output_assembly` |
+| `<EditorConfigFiles Include=".editorconfig" />` | `editorconfig_files = [".editorconfig"]` |
+
 ## Testing with MSTest or xUnit
 
 Set `target_type = "library"` and depend on `Microsoft.NET.Test.Sdk` plus a framework and its adapter

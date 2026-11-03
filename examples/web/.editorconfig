@@ -1,0 +1,7 @@
+root = true
+
+# Options classes here get their values after construction, from configuration binding or an
+# object initializer, so CS8618 (non-nullable property left uninitialized) is off for these
+# sources. The library treats warnings as errors, so the build fails without this section.
+[*.cs]
+dotnet_diagnostic.CS8618.severity = none

@@ -82,6 +82,10 @@ jobs:
         working-directory: examples
         run: test "$(bazel run //:hello | tr -d '\r')" = "Hello, Bazel!"
 
+      - name: Run web example
+        working-directory: examples
+        run: test "$(bazel run //web | tr -d '\r')" = "200 Hello, web!"
+
       - name: Check examples coverage
         working-directory: examples
         run: |

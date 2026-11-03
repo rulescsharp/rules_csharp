@@ -1,0 +1,21 @@
+load("@rules_csharp//csharp:defs.bzl", "csharp_binary", "csharp_library")
+
+# The ASP.NET Core shared framework comes from this library, so the plain binary below compiles
+# and runs against it too. warn_as_error and .editorconfig together fail the build unless the
+# .editorconfig section applies.
+csharp_library(
+    name = "greeting_endpoint",
+    srcs = ["GreetingEndpoint.cs"],
+    editorconfig_files = [".editorconfig"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    warn_as_error = True,
+)
+
+# `bazel run //web` prints `200 Hello, web!`, read from greeting.txt in the runfiles.
+csharp_binary(
+    name = "web",
+    srcs = ["Program.cs"],
+    data = ["greeting.txt"],
+    output_assembly = "RulesCsharp.Examples.Web",
+    deps = [":greeting_endpoint"],
+)
