@@ -6,7 +6,7 @@ load(
     "read_user_netrc",
     "use_netrc",
 )
-load(":nupkg.bzl", "file_url")
+load(":nupkg.bzl", "build_references", "file_url")
 
 TFM_PRECEDENCE = [
     "net10.0",
@@ -242,7 +242,19 @@ def _nuget_package_repo_impl(repository_ctx):
     analyzer_dir = _find_analyzer_dir(repository_ctx)
 
     # 6. build/<tfm>/*.dll: MSBuild targets copy these next to a test, like the VSTest adapters.
+    # The ones the package's own props or targets add as a <Reference> are compile and runtime dlls too.
     test_runtime_dir = _find_best_tfm_dir(repository_ctx, "build")
+    build_refs = []
+    if test_runtime_dir:
+        referenced = []
+        for f in repository_ctx.path(test_runtime_dir).readdir():
+            if f.basename.lower().endswith((".props", ".targets")):
+                referenced.extend([n.lower() + ".dll" for n in build_references(repository_ctx.read(f))])
+        build_refs = sorted([
+            test_runtime_dir + "/" + f.basename
+            for f in repository_ctx.path(test_runtime_dir).readdir()
+            if f.basename.lower() in referenced
+        ])
 
     # Build file generation
     lines = [
@@ -310,6 +322,9 @@ def _nuget_package_repo_impl(repository_ctx):
 
     lines.append('csharp_import(')
     lines.append('    name = "{}",'.format(pkg_id))
+    if build_refs:
+        compile_refs_expr += " + {}".format(repr(build_refs))
+        runtime_dlls_expr += " + {}".format(repr(build_refs))
     lines.append('    compile_refs = {},'.format(compile_refs_expr))
     lines.append('    runtime_dlls = {},'.format(runtime_dlls_expr))
     lines.append('    native_libs = {},'.format(native_libs_expr))

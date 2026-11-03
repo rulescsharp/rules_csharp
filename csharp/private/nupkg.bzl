@@ -127,6 +127,41 @@ def base64_to_hex(value):
             bits = bits & ((1 << width) - 1)
     return "".join(out)
 
+def build_references(text):
+    """Returns the names of the unconditional <Reference> items in an MSBuild props or targets file.
+
+    A package's build/ files can add a dll from build/<tfm>/ as a compile reference.
+    MSTest.TestFramework does this for TestFramework.Extensions, which holds TestContext.
+    Items under a Condition or a When are left out, since they only apply to opt-in modes.
+    """
+    for _ in range(len(text)):
+        start = text.find("<!--")
+        if start < 0:
+            break
+        end = text.find("-->", start)
+        text = text[:start] + (text[end + 3:] if end >= 0 else "")
+
+    names = []
+    conditioned = [False]
+    for chunk in text.split("<")[1:]:
+        tag = chunk.split(">", 1)[0].strip()
+        if not tag or tag[0] in "!?":
+            continue
+        if tag.startswith("/"):
+            if len(conditioned) > 1:
+                conditioned.pop()
+            continue
+        element = tag.rstrip("/").replace("\t", " ").replace("\r", " ").replace("\n", " ").split(" ")[0]
+        here = conditioned[-1] or "Condition" in tag or element in ("When", "Otherwise")
+        if element == "Reference" and not here:
+            include = tag.split("Include=", 1)
+            if len(include) == 2 and include[1][:1] in ("\"", "'"):
+                quote = include[1][0]
+                names.append(include[1][1:].split(quote, 1)[0].split(",", 1)[0].strip())
+        if not tag.endswith("/"):
+            conditioned.append(here)
+    return names
+
 def sha512_files(ctx, paths):
     """Returns the lowercase hex sha512 of each file, in order.
 

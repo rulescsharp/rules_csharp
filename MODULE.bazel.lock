@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "D08ungoOqQI1E03Vq5BERyWd9zJwwnx9HDeTnUZ+pzg=",
+        "bzlTransitiveDigest": "xs+A7zAgcMBVIiWK11N5r5slrvYxRF1qhrKUQFyvi4M=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -652,7 +652,7 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "D08ungoOqQI1E03Vq5BERyWd9zJwwnx9HDeTnUZ+pzg=",
+        "bzlTransitiveDigest": "xs+A7zAgcMBVIiWK11N5r5slrvYxRF1qhrKUQFyvi4M=",
         "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
