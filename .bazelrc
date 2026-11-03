@@ -1,3 +1,7 @@
 common --enable_bzlmod
 build --incompatible_strict_action_env
 test --test_output=errors
+
+# Fall back to a Maven Central mirror for stardoc's jars. Bazel 7 only knows the
+# experimental name of this flag.
+common --experimental_downloader_config=bazel_downloader.cfg
