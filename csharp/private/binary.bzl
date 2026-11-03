@@ -357,9 +357,9 @@ if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverl
 )
 if "{target_type}"=="library" (
     if not "%FILTER%"=="" (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console --TestCaseFilter:"%FILTER%" %*
+        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console --TestCaseFilter:"%FILTER%" %* -- RunConfiguration.TreatNoTestsAsError=true
     ) else (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console %*
+        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console %* -- RunConfiguration.TreatNoTestsAsError=true
     )
 ) else (
     if not "%FILTER%"=="" set TESTBRIDGE_TEST_ONLY=%FILTER%
@@ -445,7 +445,8 @@ if [ -n "${{COVERAGE_DIR:-}}" ] && [ -f "$COVERLET_DLL" ]; then
 fi
 
 if [ "{target_type}" = "library" ]; then
-    set -- exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console ${{FILTER:+--TestCaseFilter:"$FILTER"}} "$@"
+    # vstest exits 0 when it finds no tests, so a missing adapter or a filter that matches nothing would pass.
+    set -- exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console ${{FILTER:+--TestCaseFilter:"$FILTER"}} "$@" -- RunConfiguration.TreatNoTestsAsError=true
     TEST_BIN="$DOTNET_BIN"
 else
     if [ -n "$FILTER" ]; then
@@ -573,11 +574,13 @@ $target = @("exec")
 if ($TargetType -eq "library") {
     $target += @($Vstest, $appDll, "--logger:console")
     if ($Filter) { $target += "--TestCaseFilter:$Filter" }
+    $target += $args
+    $target += @("--", "RunConfiguration.TreatNoTestsAsError=true")
 } else {
     if ($Filter) { $env:TESTBRIDGE_TEST_ONLY = $Filter }
     $target += $appDll
+    $target += $args
 }
-$target += $args
 
 $info = Join-Path $env:SCRATCH "coverlet.info"
 $coverlet = @(
