@@ -270,6 +270,10 @@ def _binary_common_impl(ctx, is_test = False):
             coverage_files["coverlet/" + f.short_path.split("tools/net8.0/any/", 1)[1]] = f
             if f.basename == "coverlet.console.dll":
                 coverlet_dll = "coverlet/" + f.basename
+        if ctx.coverage_instrumented():
+            # With --instrument_test_targets the test's own pdb goes next to its dll in runfiles too.
+            # The app dir already holds it.
+            runfiles_symlinks[prefix + pdb.basename] = pdb
         for dest, f in coverage_files.items():
             runfiles_symlinks[prefix + dest] = f
             if dest not in app_files:
@@ -364,7 +368,7 @@ rem Read the filter with delayed expansion so an exclamation mark in it stays pu
 set "FILTER=!TESTBRIDGE_TEST_ONLY!"
 if "!FILTER!"=="" set "FILTER={test_filter}"
 if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverlet_dll}"=="" (
-    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" "!FILTER!" %*
+    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" %*
     set EXIT_CODE=!ERRORLEVEL!
     rmdir /s /q "%SCRATCH%" 2>nul
     exit /b !EXIT_CODE!
@@ -572,8 +576,10 @@ exit $EXIT_CODE
     return providers
 
 # Runs a test under Coverlet on Windows and writes Bazel's coverlet.dat. Mirrors the sh runner.
-_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $Launcher, $RuntimeConfig, $TargetType, $Filter)
+_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $Launcher, $RuntimeConfig, $TargetType)
 $ErrorActionPreference = "Stop"
+# The filter comes from the runner's environment, so an empty one can't shift the arguments after it.
+$Filter = $env:FILTER
 
 function Quote([string]$a) {
     '"' + ($a -replace '(\\\\*)"', '$1$1\\"' -replace '(\\\\+)$', '$1$1') + '"'
@@ -807,8 +813,9 @@ A test runs in one of two ways, picked by `target_type`:
   shards, and writes one `<testcase>` per test to `test.xml`.
 
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
-Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. That's the code a
+test depends on, in both modes. Add `--instrument_test_targets` to count the test's own sources too. CI
+checks coverage on Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
 coverage wrapper there.
 """,
     implementation = _csharp_test_impl,

@@ -1,4 +1,4 @@
-load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_library", "csharp_proto_library", "csharp_test")
+load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_import", "csharp_library", "csharp_proto_library", "csharp_test")
 load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
@@ -59,6 +59,16 @@ csharp_library(
 older_csharp_info_dep_test(
     name = "older_csharp_info_dep_test",
     target_under_test = ":on_older_info",
+)
+
+csharp_import(
+    name = "import_on_older_info",
+    deps = [":older_info"],
+)
+
+older_csharp_info_dep_test(
+    name = "older_csharp_info_import_dep_test",
+    target_under_test = ":import_on_older_info",
 )
 
 # The proto rules moved to rules_csharp_proto. Old call sites keep their attributes and fail

@@ -57,7 +57,7 @@ namespace RulesCsharp.Tools
                     return code;
                 // xUnit v2 matches traits only while running, not while listing, so its filtered list
                 // comes back empty. Split every test then and let the run apply the filter. No shard
-                // sees the others, so a trait filter that matches nothing passes. Drop this once
+                // sees the others, so a filter that matches nothing passes. Drop this once
                 // xunit.runner.visualstudio applies traits while listing.
                 bool xunit = File.Exists(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(testDll))!, "xunit.runner.visualstudio.testadapter.dll"));
                 if (names.Count == 0 && filter.Length > 0 && xunit)
@@ -121,12 +121,14 @@ namespace RulesCsharp.Tools
         static int EnvInt(string name, int fallback) =>
             int.TryParse(Environment.GetEnvironmentVariable(name), out int v) ? v : fallback;
 
-        // A response file keeps a long filter clear of the Windows command line limit. vstest reads
-        // \\ as \ and \" as " in it.
+        // A response file keeps a long filter clear of the Windows command line limit. The pinned vstest
+        // keeps a backslash unless a quote follows it, and newer vstest reads a single \ before a filter
+        // character the same way, so backslashes go in as they are. A \" doesn't survive the pinned
+        // parser, but filters rarely hold a quote.
         static string Rsp(string work, string name, string line)
         {
             string path = Path.Combine(work, name);
-            File.WriteAllText(path, "\"" + line.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"" + Environment.NewLine);
+            File.WriteAllText(path, "\"" + line.Replace("\"", "\\\"") + "\"" + Environment.NewLine);
             return "@" + path;
         }
 

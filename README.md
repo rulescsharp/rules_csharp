@@ -75,7 +75,7 @@ accident. `test_filter` and `--test_filter` take a VSTest
 
 With `shard_count`, each shard runs its own share of the test cases. Cases that share a name, like the
 rows of a data driven test, stay together in one shard. xUnit v2 only applies trait filters while
-running, not while listing, so a sharded xUnit test whose trait filter matches nothing passes instead of
+running, not while listing, so a sharded xUnit test whose filter matches nothing passes instead of
 failing.
 
 ### Per-test results in test.xml

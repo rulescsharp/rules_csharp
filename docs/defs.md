@@ -230,8 +230,9 @@ A test runs in one of two ways, picked by `target_type`:
   shards, and writes one `<testcase>` per test to `test.xml`.
 
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
-Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. That's the code a
+test depends on, in both modes. Add `--instrument_test_targets` to count the test's own sources too. CI
+checks coverage on Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
 coverage wrapper there.
 
 **ATTRIBUTES**
