@@ -6,6 +6,7 @@ load(
     "read_user_netrc",
     "use_netrc",
 )
+load(":nupkg.bzl", "file_url")
 
 TFM_PRECEDENCE = [
     "net10.0",
@@ -133,24 +134,21 @@ def _find_analyzer_dir(repository_ctx):
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
 
-def _nuget_package_repo_impl(repository_ctx):
-    pkg_id = repository_ctx.attr.package_id
-    version = repository_ctx.attr.version
-    content_hash = repository_ctx.attr.content_hash
-
+def package_urls(pkg_id, version, feeds, local_package_dirs):
+    """Returns the URLs to try, in order, for one package version."""
     id_lower = pkg_id.lower()
     ver_lower = version.lower()
 
-    configured_feeds = list(repository_ctx.attr.feeds)
+    configured_feeds = list(feeds)
     if not configured_feeds:
         configured_feeds = ["https://api.nuget.org/v3-flatcontainer"]
 
     candidate_urls = []
 
-    for local_dir in repository_ctx.attr.local_package_dirs:
+    for local_dir in local_package_dirs:
         clean_dir = local_dir[:-1] if local_dir.endswith("/") else local_dir
         if not clean_dir.startswith("file://"):
-            clean_dir = "file://" + clean_dir
+            clean_dir = file_url(clean_dir)
         candidate_urls.append("{}/{}.{}.nupkg".format(clean_dir, pkg_id, version))
         candidate_urls.append("{}/{}.{}.nupkg".format(clean_dir, id_lower, version))
         candidate_urls.append("{}/{}/{}/{}.{}.nupkg".format(clean_dir, id_lower, version, id_lower, version))
@@ -188,24 +186,33 @@ def _nuget_package_repo_impl(repository_ctx):
     )
     if official_flat not in candidate_urls:
         candidate_urls.append(official_flat)
+    return candidate_urls
 
-    if repository_ctx.attr.netrc:
-        netrc_data = read_netrc(repository_ctx, repository_ctx.attr.netrc)
-    elif "NETRC" in repository_ctx.os.environ:
-        netrc_data = read_netrc(repository_ctx, repository_ctx.os.environ["NETRC"])
+def package_auth(ctx, netrc, urls, auth_patterns):
+    """Returns the download auth for urls from netrc, $NETRC or the user's .netrc."""
+    if netrc:
+        netrc_data = read_netrc(ctx, netrc)
+    elif "NETRC" in ctx.os.environ:
+        netrc_data = read_netrc(ctx, ctx.os.environ["NETRC"])
     else:
-        netrc_data = read_user_netrc(repository_ctx)
+        netrc_data = read_user_netrc(ctx)
+    return use_netrc(netrc_data, urls, auth_patterns)
 
-    auth_patterns = repository_ctx.attr.auth_patterns if hasattr(repository_ctx.attr, "auth_patterns") else {}
-    auth = use_netrc(netrc_data, candidate_urls, auth_patterns)
-    integrity = "sha512-" + content_hash if content_hash else ""
-
-    repository_ctx.download_and_extract(
-        url = candidate_urls,
-        type = "zip",
-        integrity = integrity,
-        auth = auth,
+def _nuget_package_repo_impl(repository_ctx):
+    urls = package_urls(
+        repository_ctx.attr.package_id,
+        repository_ctx.attr.version,
+        repository_ctx.attr.feeds,
+        repository_ctx.attr.local_package_dirs,
     )
+    repository_ctx.download_and_extract(
+        url = urls,
+        type = "zip",
+        sha256 = repository_ctx.attr.sha256,
+        auth = package_auth(repository_ctx, repository_ctx.attr.netrc, urls, repository_ctx.attr.auth_patterns),
+    )
+
+    pkg_id = repository_ctx.attr.package_id
 
     # 1. Compile references: ref/<tfm>/ falling back to lib/<tfm>/
     compile_dir = _find_best_tfm_dir(repository_ctx, "ref")
@@ -331,9 +338,6 @@ nuget_package_repo = repository_rule(
         "auth_patterns": attr.string_dict(
             doc = "Host to authentication pattern mappings.",
         ),
-        "content_hash": attr.string(
-            doc = "Base64-encoded SHA-512 package content hash.",
-        ),
         "dependencies": attr.string_list(
             doc = "Direct dependency package identifier list.",
         ),
@@ -349,6 +353,9 @@ nuget_package_repo = repository_rule(
         "package_id": attr.string(
             doc = "NuGet package identifier string.",
             mandatory = True,
+        ),
+        "sha256": attr.string(
+            doc = "SHA-256 of the downloaded .nupkg file. Empty downloads it unverified.",
         ),
         "version": attr.string(
             doc = "NuGet package version string.",

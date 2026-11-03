@@ -1,13 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "dependencies": {
     "net8.0": {
       "Google.Protobuf": {
         "type": "Direct",
         "requested": "[3.30.0, )",
         "resolved": "3.30.0",
-        "contentHash": "MatzpUQ9/cQkLuWHDExAKQL1Zi9vPMCTkofm/vOuHyqIyBc9XvzZJV9ElW2fDw8DNkjW7MQOchSi8h7VZPxCzQ==",
-        "dependencies": {}
+        "contentHash": "ZnEI4oZWnHvd+Yz5Gcnx5Q5RQIuzptIzd0fmxAN8f81FYHI0USZqMOrPTkrsd/QEzo9vl2b217v9FqFgHfufQw=="
       }
     }
   }

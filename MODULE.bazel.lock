@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
+        "bzlTransitiveDigest": "lUXG6zwnDb2xwiur9YAFSckCV3eNMiAC7E7HDo0EoTs=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -652,22 +652,22 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "TGvLl/DXpTGAziHdmyAm1iSJnDXmD8KybF7cJ4VHpSA=",
+        "bzlTransitiveDigest": "lUXG6zwnDb2xwiur9YAFSckCV3eNMiAC7E7HDo0EoTs=",
         "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json 3875a1e8525c7b49be497ee6aebcc204cfbc88647ff08d4009430926a349b2ea"
+          "FILE:@@//tests/integration/packages.lock.json 869020849a5a70a623ccf2c053777c329b165ce985b9a7e802d0f22dff760a0a"
         ],
         "generatedRepoSpecs": {
           "nuget_commandlineparser": {
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
               "auth_patterns": {},
-              "content_hash": "TzZORclmjH58xqkitIjz+lIwM8INekMmlPCmrwXOUo6gSB2DdeL08QMsaZA0e0gDzpoOSAaMb+FexG+xJU8IXQ==",
               "dependencies": [],
               "feeds": [],
               "local_package_dirs": [],
               "package_id": "CommandLineParser",
+              "sha256": "02953dcb5c97eb475a4a33e4dca60305e27b5d9072296f21b1ef4d45919c8dea",
               "version": "2.9.1"
             }
           },
@@ -675,11 +675,11 @@
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
               "auth_patterns": {},
-              "content_hash": "EOgPDkmNZpfHDo407lseoTt2UYRXzuIErP5MjA9bbJcaVEymbzI8yBNldtM32uzszJgdpbJkfO5EtryMP+ZaMA==",
               "dependencies": [],
               "feeds": [],
               "local_package_dirs": [],
               "package_id": "PolySharp",
+              "sha256": "97a873f921be7043bcd7bc5332ae036c948956745ee857ebfae246563fedd7bd",
               "version": "1.14.1"
             }
           },
@@ -687,11 +687,11 @@
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
               "auth_patterns": {},
-              "content_hash": "BL3ZLJxNoGGagdsMfGLt1JBNxzpcx1Cx4H2d+ryS5d/s6pmydwkDBZyfag2B6knPfLS8xTchRvuJ2JA+9x48mA==",
               "dependencies": [],
               "feeds": [],
               "local_package_dirs": [],
               "package_id": "Riok.Mapperly",
+              "sha256": "6965da6f891734a2f4341562ecde47c9d51c1d28c013fdee182da7789e981a75",
               "version": "3.6.0"
             }
           },

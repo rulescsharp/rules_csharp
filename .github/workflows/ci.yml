@@ -82,3 +82,36 @@ jobs:
       - name: Execute examples tests
         working-directory: examples
         run: bazel test //...
+
+  nuget-fetch:
+    name: NuGet fetch (Bazel ${{ matrix.bazel }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bazel: [7.x, 8.x, 9.x]
+    env:
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+
+      - name: Start bazel-remote with the remote asset API
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/bazel-remote" \
+            https://github.com/buchgr/bazel-remote/releases/download/v2.6.1/bazel-remote-2.6.1-linux-amd64
+          echo "025d53aeb03a7fdd4a0e76262a5ae9eeee9f64d53ca510deff1c84cf3f276784  $RUNNER_TEMP/bazel-remote" | sha256sum -c
+          chmod +x "$RUNNER_TEMP/bazel-remote"
+          "$RUNNER_TEMP/bazel-remote" --dir "$RUNNER_TEMP/bazel-remote-cache" --max_size 1 \
+            --experimental_remote_asset_api \
+            --grpc_address localhost:9092 --http_address localhost:9091 &
+          for _ in $(seq 30); do curl -fs localhost:9091/status >/dev/null && exit 0; sleep 1; done
+          exit 1
+
+      - name: Fetch a signed package from packages.lock.json
+        run: tests/nuget_fetch/fetch_test.sh grpc://localhost:9092
