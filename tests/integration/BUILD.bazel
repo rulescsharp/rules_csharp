@@ -116,3 +116,17 @@ csharp_test(
         "@nuget//:Microsoft.NET.Test.Sdk",
     ],
 )
+
+# A real xUnit suite, with the adapter from xunit.runner.visualstudio, split over two shards.
+csharp_test(
+    name = "xunit_sharded",
+    srcs = ["XunitSuite.cs"],
+    shard_count = 2,
+    target_type = "library",
+    test_filter = "Category=Unit",
+    deps = [
+        "@nuget//:Microsoft.NET.Test.Sdk",
+        "@nuget//:xunit",
+        "@nuget//:xunit.runner.visualstudio",
+    ],
+)

@@ -49,18 +49,23 @@ namespace RulesCsharp.Tools
             int index = EnvInt("TEST_SHARD_INDEX", 0);
             string? xmlOutput = Environment.GetEnvironmentVariable("XML_OUTPUT_FILE");
 
+            bool requireTests = true;
             if (total > 1)
             {
-                string listFile = Path.Combine(work, "tests.txt");
-                var list = new List<string> { vstest, testDll, "--ListFullyQualifiedTests", "--ListTestsTargetPath:" + listFile };
-                if (filter.Length > 0)
-                    list.Add(Rsp(work, "list.rsp", "--TestCaseFilter:" + filter));
-                int code = Vstest(list);
+                var names = List(vstest, testDll, filter, work, out int code);
                 if (code != 0)
                     return code;
-
-                // Data rows and theory cases share a name, so they stay in one shard.
-                var names = File.ReadAllLines(listFile).Where(n => n.Length > 0).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
+                if (names.Count == 0 && filter.Length > 0)
+                {
+                    // xUnit v2 can't match traits while discovering, only while running, so its
+                    // filtered list comes back empty. Split every test then and let the run filter
+                    // them. shortcut: a trait filter that matches nothing passes when sharded, revisit
+                    // once xunit.runner.visualstudio filters traits in discovery.
+                    names = List(vstest, testDll, "", work, out code);
+                    if (code != 0)
+                        return code;
+                    requireTests = names.Count == 0;
+                }
                 if (names.Count == 0)
                 {
                     Console.Error.WriteLine(filter.Length > 0 ? "No test matches the given testcase filter `" + filter + "`" : "No test is available in " + testDll);
@@ -87,12 +92,26 @@ namespace RulesCsharp.Tools
             run.AddRange(extra);
             // vstest exits 0 when it finds no tests, so a missing adapter or a filter that matches nothing would pass.
             run.Add("--");
-            run.Add("RunConfiguration.TreatNoTestsAsError=true");
+            run.Add("RunConfiguration.TreatNoTestsAsError=" + (requireTests ? "true" : "false"));
             int exit = Vstest(run);
 
-            if (!string.IsNullOrEmpty(xmlOutput) && File.Exists(trx))
-                ToJUnit(XDocument.Load(trx), Path.GetFileNameWithoutExtension(testDll)).Save(xmlOutput);
+            if (!string.IsNullOrEmpty(xmlOutput))
+                (File.Exists(trx) ? ToJUnit(XDocument.Load(trx), Path.GetFileNameWithoutExtension(testDll)) : new XDocument(new XElement("testsuites"))).Save(xmlOutput);
             return exit;
+        }
+
+        // Data rows and theory cases share a name, so they stay in one shard.
+        static List<string> List(string vstest, string testDll, string filter, string work, out int code)
+        {
+            string listFile = Path.Combine(work, "tests.txt");
+            File.Delete(listFile);
+            var list = new List<string> { vstest, testDll, "--ListFullyQualifiedTests", "--ListTestsTargetPath:" + listFile };
+            if (filter.Length > 0)
+                list.Add(Rsp(work, "list.rsp", "--TestCaseFilter:" + filter));
+            code = Vstest(list);
+            if (code != 0 || !File.Exists(listFile))
+                return new List<string>();
+            return File.ReadAllLines(listFile).Where(n => n.Length > 0).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
         }
 
         static int EnvInt(string name, int fallback) =>
