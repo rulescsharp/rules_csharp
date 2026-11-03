@@ -13,11 +13,24 @@ Then load the rules from this file:
 ```starlark
 load("@rules_csharp_proto//csharp:defs.bzl", "csharp_grpc_library", "csharp_proto_library")
 ```
+
+The rules run protoc from protobuf's proto toolchain. By default that's protoc built from source,
+which needs a C++17 compiler. To use the prebuilt protoc that protobuf publishes, add this to
+`.bazelrc`:
+
+```
+common --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
+```
+
+On Bazel 7 and 8 also add `common --incompatible_enable_proto_toolchain_resolution`, or
+`proto_library` keeps building protoc from source. Bazel 7's default C++ toolchain can't build it.
 """
 
 load("@protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
 load("@rules_csharp//csharp/private:common.bzl", "target_framework_transition")
 load("@rules_csharp//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl")
+
+_PROTO_TOOLCHAIN = "@protobuf//bazel/private:proto_toolchain_type"
 
 def _proto_to_csharp_basename(proto_file):
     base = proto_file.basename
@@ -94,7 +107,7 @@ def _proto_common_impl(ctx, is_grpc = False):
 
     ctx.actions.run(
         mnemonic = "ProtocGenCSharp" if not is_grpc else "ProtocGenCSharpGrpc",
-        executable = ctx.executable._protoc,
+        executable = ctx.toolchains[_PROTO_TOOLCHAIN].proto.proto_compiler,
         arguments = [args],
         inputs = proto_info.transitive_sources,
         outputs = protoc_outputs,
@@ -116,11 +129,6 @@ _PROTO_ATTRS.update({
         default = None,
         providers = [ProtoInfo],
         doc = "Target providing ProtoInfo with proto sources.",
-    ),
-    "_protoc": attr.label(
-        default = "@protobuf//:protoc",
-        executable = True,
-        cfg = "exec",
     ),
 })
 
@@ -146,7 +154,7 @@ csharp_proto_library = rule(
     implementation = _csharp_proto_library_impl,
     attrs = _PROTO_ATTRS,
     cfg = target_framework_transition,
-    toolchains = ["@rules_csharp//csharp:toolchain_type"],
+    toolchains = ["@rules_csharp//csharp:toolchain_type", _PROTO_TOOLCHAIN],
 )
 
 csharp_grpc_library = rule(
@@ -154,5 +162,5 @@ csharp_grpc_library = rule(
     implementation = _csharp_grpc_library_impl,
     attrs = _GRPC_ATTRS,
     cfg = target_framework_transition,
-    toolchains = ["@rules_csharp//csharp:toolchain_type"],
+    toolchains = ["@rules_csharp//csharp:toolchain_type", _PROTO_TOOLCHAIN],
 )
