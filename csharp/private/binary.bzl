@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "compile_impl")
+load(":compile.bzl", "DATA_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -18,6 +18,20 @@ def _binary_common_impl(ctx, is_test = False):
     csharp_info = compile_providers[0]
     main_dll = csharp_info.runtime_dll
     pdb = csharp_info.pdb
+    assembly = output_assembly(ctx)
+
+    # The host loads one assembly per name, so a second one with the same name would silently go missing.
+    # One target built for two frameworks is still one assembly. Prebuilt packages often ship the same
+    # dll, like Microsoft.TestPlatform.CoreUtilities in both test platform packages. The app keeps the
+    # first of those in dependency order where MSBuild would pick the higher version, so only a clash
+    # with an assembly built here fails.
+    assembly_owners = {}
+    for f in csharp_info.transitive_runtime_dlls.to_list():
+        other = assembly_owners.setdefault(f.basename.lower(), f)
+        if other.owner != f.owner and not (other.is_source and f.is_source):
+            built = other if f.is_source else f
+            fail("""{} loads two assemblies named {}, from {} and {}. Set output_assembly on {} so each \
+name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owner, f.owner, built.owner))
 
     #monikers
     tfm = csharp_info.target_framework or "net8.0"
@@ -32,19 +46,18 @@ def _binary_common_impl(ctx, is_test = False):
     probing_paths_str = ", ".join(probing_paths)
 
     # 1. Synthesize <name>.runtimeconfig.json
-    runtimeconfig_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".runtimeconfig.json")
-    sdk_flavor = getattr(ctx.attr, "sdk", "Microsoft.NET.Sdk")
-    if sdk_flavor == "Microsoft.NET.Sdk.Web":
+    runtimeconfig_json = ctx.actions.declare_file(app_dir + assembly + ".runtimeconfig.json")
+    frameworks = csharp_info.framework_references.to_list()
+    if frameworks:
         framework_section = """    "frameworks": [
-      {
-        "name": "Microsoft.NETCore.App",
+%s
+    ],""" % ",\n".join([
+            """      {
+        "name": "%s",
         "version": "%s"
-      },
-      {
-        "name": "Microsoft.AspNetCore.App",
-        "version": "%s"
-      }
-    ],""" % (framework_version, framework_version)
+      }""" % (name, framework_version)
+            for name in ["Microsoft.NETCore.App"] + sorted(frameworks)
+        ])
     else:
         framework_section = """    "framework": {
       "name": "Microsoft.NETCore.App",
@@ -76,13 +89,13 @@ def _binary_common_impl(ctx, is_test = False):
     )
 
     # 2. Synthesize <name>.deps.json
-    deps_json = ctx.actions.declare_file(app_dir + ctx.label.name + ".deps.json")
+    deps_json = ctx.actions.declare_file(app_dir + assembly + ".deps.json")
 
     main_deps = {}
     target_entries = []
     library_entries = []
 
-    seen_dep_names = {ctx.label.name: True}
+    seen_dep_names = {assembly: True}
     for dep_file in csharp_info.transitive_runtime_dlls.to_list():
         if dep_file.basename != main_dll.basename:
             dep_name = dep_file.basename[:-4] if dep_file.basename.endswith(".dll") else dep_file.basename
@@ -112,7 +125,7 @@ def _binary_common_impl(ctx, is_test = False):
           "{dll_name}": {{}}
         }}
       }}""".format(
-        name = ctx.label.name,
+        name = assembly,
         dll_name = main_dll.basename,
         main_deps_str = main_deps_str,
     )
@@ -121,7 +134,7 @@ def _binary_common_impl(ctx, is_test = False):
       "type": "project",
       "serviceable": false,
       "sha512": ""
-    }}""".format(name = ctx.label.name)
+    }}""".format(name = assembly)
 
     all_target_entries = [root_target_entry] + target_entries
     all_library_entries = [root_library_entry] + library_entries
@@ -280,9 +293,6 @@ def _binary_common_impl(ctx, is_test = False):
                 declared = ctx.actions.declare_file(app_dir + dest)
                 ctx.actions.symlink(output = declared, target_file = f)
                 extra_output_files.append(declared)
-
-    data_files = ctx.files.data if hasattr(ctx.files, "data") else []
-    runfiles_files.extend(data_files)
 
     target_type = getattr(ctx.attr, "target_type", "exe")
     executable_file = exe_file
@@ -542,7 +552,7 @@ exit $EXIT_CODE
             csharp_info.transitive_runtime_dlls.to_list() +
             csharp_info.transitive_native_libs.to_list(),
         ),
-    )
+    ).merge(library_runfiles(ctx, list(ctx.attr.deps) + list(ctx.attr.exports)))
 
     providers = [
         DefaultInfo(
@@ -559,7 +569,7 @@ exit $EXIT_CODE
     if is_test:
         test_env = dict(toolchain.dotnet_env) if hasattr(toolchain, "dotnet_env") and toolchain.dotnet_env else dict(SEALED_DOTNET_ENV)
         for k, v in getattr(ctx.attr, "env", {}).items():
-            test_env[k] = v
+            test_env[k] = ctx.expand_location(v, targets = ctx.attr.data + ctx.attr.deps)
         test_env["DOTNET_ROOT"] = dotnet_root_rel
         providers.append(
             testing.TestEnvironment(
@@ -658,6 +668,11 @@ _BINARY_ATTRS = {
         default = Label("//csharp/private/tools:apphost_patcher_runtimeconfig"),
         doc = "Runtime configuration file for patcher executable.",
     ),
+    "data": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = DATA_DOC,
+    ),
     "defines": attr.string_list(
         default = [],
         doc = "Preprocessor symbols to define during compilation.",
@@ -666,6 +681,11 @@ _BINARY_ATTRS = {
         default = [],
         doc = "Direct dependency libraries.",
         providers = [[CSharpInfo]],
+    ),
+    "editorconfig_files": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = EDITORCONFIG_FILES_DOC,
     ),
     "exports": attr.label_list(
         default = [],
@@ -686,6 +706,10 @@ _BINARY_ATTRS = {
         default = {},
         doc = "Files mapped to destination output paths.",
     ),
+    "framework_references": attr.string_list(
+        default = [],
+        doc = FRAMEWORK_REFERENCES_DOC,
+    ),
     "generate_assembly_info": attr.bool(
         default = True,
         doc = "Synthesize assembly information attributes.",
@@ -701,6 +725,10 @@ _BINARY_ATTRS = {
     "langversion": attr.string(
         default = "latest",
         doc = "Target C# language version specification.",
+    ),
+    "output_assembly": attr.string(
+        default = "",
+        doc = OUTPUT_ASSEMBLY_DOC,
     ),
     "plugins": attr.label_list(
         default = [],
@@ -722,7 +750,7 @@ _BINARY_ATTRS = {
     ),
     "sdk": attr.string(
         default = "Microsoft.NET.Sdk",
-        doc = "Target .NET SDK project flavor.",
+        doc = SDK_DOC,
         values = [
             "Microsoft.NET.Sdk",
             "Microsoft.NET.Sdk.Web",
@@ -780,14 +808,9 @@ _TEST_ATTRS.update({
         default = configuration_field(fragment = "coverage", name = "output_generator"),
         doc = "Bazel coverage output generator that merges LCOV reports.",
     ),
-    "data": attr.label_list(
-        allow_files = True,
-        default = [],
-        doc = "Runtime data files for test execution.",
-    ),
     "env": attr.string_dict(
         default = {},
-        doc = "Environment variables for test execution.",
+        doc = "Environment variables for test execution. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`.",
     ),
     "env_inherit": attr.string_list(
         default = [],

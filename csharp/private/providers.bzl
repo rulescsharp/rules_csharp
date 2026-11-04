@@ -4,6 +4,7 @@ CSharpInfo = provider(
     doc = "Propagates compilation references, runtime assemblies, and unmanaged libraries.",
     fields = {
         "compile_ref": "Metadata-only reference assembly File produced by -refout.",
+        "framework_references": "Depset of shared framework names (for example Microsoft.AspNetCore.App) this target and its dependencies need at compile time and run time. Providers created before this field existed lack it, so read it with getattr.",
         "pdb": "Portable program database symbol File.",
         "runtime_dll": "Implementation assembly File.",
         "target_framework": "Target framework moniker string (for example net8.0).",

@@ -4,12 +4,104 @@ load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framewo
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
+_ASPNETCORE_APP = "Microsoft.AspNetCore.App"
+
+# Shared frameworks the toolchain ships reference assemblies for. Microsoft.NETCore.App is always referenced.
+_SUPPORTED_FRAMEWORK_REFERENCES = [_ASPNETCORE_APP]
+
+FRAMEWORK_REFERENCES_DOC = """Shared frameworks this target uses, the same as MSBuild `FrameworkReference` items. The only \
+supported value is `"Microsoft.AspNetCore.App"`, since `Microsoft.NETCore.App` is always referenced. A target gets the framework's \
+reference assemblies at compile time, and everything that depends on it gets them too, so an executable lists the \
+framework in its runtimeconfig.json and the runtime loads it. `sdk = "Microsoft.NET.Sdk.Web"` implies \
+`"Microsoft.AspNetCore.App"`."""
+
+SDK_DOC = """Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the \
+ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the \
+Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs \
+`framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package."""
+
+OUTPUT_ASSEMBLY_DOC = """Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target \
+name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it \
+is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with \
+the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and \
+one of them is built from sources."""
+
+EDITORCONFIG_FILES_DOC = """`.editorconfig` and global analyzer config files passed to the compiler with \
+`-analyzerconfig`, the same as MSBuild `EditorConfigFiles` items. Sections such as `[*.cs]` match source paths \
+under the directory of the file, so keep a `.editorconfig` next to or above the sources it covers. Severity settings \
+such as `dotnet_diagnostic.CS8618.severity = none` apply to compiler warnings. CA and IDE rules come from analyzers, so \
+they take effect only when the analyzer package is in `plugins` or `deps`."""
+
+DATA_DOC = """Files and targets needed at run time. Their files and runfiles join the runfiles of this target and of \
+every executable that depends on it, along with the `content` of libraries it depends on."""
+
+def library_runfiles(ctx, deps):
+    """Returns the runfiles of a target's data and of the targets it depends on.
+
+    Args:
+      ctx: The rule context.
+      deps: Targets whose runfiles an executable needs alongside this target.
+
+    Returns:
+      A runfiles object.
+    """
+    data = getattr(ctx.attr, "data", [])
+    return ctx.runfiles(files = getattr(ctx.files, "data", [])).merge_all(
+        [t[DefaultInfo].default_runfiles for t in data] + [d[DefaultInfo].default_runfiles for d in deps],
+    )
+
+def output_assembly(ctx):
+    """Returns the assembly name a target compiles to.
+
+    Args:
+      ctx: The rule context.
+
+    Returns:
+      The assembly name, without an extension.
+    """
+    name = getattr(ctx.attr, "output_assembly", "")
+    if not name:
+        return ctx.label.name
+    if "/" in name or "\\" in name or name.lower().endswith((".dll", ".exe")):
+        fail("output_assembly of {} is \"{}\". Use an assembly name without a directory or extension.".format(ctx.label, name))
+    return name
+
+def framework_references(ctx, deps):
+    """Returns the shared frameworks a target and its dependencies use.
+
+    Args:
+      ctx: The rule context.
+      deps: Targets whose CSharpInfo carries their own framework references.
+
+    Returns:
+      A depset of shared framework names.
+    """
+    own = []
+    for name in getattr(ctx.attr, "framework_references", []):
+        if name not in _SUPPORTED_FRAMEWORK_REFERENCES:
+            fail("framework_references of {} lists \"{}\", which is not a shared framework the toolchain provides. Use one of: {}. Microsoft.NETCore.App is always referenced.".format(
+                ctx.label,
+                name,
+                ", ".join(_SUPPORTED_FRAMEWORK_REFERENCES),
+            ))
+        own.append(name)
+    if getattr(ctx.attr, "sdk", "") == "Microsoft.NET.Sdk.Web":
+        own.append(_ASPNETCORE_APP)
+
+    # CSharpInfo created by an older rules_csharp has no framework_references field.
+    transitive = [getattr(dep[CSharpInfo], "framework_references", None) for dep in deps if CSharpInfo in dep]
+    return depset(own, transitive = [d for d in transitive if d])
+
 def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
-    out_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".dll")
-    refout_dll = ctx.actions.declare_file(out_dir + ctx.label.name + ".ref.dll")
-    pdb = ctx.actions.declare_file(out_dir + ctx.label.name + ".pdb")
+    assembly = output_assembly(ctx)
+    if assembly != ctx.label.name and not out_dir:
+        # Keeps two libraries in one package from writing the same file.
+        out_dir = ctx.label.name + "_/"
+    out_dll = ctx.actions.declare_file(out_dir + assembly + ".dll")
+    refout_dll = ctx.actions.declare_file(out_dir + assembly + ".ref.dll")
+    pdb = ctx.actions.declare_file(out_dir + assembly + ".pdb")
 
     direct_deps_and_exports = list(ctx.attr.deps) + list(getattr(ctx.attr, "exports", []))
 
@@ -67,8 +159,10 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         args.add("-reference:" + ref.path.replace("\\", "/"))
 
     sdk_flavor = getattr(ctx.attr, "sdk", "Microsoft.NET.Sdk")
+    frameworks = framework_references(ctx, direct_deps_and_exports)
+    uses_aspnetcore = _ASPNETCORE_APP in frameworks.to_list()
     aspnet_depsets = []
-    if sdk_flavor == "Microsoft.NET.Sdk.Web" and hasattr(toolchain, "aspnetcore_ref_pack") and toolchain.aspnetcore_ref_pack:
+    if uses_aspnetcore and hasattr(toolchain, "aspnetcore_ref_pack") and toolchain.aspnetcore_ref_pack:
         aspnet_depsets.append(toolchain.aspnetcore_ref_pack)
         for ref in toolchain.aspnetcore_ref_pack.to_list():
             args.add("-reference:" + ref.path.replace("\\", "/"))
@@ -81,6 +175,10 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     # Analyzers
     for analyzer in analyzers_depset.to_list():
         args.add("-analyzer:" + analyzer.path.replace("\\", "/"))
+
+    editorconfig_files = getattr(ctx.files, "editorconfig_files", [])
+    for f in editorconfig_files:
+        args.add("-analyzerconfig:" + f.path.replace("\\", "/"))
 
     # Synthesized GlobalUsings
     synthesized_srcs = []
@@ -95,18 +193,31 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
             "System.Threading",
             "System.Threading.Tasks",
         ]
-        if sdk_flavor in ("Microsoft.NET.Sdk.Web", "Microsoft.NET.Sdk.Worker"):
+        # The same usings the Web and Worker SDKs add in MSBuild
+        if sdk_flavor == "Microsoft.NET.Sdk.Web":
             namespaces.extend([
                 "System.Net.Http.Json",
                 "Microsoft.AspNetCore.Builder",
                 "Microsoft.AspNetCore.Hosting",
                 "Microsoft.AspNetCore.Http",
                 "Microsoft.AspNetCore.Routing",
+            ])
+        if sdk_flavor in ("Microsoft.NET.Sdk.Web", "Microsoft.NET.Sdk.Worker"):
+            namespaces.extend([
                 "Microsoft.Extensions.Configuration",
                 "Microsoft.Extensions.DependencyInjection",
                 "Microsoft.Extensions.Hosting",
                 "Microsoft.Extensions.Logging",
             ])
+        if sdk_flavor == "Microsoft.NET.Sdk.Worker" and not uses_aspnetcore and not [
+            ref
+            for ref in all_compile_refs
+            if ref.basename.startswith("Microsoft.Extensions.Hosting.Abstractions.")
+        ]:
+            # The Worker SDK adds no reference for these usings. MSBuild projects get one from a package.
+            fail("""{} uses sdk = "Microsoft.NET.Sdk.Worker", whose implicit usings need the Microsoft.Extensions \
+hosting assemblies. Add framework_references = ["{}"], depend on the Microsoft.Extensions.Hosting NuGet package, or set \
+implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         usings_content = "// <auto-generated/>\n" + "\n".join(["global using global::" + ns + ";" for ns in namespaces]) + "\n"
         ctx.actions.write(
             output = global_usings_file,
@@ -126,8 +237,8 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     internals_visible_to = getattr(ctx.attr, "internals_visible_to", [])
     if generate_assembly_info or internals_visible_to:
         info_lines += [
-            "[assembly: global::System.Reflection.AssemblyTitle(\"%s\")]" % ctx.label.name,
-            "[assembly: global::System.Reflection.AssemblyProduct(\"%s\")]" % ctx.label.name,
+            "[assembly: global::System.Reflection.AssemblyTitle(\"%s\")]" % assembly,
+            "[assembly: global::System.Reflection.AssemblyProduct(\"%s\")]" % assembly,
             "[assembly: global::System.Reflection.AssemblyVersion(\"1.0.0.0\")]",
             "[assembly: global::System.Reflection.AssemblyFileVersion(\"1.0.0.0\")]",
         ]
@@ -147,7 +258,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
             for res_target, logical_name in ctx.attr.resources.items():
                 for f in res_target.files.to_list():
                     resource_files.append(f)
-                    log_name = logical_name if logical_name else (ctx.label.name + "." + f.basename)
+                    log_name = logical_name if logical_name else (assembly + "." + f.basename)
                     args.add("-resource:" + f.path.replace("\\", "/") + "," + log_name)
         else:
             for f in ctx.files.resources:
@@ -160,7 +271,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         args.add(s.path.replace("\\", "/"))
 
     # Inputs strictly limited to srcs, resources, toolchain ref_pack, analyzers, and transitive_compile_refs
-    direct_inputs = [toolchain.csc_dll] + all_srcs + resource_files
+    direct_inputs = [toolchain.csc_dll] + all_srcs + resource_files + editorconfig_files
     worker_depsets = []
     if toolchain.csc_worker:
         direct_inputs.append(toolchain.csc_worker)
@@ -230,6 +341,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
         transitive_test_runtime_dlls = transitive_test_runtime_dlls,
+        framework_references = frameworks,
     )
 
     default_info = DefaultInfo(
@@ -237,7 +349,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         runfiles = ctx.runfiles(
             files = [out_dll, pdb] + resource_files + getattr(ctx.files, "content", []),
             transitive_files = depset(transitive_runtime_dlls.to_list()),
-        ),
+        ).merge(library_runfiles(ctx, direct_deps_and_exports)),
     )
 
     providers = [csharp_info, default_info]
@@ -326,6 +438,7 @@ def _csharp_import_impl(ctx):
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
         transitive_test_runtime_dlls = depset(transitive = transitive_test_runtime_depsets),
+        framework_references = framework_references(ctx, direct_deps),
     )
 
     all_files = list(compile_refs) + list(runtime_dlls) + list(native_libs) + list(analyzers)
@@ -334,7 +447,7 @@ def _csharp_import_impl(ctx):
         runfiles = ctx.runfiles(
             files = runtime_dlls + native_libs,
             transitive_files = depset(transitive = [transitive_runtime_dlls, transitive_native_libs]),
-        ),
+        ).merge(library_runfiles(ctx, direct_deps)),
     )
 
     providers = [csharp_info, default_info]
@@ -375,6 +488,11 @@ _COMMON_ATTRS = {
         default = [],
         doc = "Precompiled reference assembly DLL files.",
     ),
+    "data": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = DATA_DOC,
+    ),
     "defines": attr.string_list(
         default = [],
         doc = "Preprocessor symbols to define during compilation.",
@@ -388,6 +506,11 @@ _COMMON_ATTRS = {
         allow_files = [".dll"],
         default = [],
         doc = "Precompiled implementation assembly DLL files.",
+    ),
+    "editorconfig_files": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = EDITORCONFIG_FILES_DOC,
     ),
     "exports": attr.label_list(
         default = [],
@@ -413,6 +536,10 @@ _COMMON_ATTRS = {
         default = {},
         doc = "Files mapped to destination output paths.",
     ),
+    "framework_references": attr.string_list(
+        default = [],
+        doc = FRAMEWORK_REFERENCES_DOC,
+    ),
     "generate_assembly_info": attr.bool(
         default = True,
         doc = "Synthesize assembly information attributes.",
@@ -428,6 +555,10 @@ _COMMON_ATTRS = {
     "langversion": attr.string(
         default = "latest",
         doc = "Target C# language version specification.",
+    ),
+    "output_assembly": attr.string(
+        default = "",
+        doc = OUTPUT_ASSEMBLY_DOC,
     ),
     "plugins": attr.label_list(
         default = [],
@@ -454,7 +585,7 @@ _COMMON_ATTRS = {
     ),
     "sdk": attr.string(
         default = "Microsoft.NET.Sdk",
-        doc = "Target .NET SDK project flavor.",
+        doc = SDK_DOC,
         values = [
             "Microsoft.NET.Sdk",
             "Microsoft.NET.Sdk.Web",

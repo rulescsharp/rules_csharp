@@ -39,6 +39,14 @@ jobs:
       - name: Execute all tests
         run: bazel test //...
 
+      - name: Check .editorconfig sections outside the compile worker
+        # bazel test compiled this library in the persistent worker. A fresh server without the action
+        # cache compiles it again as a plain process, sandboxed where the OS has a sandbox.
+        run: |
+          bazel shutdown
+          bazel build //tests/integration/editorconfig:editorconfig_lib --nouse_action_cache --noremote_accept_cached \
+            --strategy=CSharpCompile=${{ runner.os == 'Windows' && 'local' || 'sandboxed' }}
+
       - name: Check library test filters and results
         run: |
           # Bazel exits with 3 when tests ran and failed, so a build error can't pass for a test failure.
@@ -73,6 +81,10 @@ jobs:
       - name: Run examples binary
         working-directory: examples
         run: test "$(bazel run //:hello | tr -d '\r')" = "Hello, Bazel!"
+
+      - name: Run web example
+        working-directory: examples
+        run: test "$(bazel run //web | tr -d '\r')" = "200 Hello, web!"
 
       - name: Check examples coverage
         working-directory: examples

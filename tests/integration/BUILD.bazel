@@ -85,6 +85,40 @@ csharp_test(
     sdk = "Microsoft.NET.Sdk.Web",
 )
 
+# A plain binary runs against the ASP.NET Core shared framework a Web library uses.
+csharp_library(
+    name = "web_lib",
+    srcs = ["WebLib.cs"],
+    sdk = "Microsoft.NET.Sdk.Web",
+)
+
+csharp_test(
+    name = "framework_reference_test",
+    srcs = ["FrameworkReferenceTest.cs"],
+    deps = [":web_lib"],
+)
+
+# The Worker SDK's implicit usings compile against the hosting assemblies in ASP.NET Core.
+csharp_test(
+    name = "worker_test",
+    srcs = ["WorkerTest.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    sdk = "Microsoft.NET.Sdk.Worker",
+)
+
+csharp_library(
+    name = "renamed_lib",
+    srcs = ["Lib.cs"],
+    output_assembly = "Contoso.Renamed",
+)
+
+csharp_test(
+    name = "output_assembly_test",
+    srcs = ["OutputAssemblyTest.cs"],
+    output_assembly = "Contoso.Renamed.Tests",
+    deps = [":renamed_lib"],
+)
+
 # A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",
