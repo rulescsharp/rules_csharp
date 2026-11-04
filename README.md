@@ -110,6 +110,11 @@ through Bazel's [test environment](https://bazel.build/reference/test-encycloped
   configured one.
   Set `dotnet_versions` on the `csharp.toolchain` tag to pick other SDKs.
 - Linux, macOS and Windows.
+- NuGet packages get their `runtimes/` files for `linux-x64`, `linux-arm64`, `osx-arm64`, `osx-x64`
+  and `win-x64`. Like `dotnet restore`, each RID falls back along the
+  [RID graph](https://learn.microsoft.com/en-us/dotnet/core/rid-catalog) to the first match:
+  `linux-x64` and `linux-arm64` to `linux` and then `unix`, `osx-arm64` and `osx-x64` to `osx`
+  and then `unix`, and `win-x64` to `win`. A package with none of them uses its `lib/` files.
 
 `bazel coverage` on Windows needs Bazel 9 or later.
 

@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
+        "bzlTransitiveDigest": "9TIQGWdlM+cuTQOe3HnsP/jUczfH3cU0W0DRBzeVAG8=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -652,11 +652,11 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
+        "bzlTransitiveDigest": "9TIQGWdlM+cuTQOe3HnsP/jUczfH3cU0W0DRBzeVAG8=",
         "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json c77b4d4a22d0b643eb8dbba5c1a844b457879af9e31ff89b6150df12ba7af884"
+          "FILE:@@//tests/integration/packages.lock.json 59d34740418b1ee6f208c5c06e862c02e0b65f4dfbdd479e38f439531a5cf71b"
         ],
         "generatedRepoSpecs": {
           "nuget_commandlineparser": {
@@ -741,6 +741,21 @@
               "sha256": "6965da6f891734a2f4341562ecde47c9d51c1d28c013fdee182da7789e981a75",
               "use_public_sources": true,
               "version": "3.6.0"
+            }
+          },
+          "nuget_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "runtime.native.System.IO.Ports"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "System.IO.Ports",
+              "sha256": "1bc8fd7347ab07365f2405655b4f17a04e7c80f862356244efcb056815767b84",
+              "use_public_sources": true,
+              "version": "8.0.0"
             }
           },
           "nuget_xunit": {
@@ -923,6 +938,90 @@
               "version": "13.0.1"
             }
           },
+          "nuget_runtime_linux_arm_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.linux-arm.runtime.native.System.IO.Ports",
+              "sha256": "9b9fa877b661973226c1213d13b42ad671f70379ae5f00a7b2fad552827bf961",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
+          "nuget_runtime_linux_arm64_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.linux-arm64.runtime.native.System.IO.Ports",
+              "sha256": "2206c6dc74f7034548b569796ac13b1e4d336908d09de2904bd7fae5c4008cb2",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
+          "nuget_runtime_linux_x64_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.linux-x64.runtime.native.System.IO.Ports",
+              "sha256": "e38a2e8d21e1734365d960af2d891272b032a8d0256c67ce9e5ccfc02a1fc250",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
+          "nuget_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "runtime.linux-arm.runtime.native.System.IO.Ports",
+                "runtime.linux-arm64.runtime.native.System.IO.Ports",
+                "runtime.linux-x64.runtime.native.System.IO.Ports",
+                "runtime.osx-arm64.runtime.native.System.IO.Ports",
+                "runtime.osx-x64.runtime.native.System.IO.Ports"
+              ],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.native.System.IO.Ports",
+              "sha256": "06a131554ff31e3ee8fbe9b33a963dcbe8bdc996556dc1a63bf0f8991ce2818f",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
+          "nuget_runtime_osx_arm64_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.osx-arm64.runtime.native.System.IO.Ports",
+              "sha256": "a05305eb4cb24f2ddf5f02e55c990d52dcdd473e04cb17af01421c7dc5444821",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
+          "nuget_runtime_osx_x64_runtime_native_system_io_ports": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "local_package_dirs": [],
+              "package_id": "runtime.osx-x64.runtime.native.System.IO.Ports",
+              "sha256": "6f627d0dcba732d0a1a6ec8d0b45cddfd674d56afbdfc1c8fecc895b59fd6df1",
+              "use_public_sources": true,
+              "version": "8.0.0"
+            }
+          },
           "nuget_system_diagnostics_diagnosticsource": {
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
@@ -1044,6 +1143,7 @@
                 "MSTest.TestFramework": "nuget_mstest_testframework",
                 "PolySharp": "nuget_polysharp",
                 "Riok.Mapperly": "nuget_riok_mapperly",
+                "System.IO.Ports": "nuget_system_io_ports",
                 "xunit": "nuget_xunit",
                 "xunit.runner.visualstudio": "nuget_xunit_runner_visualstudio",
                 "Microsoft.ApplicationInsights": "nuget_microsoft_applicationinsights",
@@ -1056,6 +1156,12 @@
                 "Microsoft.TestPlatform.ObjectModel": "nuget_microsoft_testplatform_objectmodel",
                 "Microsoft.TestPlatform.TestHost": "nuget_microsoft_testplatform_testhost",
                 "Newtonsoft.Json": "nuget_newtonsoft_json",
+                "runtime.linux-arm.runtime.native.System.IO.Ports": "nuget_runtime_linux_arm_runtime_native_system_io_ports",
+                "runtime.linux-arm64.runtime.native.System.IO.Ports": "nuget_runtime_linux_arm64_runtime_native_system_io_ports",
+                "runtime.linux-x64.runtime.native.System.IO.Ports": "nuget_runtime_linux_x64_runtime_native_system_io_ports",
+                "runtime.native.System.IO.Ports": "nuget_runtime_native_system_io_ports",
+                "runtime.osx-arm64.runtime.native.System.IO.Ports": "nuget_runtime_osx_arm64_runtime_native_system_io_ports",
+                "runtime.osx-x64.runtime.native.System.IO.Ports": "nuget_runtime_osx_x64_runtime_native_system_io_ports",
                 "System.Diagnostics.DiagnosticSource": "nuget_system_diagnostics_diagnosticsource",
                 "System.Reflection.Metadata": "nuget_system_reflection_metadata",
                 "xunit.abstractions": "nuget_xunit_abstractions",

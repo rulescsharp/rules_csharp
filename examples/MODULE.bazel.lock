@@ -212,7 +212,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
+        "bzlTransitiveDigest": "9TIQGWdlM+cuTQOe3HnsP/jUczfH3cU0W0DRBzeVAG8=",
         "usagesDigest": "c2LakH3bpMum/Zp8SZPnpBf/N2oIYLYoZfAfC9YndJU=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools"
@@ -674,7 +674,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
+        "bzlTransitiveDigest": "9TIQGWdlM+cuTQOe3HnsP/jUczfH3cU0W0DRBzeVAG8=",
         "usagesDigest": "IjoYjMqlvKwm0U72hL5w0nN0kQ+WHbho0yoCZ5qiHgA=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools",

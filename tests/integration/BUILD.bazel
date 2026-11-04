@@ -119,6 +119,13 @@ csharp_test(
     deps = [":renamed_lib"],
 )
 
+# System.IO.Ports only works from its runtimes/unix and runtimes/win files.
+csharp_test(
+    name = "rid_fallback_test",
+    srcs = ["RidFallbackTest.cs"],
+    deps = ["@nuget//:System.IO.Ports"],
+)
+
 # A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",
