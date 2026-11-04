@@ -8,6 +8,19 @@
 # 2. A new output base with the same repository cache fetches with
 #    --repository_disable_download.
 # 3. A local feed with one flipped byte in the package fails and names it.
+# 4. With use_public_sources = False, a feed without the package fails
+#    instead of falling back to nuget.org, and a feed with it passes.
+# 5. With use_public_sources = False, an empty contentHash fails, also when
+#    a later tag leaves use_public_sources at its default.
+# 6. A nuget_config with <clear /> and nuget.org's v3 index.json fetches from
+#    nuget.org.
+# 7. A nuget_config with <clear /> and another feed's v3 index.json fetches
+#    from the PackageBaseAddress that index.json lists.
+# 8. With use_public_sources = False, an SDK patch version pinned only in
+#    sdk_checksums and coverlet.console come from a file mirror, and an empty
+#    mirror fails instead of falling back to Microsoft's CDN, also when a later
+#    tag leaves use_public_sources at its default.
+# 9. A feed whose index.json is not a v3 service index fails and names it.
 #
 # Output bases and feeds sit under a path with a space and a %.
 set -euo pipefail
@@ -38,7 +51,7 @@ PACKAGE_VERSION=1.14.1
 CONTENT_HASH="mOOmFYwad3MIOL14VCjj02LljyF1GNw1wP0YVlxtcPvqdxjGGMNdNJJxHptlry3MOd8b40Flm8RPOM8JOlN2sQ=="
 
 write_module() {
-  local dir="$1" from_lock="$2"
+  local dir="$1" from_lock="$2" content_hash="${3-$CONTENT_HASH}"
   mkdir -p "$dir"
   cat >"$dir/MODULE.bazel" <<MODULE
 bazel_dep(name = "rules_csharp")
@@ -63,7 +76,7 @@ MODULE
         "type": "Direct",
         "requested": "[$PACKAGE_VERSION, )",
         "resolved": "$PACKAGE_VERSION",
-        "contentHash": "$CONTENT_HASH"
+        "contentHash": "$content_hash"
       }
     }
   }
@@ -114,6 +127,210 @@ fi
 if ! grep -q "$PACKAGE_ID $PACKAGE_VERSION: the downloaded package does not match its contentHash" "$WORK/tampered.log"; then
   cat "$WORK/tampered.log"
   echo "FAIL: the tampered fetch failed without naming the package" >&2
+  exit 1
+fi
+
+echo "--- public sources off, feed without the package"
+EMPTY_FEED="$WORK/empty feed"
+mkdir -p "$EMPTY_FEED"
+write_module "$WORK/private missing" "packages_lock_json = \"//:packages.lock.json\",
+    local_package_dirs = [\"$EMPTY_FEED\"],
+    use_public_sources = False,"
+if fetch "$WORK/private missing" "$WORK/output base 4" >"$WORK/private_missing.log" 2>&1; then
+  cat "$WORK/private_missing.log"
+  echo "FAIL: the package fetched from a public source" >&2
+  exit 1
+fi
+if grep -q "api.nuget.org" "$WORK/private_missing.log"; then
+  cat "$WORK/private_missing.log"
+  echo "FAIL: the fetch tried nuget.org" >&2
+  exit 1
+fi
+
+echo "--- public sources off, feed with the package"
+PRIVATE_FEED="$WORK/private feed"
+mkdir -p "$PRIVATE_FEED"
+curl -fsSL -o "$PRIVATE_FEED/$PACKAGE_ID.$PACKAGE_VERSION.nupkg" \
+  "https://api.nuget.org/v3-flatcontainer/polysharp/$PACKAGE_VERSION/polysharp.$PACKAGE_VERSION.nupkg"
+write_module "$WORK/private" "packages_lock_json = \"//:packages.lock.json\",
+    local_package_dirs = [\"$PRIVATE_FEED\"],
+    use_public_sources = False,"
+fetch "$WORK/private" "$WORK/output base 5"
+
+echo "--- public sources off, empty contentHash"
+write_module "$WORK/no hash" "packages_lock_json = \"//:packages.lock.json\",
+    local_package_dirs = [\"$PRIVATE_FEED\"],
+    use_public_sources = False," ""
+if fetch "$WORK/no hash" "$WORK/output base 6" >"$WORK/no_hash.log" 2>&1; then
+  cat "$WORK/no_hash.log"
+  echo "FAIL: a package with an empty contentHash fetched" >&2
+  exit 1
+fi
+if ! grep -q "$PACKAGE_ID $PACKAGE_VERSION has an empty contentHash" "$WORK/no_hash.log"; then
+  cat "$WORK/no_hash.log"
+  echo "FAIL: the empty contentHash fetch failed without naming the package" >&2
+  exit 1
+fi
+
+echo "--- public sources off in one tag, empty contentHash in a later tag"
+write_module "$WORK/two tags" "packages_lock_json = \"//:empty.lock.json\",
+    local_package_dirs = [\"$PRIVATE_FEED\"],
+    use_public_sources = False,"
+echo '{"version": 2, "dependencies": {}}' >"$WORK/two tags/empty.lock.json"
+cp "$WORK/no hash/packages.lock.json" "$WORK/two tags/no_hash.lock.json"
+cat >>"$WORK/two tags/MODULE.bazel" <<MODULE
+nuget.from_lock(
+    packages_lock_json = "//:no_hash.lock.json",
+)
+MODULE
+if fetch "$WORK/two tags" "$WORK/output base 9" >"$WORK/two_tags.log" 2>&1; then
+  cat "$WORK/two_tags.log"
+  echo "FAIL: a later tag turned public sources back on" >&2
+  exit 1
+fi
+if ! grep -q "$PACKAGE_ID $PACKAGE_VERSION has an empty contentHash" "$WORK/two_tags.log"; then
+  cat "$WORK/two_tags.log"
+  echo "FAIL: the two tag fetch failed without naming the package" >&2
+  exit 1
+fi
+
+echo "--- nuget_config with <clear /> and nuget.org's index.json"
+write_module "$WORK/nuget config" 'packages_lock_json = "//:packages.lock.json",
+    nuget_config = "//:NuGet.Config",'
+cat >"$WORK/nuget config/NuGet.Config" <<CONFIG
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+</configuration>
+CONFIG
+fetch "$WORK/nuget config" "$WORK/output base 10"
+
+# 8.0.404 isn't one of the SDKs rules_csharp knows, so only sdk_checksums
+# pins it. The hash is the one releases.json lists for the file.
+SDK_VERSION=8.0.404
+SDK_ARCHIVE="dotnet-sdk-$SDK_VERSION-linux-x64.tar.gz"
+SDK_SHA512=2f166f7f3bd508154d72d1783ffac6e0e3c92023ccc2c6de49d22b411fc8b9e6dd03e7576acc1bb5870a6951181129ba77f3bf94bb45fe9c70105b1b896b9bb9
+SDK_MIRROR="$WORK/sdk mirror"
+COVERLET=coverlet.console.10.1.0.nupkg
+
+write_sdk_module() {
+  local dir="$1" mirror_url="$2"
+  mkdir -p "$dir"
+  cat >"$dir/MODULE.bazel" <<MODULE
+bazel_dep(name = "rules_csharp")
+local_path_override(
+    module_name = "rules_csharp",
+    path = "$RULES_CSHARP",
+)
+
+csharp = use_extension("@rules_csharp//csharp:extensions.bzl", "csharp")
+csharp.toolchain(
+    dotnet_versions = ["$SDK_VERSION"],
+    mirror_urls = ["$mirror_url"],
+    sdk_checksums = {"$SDK_ARCHIVE": "$SDK_SHA512"},
+    use_public_sources = False,
+)
+use_repo(csharp, "csharp_coverlet", "dotnet_sdk_8_0_404_linux_x86_64")
+MODULE
+  touch "$dir/BUILD.bazel"
+}
+
+# file:// URL of a path, with the space and % escaped.
+file_url() {
+  local path="${1//%/%25}"
+  echo "file://${path// /%20}"
+}
+
+echo "--- public sources off, SDK and coverlet from an empty mirror"
+EMPTY_MIRROR="$WORK/empty mirror"
+mkdir -p "$EMPTY_MIRROR"
+write_sdk_module "$WORK/sdk missing" "$(file_url "$EMPTY_MIRROR")"
+OUTPUT_BASES+=("$WORK/output base 7")
+if (cd "$WORK/sdk missing" && bazel --output_base="$WORK/output base 7" query --repository_cache="$WORK/sdk repo cache" @dotnet_sdk_8_0_404_linux_x86_64//:all) >"$WORK/sdk_missing.log" 2>&1; then
+  cat "$WORK/sdk_missing.log"
+  echo "FAIL: the SDK fetched from a public source" >&2
+  exit 1
+fi
+if grep -q "azureedge.net" "$WORK/sdk_missing.log"; then
+  cat "$WORK/sdk_missing.log"
+  echo "FAIL: the SDK fetch tried Microsoft's CDN" >&2
+  exit 1
+fi
+
+echo "--- public sources off in one toolchain tag, default in a later tag"
+write_sdk_module "$WORK/sdk two tags" "$(file_url "$EMPTY_MIRROR")"
+cat >>"$WORK/sdk two tags/MODULE.bazel" <<MODULE
+csharp.toolchain(
+    dotnet_versions = ["$SDK_VERSION"],
+)
+MODULE
+OUTPUT_BASES+=("$WORK/output base 11")
+if (cd "$WORK/sdk two tags" && bazel --output_base="$WORK/output base 11" query --repository_cache="$WORK/sdk repo cache" @dotnet_sdk_8_0_404_linux_x86_64//:all) >"$WORK/sdk_two_tags.log" 2>&1; then
+  cat "$WORK/sdk_two_tags.log"
+  echo "FAIL: a later toolchain tag turned public sources back on" >&2
+  exit 1
+fi
+if grep -q "azureedge.net" "$WORK/sdk_two_tags.log"; then
+  cat "$WORK/sdk_two_tags.log"
+  echo "FAIL: the SDK fetch tried Microsoft's CDN" >&2
+  exit 1
+fi
+
+echo "--- public sources off, SDK and coverlet from a mirror"
+mkdir -p "$SDK_MIRROR/dotnet/Sdk/$SDK_VERSION"
+curl -fsSL -o "$SDK_MIRROR/dotnet/Sdk/$SDK_VERSION/$SDK_ARCHIVE" \
+  "https://builds.dotnet.microsoft.com/dotnet/Sdk/$SDK_VERSION/$SDK_ARCHIVE"
+curl -fsSL -o "$SDK_MIRROR/$COVERLET" \
+  "https://api.nuget.org/v3-flatcontainer/coverlet.console/10.1.0/$COVERLET"
+write_sdk_module "$WORK/sdk" "$(file_url "$SDK_MIRROR")"
+OUTPUT_BASES+=("$WORK/output base 8")
+(cd "$WORK/sdk" && bazel --output_base="$WORK/output base 8" query \
+  --repository_cache="$WORK/sdk repo cache" "@dotnet_sdk_8_0_404_linux_x86_64//:all + @csharp_coverlet//:files")
+
+echo "--- nuget_config with <clear /> and another feed's index.json"
+V3_FEED="$WORK/v3 feed"
+mkdir -p "$V3_FEED/flat2/polysharp/$PACKAGE_VERSION"
+cp "$PRIVATE_FEED/$PACKAGE_ID.$PACKAGE_VERSION.nupkg" \
+  "$V3_FEED/flat2/polysharp/$PACKAGE_VERSION/polysharp.$PACKAGE_VERSION.nupkg"
+cat >"$V3_FEED/index.json" <<INDEX
+{
+  "version": "3.0.0",
+  "resources": [
+    {"@id": "$(file_url "$V3_FEED/flat2")/", "@type": "PackageBaseAddress/3.0.0"}
+  ]
+}
+INDEX
+write_module "$WORK/v3 config" 'packages_lock_json = "//:packages.lock.json",
+    nuget_config = "//:NuGet.Config",'
+cat >"$WORK/v3 config/NuGet.Config" <<CONFIG
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="private" value="$(file_url "$V3_FEED/index.json")" />
+  </packageSources>
+</configuration>
+CONFIG
+fetch "$WORK/v3 config" "$WORK/output base 12"
+
+echo "--- nuget_config with an index.json that is not a service index"
+echo "<html>Sign in</html>" >"$V3_FEED/index.json"
+# A module of its own, because the last case's MODULE.bazel.lock already holds
+# the package base, so Bazel would not read index.json again.
+write_module "$WORK/not index config" 'packages_lock_json = "//:packages.lock.json",
+    nuget_config = "//:NuGet.Config",'
+cp "$WORK/v3 config/NuGet.Config" "$WORK/not index config/"
+if fetch "$WORK/not index config" "$WORK/output base 13" >"$WORK/not_index.log" 2>&1; then
+  cat "$WORK/not_index.log"
+  echo "FAIL: a feed with a non-JSON index.json fetched" >&2
+  exit 1
+fi
+if ! grep -q "index.json is not a v3 service index" "$WORK/not_index.log"; then
+  cat "$WORK/not_index.log"
+  echo "FAIL: the error does not name the index.json" >&2
   exit 1
 fi
 

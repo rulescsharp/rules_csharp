@@ -78,12 +78,6 @@ csharp_test(
     deps = ["//tests/support:runfiles"],
 )
 
-# NuGet packages resolve from an offline mirror.
-csharp_test(
-    name = "offline_mirror_test",
-    srcs = ["OfflineMirrorTest.cs"],
-)
-
 # A Microsoft.NET.Sdk.Web app compiles and starts.
 csharp_test(
     name = "web_test",

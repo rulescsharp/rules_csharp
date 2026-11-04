@@ -134,15 +134,16 @@ def _find_analyzer_dir(repository_ctx):
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
 
-def package_urls(pkg_id, version, feeds, local_package_dirs):
-    """Returns the URLs to try, in order, for one package version."""
+def package_urls(pkg_id, version, feeds, local_package_dirs, use_public_sources):
+    """Returns the URLs to try, in order, for one package version.
+
+    Local directories come first, then feeds, then nuget.org unless
+    use_public_sources is False.
+    """
     id_lower = pkg_id.lower()
     ver_lower = version.lower()
 
     configured_feeds = list(feeds)
-    if not configured_feeds:
-        configured_feeds = ["https://api.nuget.org/v3-flatcontainer"]
-
     candidate_urls = []
 
     for local_dir in local_package_dirs:
@@ -157,6 +158,10 @@ def package_urls(pkg_id, version, feeds, local_package_dirs):
         clean_feed = feed[:-1] if feed.endswith("/") else feed
         if clean_feed.endswith("/index.json"):
             clean_feed = clean_feed[:-len("/index.json")]
+
+        # nuget.org's v3 service index serves packages from its flat container.
+        if clean_feed.lower() == "https://api.nuget.org/v3":
+            clean_feed = "https://api.nuget.org/v3-flatcontainer"
 
         candidate_urls.append("{}/{}/{}/{}.{}.nupkg".format(
             clean_feed,
@@ -184,7 +189,7 @@ def package_urls(pkg_id, version, feeds, local_package_dirs):
         id_lower,
         ver_lower,
     )
-    if official_flat not in candidate_urls:
+    if use_public_sources and official_flat not in candidate_urls:
         candidate_urls.append(official_flat)
     return candidate_urls
 
@@ -204,6 +209,7 @@ def _nuget_package_repo_impl(repository_ctx):
         repository_ctx.attr.version,
         repository_ctx.attr.feeds,
         repository_ctx.attr.local_package_dirs,
+        repository_ctx.attr.use_public_sources,
     )
     repository_ctx.download_and_extract(
         url = urls,
@@ -377,6 +383,10 @@ nuget_package_repo = repository_rule(
         ),
         "sha256": attr.string(
             doc = "SHA-256 of the downloaded .nupkg file. Empty downloads it unverified.",
+        ),
+        "use_public_sources": attr.bool(
+            default = True,
+            doc = "Whether to fall back to nuget.org after the feeds.",
         ),
         "version": attr.string(
             doc = "NuGet package version string.",

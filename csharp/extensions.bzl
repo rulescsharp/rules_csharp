@@ -3,17 +3,28 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//csharp:toolchains.bzl", "DOTNET_ARTIFACTS", "PLATFORMS", "csharp_toolchains_hub", "runtime_pack", "sdk_exec")
 load("//csharp/private:nuget_repo.bzl", "nuget_hub_repo", "nuget_package_repo", "package_auth", "package_urls")
-load("//csharp/private:nupkg.bzl", "base64_to_hex", "sha512_files", "strip_signature")
+load("//csharp/private:nupkg.bzl", "base64_to_hex", "hex_to_sri", "sha512_files", "strip_signature")
+
+_COVERLET = "coverlet.console.10.1.0.nupkg"
 
 toolchain_tag = tag_class(
-    doc = "Declares .NET SDK versions and remote mirror configurations.",
+    doc = """Declares .NET SDK versions and where to download them from.
+
+The SDK archives come from `mirror_urls` first, then from Microsoft's download
+CDN. The coverage tool, coverlet.console, comes from `{mirror}/""" + _COVERLET + """`
+on each mirror first, then from nuget.org. Set `use_public_sources = False` to
+download only from the mirrors.
+""",
     attrs = {
         "auth_patterns": attr.string_dict(
             doc = "Host to authentication pattern mappings.",
         ),
         "dotnet_versions": attr.string_list(
             default = ["8.0.403", "9.0.200", "10.0.100"],
-            doc = "Supported .NET SDK version strings.",
+            doc = """Supported .NET SDK version strings.
+
+rules_csharp knows the checksums of the default versions. Any other version
+needs its archives in `sdk_checksums`.""",
         ),
         "mirror_urls": attr.string_list(
             doc = "Candidate mirror base URL list.",
@@ -21,12 +32,46 @@ toolchain_tag = tag_class(
         "netrc": attr.label(
             doc = "Authentication netrc configuration file label.",
         ),
+        "sdk_checksums": attr.string_dict(
+            doc = """Checksum of each SDK archive, keyed by archive file name.
+
+This pins any SDK version, including patch releases rules_csharp doesn't know
+about, so the download is checked and cached with no network access beyond
+the mirror. A value is the `hash` (hex sha512) that
+https://builds.dotnet.microsoft.com/dotnet/release-metadata/<major.minor>/releases.json
+lists for the file, or an SRI value such as `sha256-...`. The closest MSBuild
+equivalent is the `contentHash` that packages.lock.json records for each
+package. `dotnet` itself doesn't download an SDK.
+
+```starlark
+csharp.toolchain(
+    dotnet_versions = ["8.0.404"],
+    mirror_urls = ["https://artifacts.example.com/dotnet"],
+    sdk_checksums = {
+        "dotnet-sdk-8.0.404-linux-x64.tar.gz": "<sha512 from releases.json>",
+    },
+)
+```
+
+Each platform a build uses needs its archive here. An archive with no
+checksum fails when Bazel fetches it and names the file.""",
+        ),
         "url_templates": attr.string_list(
             default = [
                 "{mirror}/dotnet/Sdk/{version}/{archive}",
                 "{mirror}/artifactory/dotnet-sdk/{version}/{archive}",
             ],
             doc = "URL templates for mirror expansion.",
+        ),
+        "use_public_sources": attr.bool(
+            default = True,
+            doc = """Whether to fall back to Microsoft's download CDN and nuget.org.
+
+When False, the SDK archives and coverlet.console come only from
+`mirror_urls`, and Bazel never contacts a public host for them. This is the
+same as a NuGet.Config whose `<packageSources>` starts with `<clear />`.
+Setting it needs `mirror_urls`. Once any `csharp.toolchain` tag sets it to
+False, other tags can't turn it back on.""",
         ),
     },
 )
@@ -40,34 +85,31 @@ def _csharp_impl(module_ctx):
     ]
     netrc = None
     auth_patterns = {}
+    sdk_checksums = {}
+    use_public_sources = True
 
-    for mod in module_ctx.modules:
-        if not mod.is_root:
-            for tag in mod.tags.toolchain:
-                if tag.dotnet_versions:
-                    dotnet_versions = tag.dotnet_versions
-                if tag.mirror_urls:
-                    mirror_urls = tag.mirror_urls
-                if tag.url_templates:
-                    url_templates = tag.url_templates
-                if tag.netrc:
-                    netrc = tag.netrc
-                if tag.auth_patterns:
-                    auth_patterns = tag.auth_patterns
+    # The root module's tags win over its dependencies' tags.
+    tags = [t for mod in module_ctx.modules if not mod.is_root for t in mod.tags.toolchain]
+    tags += [t for mod in module_ctx.modules if mod.is_root for t in mod.tags.toolchain]
+    for tag in tags:
+        if tag.dotnet_versions:
+            dotnet_versions = tag.dotnet_versions
+        if tag.mirror_urls:
+            mirror_urls = tag.mirror_urls
+        if tag.url_templates:
+            url_templates = tag.url_templates
+        if tag.netrc:
+            netrc = tag.netrc
+        if tag.auth_patterns:
+            auth_patterns = tag.auth_patterns
+        sdk_checksums.update(tag.sdk_checksums)
 
-    for mod in module_ctx.modules:
-        if mod.is_root:
-            for tag in mod.tags.toolchain:
-                if tag.dotnet_versions:
-                    dotnet_versions = tag.dotnet_versions
-                if tag.mirror_urls:
-                    mirror_urls = tag.mirror_urls
-                if tag.url_templates:
-                    url_templates = tag.url_templates
-                if tag.netrc:
-                    netrc = tag.netrc
-                if tag.auth_patterns:
-                    auth_patterns = tag.auth_patterns
+        # Once any tag turns public sources off they stay off, so another tag can't quietly turn them back on.
+        use_public_sources = use_public_sources and tag.use_public_sources
+
+    if not use_public_sources and not mirror_urls:
+        fail("csharp.toolchain sets use_public_sources = False, so it needs mirror_urls to download the SDK from.")
+    mirrors = [m[:-1] if m.endswith("/") else m for m in mirror_urls]
 
     for version in dotnet_versions:
         v_slug = version.replace(".", "_")
@@ -77,8 +119,7 @@ def _csharp_impl(module_ctx):
             archive = "dotnet-sdk-{}-{}.{}".format(version, rid, ext)
 
             candidate_urls = []
-            for m in mirror_urls:
-                base = m[:-1] if m.endswith("/") else m
+            for base in mirrors:
                 for tmpl in url_templates:
                     candidate_urls.append(tmpl.format(
                         archive = archive,
@@ -86,11 +127,13 @@ def _csharp_impl(module_ctx):
                         rid = rid,
                         version = version,
                     ))
-            candidate_urls.append("https://dotnetcli.azureedge.net/dotnet/Sdk/{}/{}".format(version, archive))
+            if use_public_sources:
+                candidate_urls.append("https://dotnetcli.azureedge.net/dotnet/Sdk/{}/{}".format(version, archive))
 
-            integrity = ""
-            if version in DOTNET_ARTIFACTS and rid in DOTNET_ARTIFACTS[version]:
-                integrity = DOTNET_ARTIFACTS[version][rid]["sdk"]
+            if archive in sdk_checksums:
+                integrity = hex_to_sri(sdk_checksums[archive])
+            else:
+                integrity = DOTNET_ARTIFACTS.get(version, {}).get(rid, "")
 
             sdk_name = "dotnet_sdk_{}_{}".format(v_slug, p_name)
             sdk_exec(
@@ -118,6 +161,9 @@ def _csharp_impl(module_ctx):
                 urls = candidate_urls,
             )
 
+    coverlet_urls = [base + "/" + _COVERLET for base in mirrors]
+    if use_public_sources:
+        coverlet_urls.append("https://api.nuget.org/v3-flatcontainer/coverlet.console/10.1.0/" + _COVERLET)
     http_archive(
         name = "csharp_coverlet",
         build_file_content = """filegroup(
@@ -128,7 +174,7 @@ def _csharp_impl(module_ctx):
 """,
         sha256 = "b01e98cead98a7888745b5f2a48c4e71d4b5372e6c70e751b81cc8ccf4af0a76",
         type = "zip",
-        urls = ["https://api.nuget.org/v3-flatcontainer/coverlet.console/10.1.0/coverlet.console.10.1.0.nupkg"],
+        urls = coverlet_urls,
     )
 
     csharp_toolchains_hub(
@@ -160,8 +206,13 @@ NuGet checks it. The extension then pins the sha256 of each downloaded file,
 which MODULE.bazel.lock records. Later fetches check that sha256 and are
 served from the repository cache.
 
+Packages come from `local_package_dirs` first, then `feeds` (or the sources
+in `nuget_config`), then nuget.org. Set `use_public_sources = False` to
+download only from those directories and feeds.
+
 A package whose `contentHash` is empty, as `CsprojSync --bootstrap-lock` writes
-when restore fails, is not checked and is downloaded unverified.
+when restore fails, can't be checked. With public sources on, the extension
+warns and downloads it unverified. With them off, it fails.
 
 Feeds must use https or local directories. Bazel does not download over plain
 http without a known checksum.
@@ -174,7 +225,9 @@ http without a known checksum.
             doc = "Path to Directory.Packages.props file.",
         ),
         "feeds": attr.string_list(
-            doc = "Candidate package feed URLs.",
+            doc = """Package feed URLs, tried in order. Each is a v3 feed's `index.json`, the
+same URL a NuGet.Config `<add>` uses, or the package base URL that `index.json`
+lists as `PackageBaseAddress/3.0.0`.""",
         ),
         "local_package_dirs": attr.string_list(
             doc = "Local filesystem package directory paths.",
@@ -192,6 +245,18 @@ http without a known checksum.
         "packages_lock_json": attr.label(
             doc = "Path to packages.lock.json lockfile written by `dotnet restore`.",
             mandatory = True,
+        ),
+        "use_public_sources": attr.bool(
+            default = True,
+            doc = """Whether to fall back to nuget.org after the directories and feeds.
+
+When False, packages come only from `local_package_dirs`, `feeds` and the
+sources in `nuget_config`, so Bazel never contacts nuget.org for them, and a
+package with an empty `contentHash` fails instead of downloading unverified.
+A `nuget_config` whose `<packageSources>` has `<clear />` turns this off too,
+as it does for `dotnet restore`. Setting it needs at least one directory or
+feed. Once any `nuget.from_lock` tag turns it off, other tags can't turn it
+back on.""",
         ),
     },
 )
@@ -222,23 +287,48 @@ def _extract_block(content, start_tag, end_tag):
     return content[start:end]
 
 def _parse_nuget_config(content):
+    """Returns the package sources and whether a <clear /> dropped the inherited ones."""
     sources = []
+    cleared = False
     sources_block = _extract_block(content, "<packageSources>", "</packageSources>")
     if sources_block:
         for line in sources_block.splitlines():
             line = line.strip()
             if line.startswith("<clear") or "<clear/>" in line or "<clear />" in line:
                 sources = []
+                cleared = True
             elif line.startswith("<add"):
                 val = _extract_attr(line, "value")
                 if val:
                     sources.append(val)
-    return sources
+    return sources, cleared
 
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
 
-def _pin_packages(module_ctx, packages, feeds, local_dirs, netrc, auth_patterns):
+def _package_base(module_ctx, feed, index, netrc, auth_patterns):
+    """Returns the PackageBaseAddress/3.0.0 a v3 index.json lists, or feed as it is."""
+    url = feed.rstrip("/")
+    if not url.endswith("/index.json") or url.lower() == "https://api.nuget.org/v3/index.json":
+        return feed
+    output = "feeds/{}/index.json".format(index)
+    module_ctx.download(
+        url = url,
+        output = output,
+        auth = package_auth(module_ctx, netrc, [url], auth_patterns),
+    )
+    service_index = json.decode(module_ctx.read(output), default = None)
+    if type(service_index) != "dict":
+        fail("{} is not a v3 service index.".format(url))
+    for resource in service_index.get("resources", []):
+        types = resource.get("@type", [])
+        if type(types) == "string":
+            types = [types]
+        if "PackageBaseAddress/3.0.0" in types and resource.get("@id"):
+            return resource["@id"]
+    fail("{} lists no PackageBaseAddress/3.0.0 resource, so packages can't be downloaded from it.".format(url))
+
+def _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, netrc, auth_patterns):
     """Checks each package against its contentHash and returns its sha256 by id.
 
     For a signed package, and every package on nuget.org is signed, the
@@ -252,8 +342,13 @@ def _pin_packages(module_ctx, packages, feeds, local_dirs, netrc, auth_patterns)
     pending = []
     for pkg_id, info in packages.items():
         if not info["content_hash"]:
+            if not use_public_sources:
+                fail("{} {} has an empty contentHash in packages.lock.json. Run `dotnet restore --use-lock-file` to fill it in.".format(pkg_id, info["version"]))
+
+            # buildifier: disable=print
+            print("WARNING: {} {} has an empty contentHash in packages.lock.json, so it is downloaded unverified. Run `dotnet restore --use-lock-file` to fill it in.".format(pkg_id, info["version"]))
             continue
-        urls = package_urls(pkg_id, info["version"], feeds, local_dirs)
+        urls = package_urls(pkg_id, info["version"], feeds, local_dirs, use_public_sources)
         output = "nupkg/{}.{}.nupkg".format(pkg_id, info["version"])
         pending.append(struct(
             pkg_id = pkg_id,
@@ -294,9 +389,12 @@ def _nuget_impl(module_ctx):
     local_dirs = []
     netrc = None
     auth_patterns = {}
+    use_public_sources = True
 
     for mod in module_ctx.modules:
         for tag in mod.tags.from_lock:
+            # Once any tag or <clear /> turns public sources off they stay off.
+            use_public_sources = use_public_sources and tag.use_public_sources
             if tag.name:
                 hub_name = tag.name
             if tag.feeds:
@@ -310,9 +408,11 @@ def _nuget_impl(module_ctx):
 
             if tag.nuget_config:
                 xml_content = module_ctx.read(tag.nuget_config)
-                parsed_sources = _parse_nuget_config(xml_content)
+                parsed_sources, cleared = _parse_nuget_config(xml_content)
                 if parsed_sources:
                     feeds = parsed_sources
+                if cleared:
+                    use_public_sources = False
 
             content = module_ctx.read(tag.packages_lock_json)
             data = json.decode(content)
@@ -336,7 +436,10 @@ def _nuget_impl(module_ctx):
                             if d not in existing_deps:
                                 existing_deps.append(d)
 
-    sha256 = _pin_packages(module_ctx, packages, feeds, local_dirs, netrc, auth_patterns)
+    if not use_public_sources and not feeds and not local_dirs:
+        fail("nuget.from_lock has public sources off (use_public_sources = False or <clear /> in nuget_config), so it needs local_package_dirs, feeds or a nuget_config with sources.")
+    feeds = [_package_base(module_ctx, feed, i, netrc, auth_patterns) for i, feed in enumerate(feeds)]
+    sha256 = _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, netrc, auth_patterns)
 
     hub_packages = {}
     for pkg_id, info in packages.items():
@@ -351,6 +454,7 @@ def _nuget_impl(module_ctx):
             netrc = netrc,
             package_id = pkg_id,
             sha256 = sha256.get(pkg_id, ""),
+            use_public_sources = use_public_sources,
             version = info["version"],
         )
 
