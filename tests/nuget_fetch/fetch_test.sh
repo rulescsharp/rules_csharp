@@ -14,10 +14,13 @@
 #    a later tag leaves use_public_sources at its default.
 # 6. A nuget_config with <clear /> and nuget.org's v3 index.json fetches from
 #    nuget.org.
-# 7. With use_public_sources = False, an SDK patch version pinned only in
+# 7. A nuget_config with <clear /> and another feed's v3 index.json fetches
+#    from the PackageBaseAddress that index.json lists.
+# 8. With use_public_sources = False, an SDK patch version pinned only in
 #    sdk_checksums and coverlet.console come from a file mirror, and an empty
 #    mirror fails instead of falling back to Microsoft's CDN, also when a later
 #    tag leaves use_public_sources at its default.
+# 9. A feed whose index.json is not a v3 service index fails and names it.
 #
 # Output bases and feeds sit under a path with a space and a %.
 set -euo pipefail
@@ -286,5 +289,44 @@ write_sdk_module "$WORK/sdk" "$(file_url "$SDK_MIRROR")"
 OUTPUT_BASES+=("$WORK/output base 8")
 (cd "$WORK/sdk" && bazel --output_base="$WORK/output base 8" query \
   --repository_cache="$WORK/sdk repo cache" "@dotnet_sdk_8_0_404_linux_x86_64//:all + @csharp_coverlet//:files")
+
+echo "--- nuget_config with <clear /> and another feed's index.json"
+V3_FEED="$WORK/v3 feed"
+mkdir -p "$V3_FEED/flat2/polysharp/$PACKAGE_VERSION"
+cp "$PRIVATE_FEED/$PACKAGE_ID.$PACKAGE_VERSION.nupkg" \
+  "$V3_FEED/flat2/polysharp/$PACKAGE_VERSION/polysharp.$PACKAGE_VERSION.nupkg"
+cat >"$V3_FEED/index.json" <<INDEX
+{
+  "version": "3.0.0",
+  "resources": [
+    {"@id": "$(file_url "$V3_FEED/flat2")/", "@type": "PackageBaseAddress/3.0.0"}
+  ]
+}
+INDEX
+write_module "$WORK/v3 config" 'packages_lock_json = "//:packages.lock.json",
+    nuget_config = "//:NuGet.Config",'
+cat >"$WORK/v3 config/NuGet.Config" <<CONFIG
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="private" value="$(file_url "$V3_FEED/index.json")" />
+  </packageSources>
+</configuration>
+CONFIG
+fetch "$WORK/v3 config" "$WORK/output base 12"
+
+echo "--- nuget_config with an index.json that is not a service index"
+echo "<html>Sign in</html>" >"$V3_FEED/index.json"
+if fetch "$WORK/v3 config" "$WORK/output base 13" >"$WORK/not_index.log" 2>&1; then
+  cat "$WORK/not_index.log"
+  echo "FAIL: a feed with a non-JSON index.json fetched" >&2
+  exit 1
+fi
+if ! grep -q "index.json is not a v3 service index" "$WORK/not_index.log"; then
+  cat "$WORK/not_index.log"
+  echo "FAIL: the error does not name the index.json" >&2
+  exit 1
+fi
 
 echo "PASS"

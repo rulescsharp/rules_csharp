@@ -225,9 +225,9 @@ http without a known checksum.
             doc = "Path to Directory.Packages.props file.",
         ),
         "feeds": attr.string_list(
-            doc = """Package feed URLs, tried in order. Each is the package base URL that a v3
-feed's `index.json` lists as `PackageBaseAddress/3.0.0`. nuget.org's
-`https://api.nuget.org/v3/index.json` works as it is.""",
+            doc = """Package feed URLs, tried in order. Each is a v3 feed's `index.json`, the
+same URL a NuGet.Config `<add>` uses, or the package base URL that `index.json`
+lists as `PackageBaseAddress/3.0.0`.""",
         ),
         "local_package_dirs": attr.string_list(
             doc = "Local filesystem package directory paths.",
@@ -305,6 +305,28 @@ def _parse_nuget_config(content):
 
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
+
+def _package_base(module_ctx, feed, index, netrc, auth_patterns):
+    """Returns the PackageBaseAddress/3.0.0 a v3 index.json lists, or feed as it is."""
+    url = feed.rstrip("/")
+    if not url.endswith("/index.json") or url.lower() == "https://api.nuget.org/v3/index.json":
+        return feed
+    output = "feeds/{}/index.json".format(index)
+    module_ctx.download(
+        url = url,
+        output = output,
+        auth = package_auth(module_ctx, netrc, [url], auth_patterns),
+    )
+    service_index = json.decode(module_ctx.read(output), default = None)
+    if type(service_index) != "dict":
+        fail("{} is not a v3 service index.".format(url))
+    for resource in service_index.get("resources", []):
+        types = resource.get("@type", [])
+        if type(types) == "string":
+            types = [types]
+        if "PackageBaseAddress/3.0.0" in types and resource.get("@id"):
+            return resource["@id"]
+    fail("{} lists no PackageBaseAddress/3.0.0 resource, so packages can't be downloaded from it.".format(url))
 
 def _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, netrc, auth_patterns):
     """Checks each package against its contentHash and returns its sha256 by id.
@@ -416,6 +438,7 @@ def _nuget_impl(module_ctx):
 
     if not use_public_sources and not feeds and not local_dirs:
         fail("nuget.from_lock has public sources off (use_public_sources = False or <clear /> in nuget_config), so it needs local_package_dirs, feeds or a nuget_config with sources.")
+    feeds = [_package_base(module_ctx, feed, i, netrc, auth_patterns) for i, feed in enumerate(feeds)]
     sha256 = _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, netrc, auth_patterns)
 
     hub_packages = {}

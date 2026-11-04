@@ -212,7 +212,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "Ut7Zp10r1PbvFdQ5vdXGuJCrsu11FxSJEx7AsLLplkw=",
+        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
         "usagesDigest": "XyoWHefLjk817Egbf3OorjKrjbwfXzWgn05KZWpw2zE=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools"
@@ -674,7 +674,7 @@
     },
     "@@rules_csharp+//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "Ut7Zp10r1PbvFdQ5vdXGuJCrsu11FxSJEx7AsLLplkw=",
+        "bzlTransitiveDigest": "yqJWTuBaVGzAMTyHr/dIENkF/sPW3kG3o3yIuINMaPk=",
         "usagesDigest": "psEk0bZi+vLZLnGdksNnTRwh5BLQ4zh2dV3FzPizzUk=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools",
@@ -690,6 +690,7 @@
               "local_package_dirs": [],
               "package_id": "Google.Protobuf",
               "sha256": "932c622f7786b53f8c8e60463ebdde04f0ff05b4558f7362abc40322b7749a19",
+              "use_public_sources": true,
               "version": "3.30.0"
             }
           },

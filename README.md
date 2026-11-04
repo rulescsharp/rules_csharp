@@ -128,11 +128,14 @@ nuget.from_lock(
 
 - `use_public_sources = False` works like `<clear />` at the top of `<packageSources>` in a
   NuGet.Config. A `nuget_config` that has `<clear />` turns public sources off by itself.
-- A feed in `feeds` or `nuget_config` is the package base URL that the feed's `index.json` lists
-  as `PackageBaseAddress/3.0.0`. nuget.org's `https://api.nuget.org/v3/index.json` works as it is.
+- A feed in `feeds` or `nuget_config` can be its v3 `index.json`, as in a NuGet.Config. Packages
+  come from the `PackageBaseAddress/3.0.0` that `index.json` lists, the same place `dotnet restore`
+  gets them.
 - `sdk_checksums` pins any SDK version by archive file name. Copy the `hash` for each file from
   the version's [releases.json](https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json).
   The defaults in `dotnet_versions` are already pinned.
+- A mirror or feed can also be a local directory as a `file://` URL, so a machine with no network
+  can build from a copy on disk.
 - The mirror holds the archives at `{mirror}/dotnet/Sdk/{version}/{archive}` (see `url_templates`)
   and `coverlet.console.10.1.0.nupkg` at `{mirror}/` for `bazel coverage`.
 - With public sources off, a package whose `contentHash` is empty in `packages.lock.json` fails
