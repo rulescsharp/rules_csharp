@@ -1,0 +1,39 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("//csharp:defs.bzl", "csharp_proto_library")
+
+# price.proto is imported as shop/price.proto, so protoc sees it under _virtual_imports.
+proto_library(
+    name = "price_proto",
+    srcs = ["price.proto"],
+    import_prefix = "shop",
+    strip_import_prefix = "",
+)
+
+proto_library(
+    name = "cart_proto",
+    srcs = ["cart.proto"],
+    deps = [":price_proto"],
+)
+
+# A dep built for another target_framework still covers price.proto.
+csharp_proto_library(
+    name = "price_cs_proto",
+    proto = ":price_proto",
+    target_framework = "net8.0",
+    deps = ["@nuget//:Google.Protobuf"],
+)
+
+csharp_proto_library(
+    name = "cart_cs_proto",
+    proto = ":cart_proto",
+    deps = [
+        ":price_cs_proto",
+        "@nuget//:Google.Protobuf",
+    ],
+)
+
+build_test(
+    name = "prefixed_build_test",
+    targets = [":cart_cs_proto"],
+)

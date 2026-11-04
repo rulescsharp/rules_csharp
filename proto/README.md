@@ -16,6 +16,30 @@ Then load the rules from this file:
 load("@rules_csharp_proto//csharp:defs.bzl", "csharp_grpc_library", "csharp_proto_library")
 ```
 
+Each `csharp_proto_library` compiles the `.proto` files of one `proto_library`. When `order.proto`
+imports `money.proto` from another `proto_library`, give that one its own `csharp_proto_library`
+and put it in `deps` or `exports`. List it there directly, since a `csharp_library` that re-exports
+it isn't seen. Protos whose C# ships in a NuGet package other than `Google.Protobuf` need their own
+`csharp_proto_library` too. The generated code also needs the `Google.Protobuf` package, which has
+the well-known types such as `google.protobuf.Timestamp`:
+
+```starlark
+csharp_proto_library(
+    name = "money_cs_proto",
+    proto = ":money_proto",
+    deps = ["@nuget//:Google.Protobuf"],
+)
+
+csharp_proto_library(
+    name = "order_cs_proto",
+    proto = ":order_proto",  # imports money.proto and google/protobuf/timestamp.proto
+    deps = [
+        ":money_cs_proto",
+        "@nuget//:Google.Protobuf",
+    ],
+)
+```
+
 The rules run protoc from protobuf's proto toolchain. By default that's protoc built from source,
 which needs a C++17 compiler. To use the prebuilt protoc that protobuf publishes, add this to
 `.bazelrc`:
@@ -71,7 +95,7 @@ Compiles Protocol Buffer and gRPC service definitions into a C# assembly library
 | <a id="csharp_grpc_library-output_assembly"></a>output_assembly |  Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and one of them is built from sources.   | String | optional |  `""`  |
 | <a id="csharp_grpc_library-plugin"></a>plugin |  The grpc_csharp_plugin executable.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 | <a id="csharp_grpc_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_grpc_library-proto"></a>proto |  Target providing ProtoInfo with proto sources.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="csharp_grpc_library-proto"></a>proto |  The `proto_library` whose `.proto` files this target compiles to C#. Protos it imports from other `proto_library` targets aren't compiled here. Put a `csharp_proto_library` for each of those directly in `deps` or `exports`, the same as a `ProjectReference` to the project that compiles them. A `csharp_library` that re-exports one isn't seen. Analysis fails and names the missing protos otherwise. The well-known types such as `google/protobuf/timestamp.proto` come from the `Google.Protobuf` package.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="csharp_grpc_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_grpc_library-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_grpc_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
@@ -123,7 +147,7 @@ Compiles Protocol Buffer definitions into a C# assembly library.
 | <a id="csharp_proto_library-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress.   | List of strings | optional |  `[]`  |
 | <a id="csharp_proto_library-output_assembly"></a>output_assembly |  Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and one of them is built from sources.   | String | optional |  `""`  |
 | <a id="csharp_proto_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
-| <a id="csharp_proto_library-proto"></a>proto |  Target providing ProtoInfo with proto sources.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="csharp_proto_library-proto"></a>proto |  The `proto_library` whose `.proto` files this target compiles to C#. Protos it imports from other `proto_library` targets aren't compiled here. Put a `csharp_proto_library` for each of those directly in `deps` or `exports`, the same as a `ProjectReference` to the project that compiles them. A `csharp_library` that re-exports one isn't seen. Analysis fails and names the missing protos otherwise. The well-known types such as `google/protobuf/timestamp.proto` come from the `Google.Protobuf` package.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="csharp_proto_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_proto_library-sdk"></a>sdk |  Project SDK the target follows, the same as the `Sdk` of an MSBuild project. `Microsoft.NET.Sdk.Web` adds the ASP.NET Core implicit usings and references `Microsoft.AspNetCore.App`. `Microsoft.NET.Sdk.Worker` adds the Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_proto_library-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |

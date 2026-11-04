@@ -35,3 +35,10 @@ def _proto_action_test_impl(ctx):
     return analysistest.end(env)
 
 proto_action_test = analysistest.make(_proto_action_test_impl)
+
+def _missing_import_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    asserts.expect_failure(env, "no csharp_proto_library in deps or exports compiles:\n  //tests/analysis:greeter.proto\n")
+    return analysistest.end(env)
+
+missing_import_test = analysistest.make(_missing_import_test_impl, expect_failure = True)

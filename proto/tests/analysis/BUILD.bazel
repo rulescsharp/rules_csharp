@@ -1,7 +1,7 @@
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_csharp//csharp:defs.bzl", "csharp_test")
 load("//csharp:defs.bzl", "csharp_proto_library")
-load(":action_graph_tests.bzl", "proto_action_test")
+load(":action_graph_tests.bzl", "missing_import_test", "proto_action_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -19,6 +19,24 @@ csharp_proto_library(
 proto_action_test(
     name = "proto_action_test",
     target_under_test = ":greeter_cs_proto",
+)
+
+proto_library(
+    name = "reply_proto",
+    srcs = ["reply.proto"],
+    deps = [":greeter_proto"],
+)
+
+# greeter.proto has no csharp_proto_library in deps, so analysis fails and names it.
+csharp_proto_library(
+    name = "reply_cs_proto",
+    proto = ":reply_proto",
+    tags = ["manual"],
+)
+
+missing_import_test(
+    name = "missing_import_test",
+    target_under_test = ":reply_cs_proto",
 )
 
 csharp_test(

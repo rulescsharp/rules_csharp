@@ -14,6 +14,30 @@ Then load the rules from this file:
 load("@rules_csharp_proto//csharp:defs.bzl", "csharp_grpc_library", "csharp_proto_library")
 ```
 
+Each `csharp_proto_library` compiles the `.proto` files of one `proto_library`. When `order.proto`
+imports `money.proto` from another `proto_library`, give that one its own `csharp_proto_library`
+and put it in `deps` or `exports`. List it there directly, since a `csharp_library` that re-exports
+it isn't seen. Protos whose C# ships in a NuGet package other than `Google.Protobuf` need their own
+`csharp_proto_library` too. The generated code also needs the `Google.Protobuf` package, which has
+the well-known types such as `google.protobuf.Timestamp`:
+
+```starlark
+csharp_proto_library(
+    name = "money_cs_proto",
+    proto = ":money_proto",
+    deps = ["@nuget//:Google.Protobuf"],
+)
+
+csharp_proto_library(
+    name = "order_cs_proto",
+    proto = ":order_proto",  # imports money.proto and google/protobuf/timestamp.proto
+    deps = [
+        ":money_cs_proto",
+        "@nuget//:Google.Protobuf",
+    ],
+)
+```
+
 The rules run protoc from protobuf's proto toolchain. By default that's protoc built from source,
 which needs a C++17 compiler. To use the prebuilt protoc that protobuf publishes, add this to
 `.bazelrc`:
@@ -32,6 +56,13 @@ load("@rules_csharp//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl"
 
 _PROTO_TOOLCHAIN = "@protobuf//bazel/private:proto_toolchain_type"
 
+_PROTOBUF_REPO = Label("@protobuf//:BUILD").repo_name
+
+_CSharpProtoSourcesInfo = provider(
+    doc = "The .proto files a csharp_proto_library and its proto deps compile to C#.",
+    fields = {"sources": "depset of .proto Files"},
+)
+
 def _proto_to_csharp_basename(proto_file):
     base = proto_file.basename
     if base.endswith(".proto"):
@@ -39,17 +70,33 @@ def _proto_to_csharp_basename(proto_file):
     parts = base.split("_")
     return "".join([p[0].upper() + p[1:] if len(p) > 0 else "" for p in parts])
 
-def _proto_common_impl(ctx, is_grpc = False):
-    proto_target = getattr(ctx.attr, "proto", None)
-    if not proto_target:
-        for d in ctx.attr.deps:
-            if ProtoInfo in d:
-                proto_target = d
-                break
-    if not proto_target or ProtoInfo not in proto_target:
-        fail("Target must specify a 'proto' attribute or a dependency in 'deps' providing ProtoInfo")
+def _label(label):
+    return str(label) if label.repo_name else "//{}:{}".format(label.package, label.name)
 
-    proto_info = proto_target[ProtoInfo]
+def _proto_common_impl(ctx, is_grpc = False):
+    proto_info = ctx.attr.proto[ProtoInfo]
+
+    # protoc writes C# only for direct_sources, so every other proto this one imports has to come
+    # from a csharp_proto_library in deps or exports. The protobuf module's own protos ship in
+    # Google.Protobuf. Paths are compared by short_path because a dep on another target_framework
+    # sees the same proto under another output root.
+    covered = depset(proto_info.direct_sources, transitive = [
+        d[_CSharpProtoSourcesInfo].sources
+        for d in ctx.attr.deps + ctx.attr.exports
+        if _CSharpProtoSourcesInfo in d
+    ])
+    covered_set = {f.short_path: None for f in covered.to_list()}
+    missing = [
+        f
+        for f in proto_info.transitive_sources.to_list()
+        if f.short_path not in covered_set and f.owner.repo_name != _PROTOBUF_REPO
+    ]
+    if missing:
+        fail(("proto imports .proto files that no csharp_proto_library in deps or exports " +
+              "compiles:\n  {}\nAdd a csharp_proto_library for each proto_library that has them " +
+              "to deps or exports.").format(
+            "\n  ".join([_label(f.owner) for f in missing]),
+        ))
 
     generated_cs = []
     protoc_outputs = []
@@ -115,7 +162,7 @@ def _proto_common_impl(ctx, is_grpc = False):
         progress_message = "Generating C# proto bindings for %{label}",
     )
 
-    return compile_impl(ctx, extra_srcs = generated_cs)
+    return compile_impl(ctx, extra_srcs = generated_cs) + [_CSharpProtoSourcesInfo(sources = covered)]
 
 def _csharp_proto_library_impl(ctx):
     return _proto_common_impl(ctx, is_grpc = False)
@@ -126,9 +173,14 @@ def _csharp_grpc_library_impl(ctx):
 _PROTO_ATTRS = dict(COMMON_ATTRS)
 _PROTO_ATTRS.update({
     "proto": attr.label(
-        default = None,
+        mandatory = True,
         providers = [ProtoInfo],
-        doc = "Target providing ProtoInfo with proto sources.",
+        doc = "The `proto_library` whose `.proto` files this target compiles to C#. Protos it " +
+              "imports from other `proto_library` targets aren't compiled here. Put a " +
+              "`csharp_proto_library` for each of those directly in `deps` or `exports`, the same " +
+              "as a `ProjectReference` to the project that compiles them. A `csharp_library` that " +
+              "re-exports one isn't seen. Analysis fails and names the missing protos otherwise. The well-known types such as `google/protobuf/timestamp.proto` come " +
+              "from the `Google.Protobuf` package.",
     ),
 })
 
