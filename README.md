@@ -46,6 +46,50 @@ csharp_test(
 
 `bazel run //:hello` prints `Hello, Bazel!`, and `bazel test //:greeter_test` runs the test.
 
+## Testing with MSTest or xUnit
+
+Set `target_type = "library"` and depend on `Microsoft.NET.Test.Sdk` plus a framework and its adapter
+from the [`nuget` extension](csharp/extensions.bzl). The test then runs under VSTest, the same runner
+as `dotnet test`. From [examples/](examples/):
+
+```starlark
+csharp_test(
+    name = "greeter_mstest",
+    srcs = ["GreeterMSTest.cs"],
+    shard_count = 2,
+    target_framework = "net8.0",
+    target_type = "library",
+    deps = [
+        ":greeter",
+        "@nuget//:MSTest.TestAdapter",
+        "@nuget//:MSTest.TestFramework",
+        "@nuget//:Microsoft.NET.Test.Sdk",
+    ],
+)
+```
+
+A test that runs no tests fails, so a missing adapter or a filter that matches nothing can't pass by
+accident. `test_filter` and `--test_filter` take a VSTest
+[filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests) such as
+`TestCategory=Fast`.
+
+With `shard_count`, each shard runs its own share of the test cases. Cases that share a name, like the
+rows of a data driven test, stay together in one shard. xUnit v2 only applies trait filters while
+running, not while listing, so a sharded xUnit test whose filter matches nothing passes instead of
+failing.
+
+### Per-test results in test.xml
+
+Each library test writes one `<testcase>` per test, with the failure message and stack trace, to the
+`test.xml` Bazel collects, so CI and result viewers that read JUnit XML show every case. The TRX report
+VSTest writes is in the test's undeclared outputs (`test.outputs/`). A test that sets
+`target_framework` builds in a configuration for it, so its files are under
+`bazel-out/<config>-ST-<hash>/testlogs/` instead of behind the `bazel-testlogs` link. Tools that read
+Bazel's build event protocol find them either way.
+
+An exe test (the default `target_type`) runs its own `Main`. It owns sharding and `test.xml` itself
+through Bazel's [test environment](https://bazel.build/reference/test-encyclopedia).
+
 ## Supported versions
 
 - Bazel 7, 8 and 9, with Bzlmod only.

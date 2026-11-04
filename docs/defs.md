@@ -133,7 +133,7 @@ default install location.
 load("@rules_csharp//csharp:defs.bzl", "csharp_import")
 
 csharp_import(<a href="#csharp_import-name">name</a>, <a href="#csharp_import-deps">deps</a>, <a href="#csharp_import-analyzers">analyzers</a>, <a href="#csharp_import-compile_refs">compile_refs</a>, <a href="#csharp_import-dlls">dlls</a>, <a href="#csharp_import-exports">exports</a>, <a href="#csharp_import-native_libs">native_libs</a>, <a href="#csharp_import-plugins">plugins</a>,
-              <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-target_framework">target_framework</a>)
+              <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-target_framework">target_framework</a>, <a href="#csharp_import-test_runtime_dlls">test_runtime_dlls</a>)
 </pre>
 
 Imports precompiled reference and implementation assemblies.
@@ -153,6 +153,7 @@ Imports precompiled reference and implementation assemblies.
 | <a id="csharp_import-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-target_framework"></a>target_framework |  Target framework moniker string.   | String | optional |  `""`  |
+| <a id="csharp_import-test_runtime_dlls"></a>test_runtime_dlls |  DLL files that restore copies next to a test, such as VSTest adapters. A `csharp_test` with `target_type = "library"` stages them next to the test assembly.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 
 
 <a id="csharp_library"></a>
@@ -216,9 +217,22 @@ csharp_test(<a href="#csharp_test-name">name</a>, <a href="#csharp_test-deps">de
 
 Compiles and executes a C# test binary under the Bazel test harness.
 
+A test runs in one of two ways, picked by `target_type`:
+
+- `"exe"` (the default) builds a program and runs its `Main`. A nonzero exit code fails the test.
+  The program owns everything else: it gets `test_filter` in `TESTBRIDGE_TEST_ONLY`, and with
+  `shard_count` it reads `TEST_TOTAL_SHARDS` and `TEST_SHARD_INDEX` and must touch
+  `TEST_SHARD_STATUS_FILE`. It may write JUnit XML to `XML_OUTPUT_FILE`.
+- `"library"` builds a test assembly and runs it under VSTest, the runner behind `dotnet test`.
+  Depend on `Microsoft.NET.Test.Sdk` and a test framework with its adapter from NuGet, such as
+  `MSTest.TestFramework` with `MSTest.TestAdapter` or `xunit` with `xunit.runner.visualstudio`.
+  The rule finds the adapter, fails when no test runs, splits the test cases across `shard_count`
+  shards, and writes one `<testcase>` per test to `test.xml`.
+
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
-Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. That's the code a
+test depends on, in both modes. Add `--instrument_test_targets` to count the test's own sources too. CI
+checks coverage on Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
 coverage wrapper there.
 
 **ATTRIBUTES**
@@ -245,8 +259,8 @@ coverage wrapper there.
 | <a id="csharp_test-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_test-sdk"></a>sdk |  Target .NET SDK project flavor.   | String | optional |  `"Microsoft.NET.Sdk"`  |
 | <a id="csharp_test-target_framework"></a>target_framework |  Target framework moniker, one of net8.0, net9.0, net10.0. Picks the SDK, reference pack, and runtime the target builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the target uses the framework of the target that depends on it, or the newest configured version when built directly.   | String | optional |  `""`  |
-| <a id="csharp_test-target_type"></a>target_type |  Compiler target type output flag.   | String | optional |  `"exe"`  |
-| <a id="csharp_test-test_filter"></a>test_filter |  Default test filter expression.   | String | optional |  `""`  |
+| <a id="csharp_test-target_type"></a>target_type |  `"exe"` runs the program's `Main` as the test. `"library"` runs the assembly's tests under VSTest.   | String | optional |  `"exe"`  |
+| <a id="csharp_test-test_filter"></a>test_filter |  Default test filter, overridden by `--test_filter`. In library mode it is a VSTest [filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests), such as `TestCategory=Fast` or `FullyQualifiedName~Parser`.   | String | optional |  `""`  |
 | <a id="csharp_test-warn_as_error"></a>warn_as_error |  Treat compiler warnings as errors.   | Boolean | optional |  `False`  |
 | <a id="csharp_test-warning_level"></a>warning_level |  Compiler diagnostic severity level.   | Integer | optional |  `4`  |
 
@@ -278,7 +292,7 @@ Propagates Roslyn analyzer and source generator assembly files.
 load("@rules_csharp//csharp:defs.bzl", "CSharpInfo")
 
 CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-pdb">pdb</a>, <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>, <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>,
-           <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>)
+           <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>, <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>)
 </pre>
 
 Propagates compilation references, runtime assemblies, and unmanaged libraries.
@@ -294,6 +308,7 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 | <a id="CSharpInfo-transitive_compile_refs"></a>transitive_compile_refs |  Depset of reference assembly Files for compilation.    |
 | <a id="CSharpInfo-transitive_native_libs"></a>transitive_native_libs |  Depset of target platform unmanaged shared libraries.    |
 | <a id="CSharpInfo-transitive_runtime_dlls"></a>transitive_runtime_dlls |  Depset of runtime assembly Files for execution.    |
+| <a id="CSharpInfo-transitive_test_runtime_dlls"></a>transitive_test_runtime_dlls |  Depset of Files that a library csharp_test stages next to the test assembly, such as VSTest adapters. Optional, treated as empty when unset.    |
 
 
 <a id="CSharpToolchainInfo"></a>

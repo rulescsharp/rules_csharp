@@ -226,6 +226,22 @@ def _binary_common_impl(ctx, is_test = False):
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
 
+    launcher_dll = None
+    if is_test and getattr(ctx.attr, "target_type", "exe") == "library":
+        launcher_dll = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll
+        runfiles_files.append(launcher_dll)
+        runfiles_symlinks[prefix + launcher_dll.basename] = launcher_dll
+
+        # The testhost only loads *TestAdapter.dll files from the test dll's own dir. A runtime dll
+        # with the same name wins, as MSTest ships some dlls in both lib/ and build/.
+        for f in csharp_info.transitive_test_runtime_dlls.to_list():
+            if f.basename not in app_files:
+                app_files[f.basename] = True
+                runfiles_symlinks[prefix + f.basename] = f
+                declared = ctx.actions.declare_file(app_dir + f.basename)
+                ctx.actions.symlink(output = declared, target_file = f)
+                extra_output_files.append(declared)
+
     for f in getattr(ctx.files, "content", []):
         runfiles_symlinks[prefix + f.basename] = f
         declared = ctx.actions.declare_file(app_dir + f.basename)
@@ -254,6 +270,10 @@ def _binary_common_impl(ctx, is_test = False):
             coverage_files["coverlet/" + f.short_path.split("tools/net8.0/any/", 1)[1]] = f
             if f.basename == "coverlet.console.dll":
                 coverlet_dll = "coverlet/" + f.basename
+        if ctx.coverage_instrumented():
+            # With --instrument_test_targets the test's own pdb goes next to its dll in runfiles too.
+            # The app dir already holds it.
+            runfiles_symlinks[prefix + pdb.basename] = pdb
         for dest, f in coverage_files.items():
             runfiles_symlinks[prefix + dest] = f
             if dest not in app_files:
@@ -293,8 +313,12 @@ set DOTNET_NOLOGO=1
 set VBCSCOMPILER_TTL=0
 set MSBUILDDISABLENODEREUSE=1
 set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+rem Processes started in the same second draw the same %RANDOM%, so retry until mkdir makes a new directory.
+set SCRATCH_TRIES=0
+:make_scratch
+set /a SCRATCH_TRIES+=1
 set SCRATCH=%TEMP%\\.dotnet_scratch_%RANDOM%
-if not exist "%SCRATCH%" mkdir "%SCRATCH%"
+mkdir "%SCRATCH%" 2>nul || if !SCRATCH_TRIES! lss 100 goto make_scratch
 set DOTNET_CLI_HOME=%SCRATCH%
 set HOME=%SCRATCH%
 set USERPROFILE=%SCRATCH%
@@ -304,6 +328,8 @@ set DOTNET_BIN=%SCRIPT_DIR%{dotnet_bin}
 set VSTEST_DLL=%SCRIPT_DIR%vstest.console.dll
 set EXE_PATH=%SCRIPT_DIR%{exe_name}
 set MAIN_DLL_PATH=%SCRIPT_DIR%{main_dll_name}
+set LAUNCHER_DLL=%SCRIPT_DIR%{launcher_name}
+set RUNTIMECONFIG=%SCRIPT_DIR%{runtimeconfig_name}
 
 if not exist "!DOTNET_BIN!" (
     if defined RUNFILES_MANIFEST_FILE if exist "%RUNFILES_MANIFEST_FILE%" (
@@ -321,6 +347,12 @@ if not exist "!DOTNET_BIN!" (
             if "!R_KEY:~-{main_dll_len}!"=="{main_dll_name}" (
                 if exist "%%B" set "MAIN_DLL_PATH=%%B"
             )
+            if "!R_KEY:~-{launcher_len}!"=="{launcher_name}" (
+                if exist "%%B" set "LAUNCHER_DLL=%%B"
+            )
+            if "!R_KEY:~-{runtimeconfig_len}!"=="{runtimeconfig_name}" (
+                if exist "%%B" set "RUNTIMECONFIG=%%B"
+            )
         )
     )
 )
@@ -336,22 +368,19 @@ for %%I in ("!DOTNET_BIN!") do (
     )
 )
 
-set FILTER=%TESTBRIDGE_TEST_ONLY%
-if "%FILTER%"=="" set FILTER={test_filter}
+rem Read the filter with delayed expansion so an exclamation mark in it stays put.
+set "FILTER=!TESTBRIDGE_TEST_ONLY!"
+if "!FILTER!"=="" set "FILTER={test_filter}"
 if defined COVERAGE_DIR if exist "%SCRIPT_DIR%{coverage_script}" if not "{coverlet_dll}"=="" (
-    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "{target_type}" "%FILTER%" %*
+    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%SCRIPT_DIR%{coverage_script}" "!DOTNET_BIN!" "!MAIN_DLL_PATH!" "!VSTEST_DLL!" "!LAUNCHER_DLL!" "!RUNTIMECONFIG!" "{target_type}" %*
     set EXIT_CODE=!ERRORLEVEL!
     rmdir /s /q "%SCRATCH%" 2>nul
     exit /b !EXIT_CODE!
 )
 if "{target_type}"=="library" (
-    if not "%FILTER%"=="" (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console --TestCaseFilter:"%FILTER%" %*
-    ) else (
-        "!DOTNET_BIN!" exec "!VSTEST_DLL!" "!MAIN_DLL_PATH!" --logger:console %*
-    )
+    "!DOTNET_BIN!" exec --runtimeconfig "!RUNTIMECONFIG!" "!LAUNCHER_DLL!" "!VSTEST_DLL!" "!MAIN_DLL_PATH!" "!FILTER!" %*
 ) else (
-    if not "%FILTER%"=="" set TESTBRIDGE_TEST_ONLY=%FILTER%
+    if not "!FILTER!"=="" set "TESTBRIDGE_TEST_ONLY=!FILTER!"
     "!EXE_PATH!" %*
 )
 set EXIT_CODE=%ERRORLEVEL%
@@ -365,10 +394,15 @@ exit /b %EXIT_CODE%
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
                 exe_name_len = len(exe_file.basename),
+                launcher_len = len(ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename),
+                launcher_name = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename,
                 main_dll_len = len(main_dll.basename),
                 main_dll_name = main_dll.basename,
+                runtimeconfig_len = len(runtimeconfig_json.basename),
+                runtimeconfig_name = runtimeconfig_json.basename,
                 target_type = target_type,
-                test_filter = test_filter,
+                # The line also expands !FILTER!, so cmd reads ^ and ! as escapes in it.
+                test_filter = test_filter.replace("%", "%%").replace("^", "^^").replace("!", "^!"),
                 vstest_path = vstest_path,
             )
         else:
@@ -397,6 +431,8 @@ DOTNET_BIN="$DIR/{dotnet_bin}"
 VSTEST_DLL="$DIR/vstest.console.dll"
 EXE_PATH="$DIR/{exe_name}"
 MAIN_DLL_PATH="$DIR/{main_dll_name}"
+LAUNCHER_DLL="$DIR/{launcher_name}"
+RUNTIMECONFIG="$DIR/{runtimeconfig_name}"
 
 if [ ! -f "$DOTNET_BIN" ] && [ -n "${{RUNFILES_MANIFEST_FILE:-}}" ] && [ -f "$RUNFILES_MANIFEST_FILE" ]; then
     while read -r rpath target; do
@@ -405,6 +441,8 @@ if [ ! -f "$DOTNET_BIN" ] && [ -n "${{RUNFILES_MANIFEST_FILE:-}}" ] && [ -f "$RU
             *vstest.console.dll) [ -f "$target" ] && VSTEST_DLL="$target" ;;
             *{exe_name}) [ -f "$target" ] && EXE_PATH="$target" ;;
             *{main_dll_name}) [ -f "$target" ] && MAIN_DLL_PATH="$target" ;;
+            *{launcher_name}) [ -f "$target" ] && LAUNCHER_DLL="$target" ;;
+            *{runtimeconfig_name}) [ -f "$target" ] && RUNTIMECONFIG="$target" ;;
         esac
     done < "$RUNFILES_MANIFEST_FILE"
     if [ -f "$DOTNET_BIN" ]; then
@@ -434,7 +472,7 @@ if [ -n "${{COVERAGE_DIR:-}}" ] && [ -f "$COVERLET_DLL" ]; then
 fi
 
 if [ "{target_type}" = "library" ]; then
-    set -- exec "$VSTEST_DLL" "$MAIN_DLL_PATH" --logger:console ${{FILTER:+--TestCaseFilter:"$FILTER"}} "$@"
+    set -- exec --runtimeconfig "$RUNTIMECONFIG" "$LAUNCHER_DLL" "$VSTEST_DLL" "$MAIN_DLL_PATH" "$FILTER" "$@"
     TEST_BIN="$DOTNET_BIN"
 else
     if [ -n "$FILTER" ]; then
@@ -479,7 +517,9 @@ exit $EXIT_CODE
                 dotnet_bin = toolchain.dotnet_muxer.basename,
                 dotnet_path = dotnet_path,
                 exe_name = exe_file.basename,
+                launcher_name = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll.basename,
                 main_dll_name = main_dll.basename,
+                runtimeconfig_name = runtimeconfig_json.basename,
                 target_type = target_type,
                 test_filter = test_filter,
                 vstest_path = vstest_path,
@@ -540,8 +580,10 @@ exit $EXIT_CODE
     return providers
 
 # Runs a test under Coverlet on Windows and writes Bazel's coverlet.dat. Mirrors the sh runner.
-_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $TargetType, $Filter)
+_WINDOWS_COVERAGE_PS1 = """param($Dotnet, $MainDll, $Vstest, $Launcher, $RuntimeConfig, $TargetType)
 $ErrorActionPreference = "Stop"
+# The filter comes from the runner's environment, so an empty one can't shift the arguments after it.
+$Filter = $env:FILTER
 
 function Quote([string]$a) {
     '"' + ($a -replace '(\\\\*)"', '$1$1\\"' -replace '(\\\\+)$', '$1$1') + '"'
@@ -560,13 +602,13 @@ $appDll = Join-Path $app (Split-Path -Leaf $MainDll)
 
 $target = @("exec")
 if ($TargetType -eq "library") {
-    $target += @($Vstest, $appDll, "--logger:console")
-    if ($Filter) { $target += "--TestCaseFilter:$Filter" }
+    $target += @("--runtimeconfig", $RuntimeConfig, $Launcher, $Vstest, $appDll, $Filter)
+    $target += $args
 } else {
     if ($Filter) { $env:TESTBRIDGE_TEST_ONLY = $Filter }
     $target += $appDll
+    $target += $args
 }
-$target += $args
 
 $info = Join-Path $env:SCRATCH "coverlet.info"
 $coverlet = @(
@@ -719,6 +761,15 @@ default install location.
 
 _TEST_ATTRS = dict(_BINARY_ATTRS)
 _TEST_ATTRS.update({
+    "target_type": attr.string(
+        default = "exe",
+        doc = "`\"exe\"` runs the program's `Main` as the test. `\"library\"` runs the assembly's tests under VSTest.",
+    ),
+    "_vstest_launcher": attr.label(
+        default = Label("//csharp/private/tools:vstest_launcher"),
+        doc = "Runs library mode tests under vstest, sharded, with JUnit results.",
+        providers = [CSharpInfo],
+    ),
     "_coverlet": attr.label(
         allow_files = True,
         default = Label("//csharp/private:coverlet"),
@@ -744,16 +795,31 @@ _TEST_ATTRS.update({
     ),
     "test_filter": attr.string(
         default = "",
-        doc = "Default test filter expression.",
+        doc = "Default test filter, overridden by `--test_filter`. In library mode it is a VSTest " +
+              "[filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests), such as " +
+              "`TestCategory=Fast` or `FullyQualifiedName~Parser`.",
     ),
 })
 
 csharp_test = rule(
     doc = """Compiles and executes a C# test binary under the Bazel test harness.
 
+A test runs in one of two ways, picked by `target_type`:
+
+- `"exe"` (the default) builds a program and runs its `Main`. A nonzero exit code fails the test.
+  The program owns everything else: it gets `test_filter` in `TESTBRIDGE_TEST_ONLY`, and with
+  `shard_count` it reads `TEST_TOTAL_SHARDS` and `TEST_SHARD_INDEX` and must touch
+  `TEST_SHARD_STATUS_FILE`. It may write JUnit XML to `XML_OUTPUT_FILE`.
+- `"library"` builds a test assembly and runs it under VSTest, the runner behind `dotnet test`.
+  Depend on `Microsoft.NET.Test.Sdk` and a test framework with its adapter from NuGet, such as
+  `MSTest.TestFramework` with `MSTest.TestAdapter` or `xunit` with `xunit.runner.visualstudio`.
+  The rule finds the adapter, fails when no test runs, splits the test cases across `shard_count`
+  shards, and writes one `<testcase>` per test to `test.xml`.
+
 `bazel coverage` reports line, branch, and method coverage of instrumented C# sources, collected with
-[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. CI checks coverage on
-Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
+[Coverlet](https://github.com/coverlet-coverage/coverlet) and merged by Bazel into LCOV. That's the code a
+test depends on, in both modes. Add `--instrument_test_targets` to count the test's own sources too. CI
+checks coverage on Linux, macOS and Windows. On Windows it needs Bazel 9 or later, since older Bazel can't start its
 coverage wrapper there.
 """,
     implementation = _csharp_test_impl,

@@ -1,7 +1,7 @@
 """Unit tests for the NuGet package helpers."""
 
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
-load("//csharp/private:nupkg.bzl", "base64_to_hex", "file_url", "strip_signature")
+load("//csharp/private:nupkg.bzl", "base64_to_hex", "build_references", "file_url", "strip_signature")
 
 # Stored zips written by Python's zipfile. UNSIGNED holds lib/a.txt and
 # lib/b.txt. The signed ones add a .signature.p7s entry after or between them,
@@ -62,6 +62,47 @@ def _file_url_impl(ctx):
 
 file_url_test = unittest.make(_file_url_impl)
 
+# Trimmed from MSTest.TestFramework 3.6.4 and MSTest.TestAdapter 3.6.4 build/net8.0.
+_FRAMEWORK_TARGETS = """<Project>
+  <PropertyGroup Condition=" '$(UseWinUI)' == 'true' ">
+    <_TestFrameworkExtensionsRoot>$(MSBuildThisFileDirectory)../net6.0/winui/</_TestFrameworkExtensionsRoot>
+  </PropertyGroup>
+  <!-- <Reference Include="Commented.Out" /> -->
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions">
+      <HintPath>$(_TestFrameworkExtensionsRoot)Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include='Strong.Named, Version=1.0.0.0' />
+    <Reference Include="Only.When.Set" Condition=" '$(X)' == 'true' " />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Y)' == 'true' ">
+    <Reference Include="Conditioned.Group" />
+  </ItemGroup>
+  <Choose>
+    <When Condition=" '$(EnableMSTestRunner)' == 'true' ">
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <ItemGroup>
+    <Reference Include="After.Choose" />
+  </ItemGroup>
+</Project>
+"""
+
+def _build_references_impl(ctx):
+    env = unittest.begin(ctx)
+    asserts.equals(
+        env,
+        ["Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions", "Strong.Named", "After.Choose"],
+        build_references(_FRAMEWORK_TARGETS),
+    )
+    asserts.equals(env, [], build_references("<Project />"))
+    return unittest.end(env)
+
+build_references_test = unittest.make(_build_references_impl)
+
 def nupkg_test_suite(name):
     unittest.suite(
         name,
@@ -71,4 +112,5 @@ def nupkg_test_suite(name):
         archive_comment_test,
         base64_to_hex_test,
         file_url_test,
+        build_references_test,
     )

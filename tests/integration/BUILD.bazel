@@ -91,11 +91,43 @@ csharp_test(
     sdk = "Microsoft.NET.Sdk.Web",
 )
 
+# A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",
     srcs = ["MSTestSuite.cs"],
+    target_type = "library",
     test_filter = "TestCategory=Unit",
+    deps = [
+        "@nuget//:MSTest.TestAdapter",
+        "@nuget//:MSTest.TestFramework",
+        "@nuget//:Microsoft.NET.Test.Sdk",
+    ],
 )
 
+# Four shards for three tests, so one shard runs nothing and still passes.
+csharp_test(
+    name = "mstest_sharded",
+    srcs = ["MSTestSuite.cs"],
+    shard_count = 4,
+    target_type = "library",
+    test_filter = "TestCategory=Unit",
+    deps = [
+        "@nuget//:MSTest.TestAdapter",
+        "@nuget//:MSTest.TestFramework",
+        "@nuget//:Microsoft.NET.Test.Sdk",
+    ],
+)
 
-
+# A real xUnit suite, with the adapter from xunit.runner.visualstudio, split over two shards.
+csharp_test(
+    name = "xunit_sharded",
+    srcs = ["XunitSuite.cs"],
+    shard_count = 2,
+    target_type = "library",
+    test_filter = "Category=Unit",
+    deps = [
+        "@nuget//:Microsoft.NET.Test.Sdk",
+        "@nuget//:xunit",
+        "@nuget//:xunit.runner.visualstudio",
+    ],
+)

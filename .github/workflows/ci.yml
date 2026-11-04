@@ -39,8 +39,32 @@ jobs:
       - name: Execute all tests
         run: bazel test //...
 
+      - name: Check library test filters and results
+        run: |
+          # Bazel exits with 3 when tests ran and failed, so a build error can't pass for a test failure.
+          fails() { local rc=0; "$@" || rc=$?; test "$rc" -eq 3; }
+          # The ! reaches VSTest, so the Slow test that always fails stays out.
+          bazel test //tests/integration:mstest_sharded --test_filter='TestCategory!=Slow'
+          # Escaped characters in a filter reach VSTest as they are.
+          bazel test //tests/integration:mstest_sharded --test_filter='FullyQualifiedName=RulesCsharp.IntegrationTests.MSTestSuite.Addition|FullyQualifiedName=Nope\(x\)'
+          # A filter that matches nothing fails, sharded or not.
+          fails bazel test //tests/integration:mstest_sharded --test_filter=TestCategory=NoSuchCategory
+          fails bazel test //tests/integration:mstest_suite --test_filter=TestCategory=NoSuchCategory
+          # A failing case shows up in test.xml with its message.
+          fails bazel test //tests/integration:mstest_suite --test_filter=TestCategory=Slow
+          grep -q '<failure message="Assert.Fail failed. test_filter should leave this out' "$(find "$(bazel info output_path)" -path '*/testlogs/tests/integration/mstest_suite/test.xml' -print -quit)"
+
       - name: Execute examples tests
         run: cd examples && bazel test //...
+
+      - name: Check examples per-test results
+        working-directory: examples
+        run: |
+          xml=$(find "$(bazel info output_path)" -path '*/testlogs/greeter_mstest/shard_*_of_2/test.xml')
+          test "$(echo "$xml" | wc -l)" -eq 2
+          cat $xml | grep -o '<testcase name="[^"]*"' | sort | uniq -c
+          test "$(cat $xml | grep -o '<testcase name="[^"]*"' | sort -u | wc -l)" -eq 3
+          test "$(cat $xml | grep -c '<testcase ')" -eq 3
 
       - name: Execute proto module tests
         working-directory: proto
@@ -58,6 +82,11 @@ jobs:
             f == "Greeter.cs" && /^DA:[0-9]+,[1-9]/ { hit = 1 }
             f == "Greeter.cs" && /^DA:[0-9]+,0$/ { miss = 1 }
             END { exit !(hit && miss) }' bazel-out/_coverage/_coverage_report.dat
+          # A library test reports the code it tests too.
+          bazel coverage //:greeter_mstest --combined_report=lcov
+          awk '/^SF:/ { f = substr($0, 4) }
+            f == "Greeter.cs" && /^DA:[0-9]+,[1-9]/ { hit = 1 }
+            END { exit !hit }' bazel-out/_coverage/_coverage_report.dat
 
   bazel-versions:
     name: Examples and proto (Bazel ${{ matrix.bazel }})
