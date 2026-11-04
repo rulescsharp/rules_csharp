@@ -40,9 +40,20 @@ TFM_PRECEDENCE = [
 
 SUPPORTED_RIDS = {
     "osx-arm64": "@rules_csharp//csharp/constraints:osx_arm64",
+    "osx-x64": "@rules_csharp//csharp/constraints:osx_x64",
     "linux-x64": "@rules_csharp//csharp/constraints:linux_x64",
     "linux-arm64": "@rules_csharp//csharp/constraints:linux_arm64",
     "win-x64": "@rules_csharp//csharp/constraints:win_x64",
+}
+
+# Each RID and the more general RIDs NuGet falls back to, from
+# https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
+RID_FALLBACKS = {
+    "osx-arm64": ["osx-arm64", "osx", "unix"],
+    "osx-x64": ["osx-x64", "osx", "unix"],
+    "linux-x64": ["linux-x64", "linux", "unix"],
+    "linux-arm64": ["linux-arm64", "linux", "unix"],
+    "win-x64": ["win-x64", "win"],
 }
 
 def _has_dlls(path):
@@ -230,19 +241,22 @@ def _nuget_package_repo_impl(repository_ctx):
     if not default_runtime_dir and compile_dir:
         default_runtime_dir = compile_dir
 
-    # 3. RID-specific runtime assemblies: runtimes/<rid>/lib/<tfm>/
+    # 3. RID-specific runtime assemblies: runtimes/<rid>/lib/<tfm>/ for the first RID along the fallback chain
     rid_lib_dirs = {}
     for rid in SUPPORTED_RIDS.keys():
-        r_dir = _find_best_tfm_dir(repository_ctx, "runtimes/" + rid + "/lib")
-        if r_dir:
-            rid_lib_dirs[rid] = r_dir
+        for fallback in RID_FALLBACKS[rid]:
+            r_dir = _find_best_tfm_dir(repository_ctx, "runtimes/" + fallback + "/lib")
+            if r_dir:
+                rid_lib_dirs[rid] = r_dir
+                break
 
-    # 4. Native libraries: runtimes/<rid>/native/
+    # 4. Native libraries: runtimes/<rid>/native/ for the first RID along the fallback chain
     rid_native_dirs = {}
     for rid in SUPPORTED_RIDS.keys():
-        n_path = repository_ctx.path("runtimes/" + rid + "/native")
-        if _has_files(n_path):
-            rid_native_dirs[rid] = "runtimes/" + rid + "/native/*"
+        for fallback in RID_FALLBACKS[rid]:
+            if _has_files(repository_ctx.path("runtimes/" + fallback + "/native")):
+                rid_native_dirs[rid] = "runtimes/" + fallback + "/native/*"
+                break
 
     # 5. Analyzers
     analyzer_dir = _find_analyzer_dir(repository_ctx)
