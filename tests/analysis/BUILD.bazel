@@ -225,8 +225,8 @@ expect_failure_test(
     target_under_test = ":shared_name_app",
 )
 
-# Two test platform packages both ship Microsoft.TestPlatform.CoreUtilities.dll. Like MSBuild, the app
-# keeps one of them.
+# Two test platform packages both ship Microsoft.TestPlatform.CoreUtilities.dll. The app keeps the
+# first one in dependency order.
 csharp_binary(
     name = "package_copies_app",
     srcs = ["CrossApp.cs"],
@@ -257,7 +257,7 @@ csharp_binary(
 
 expect_failure_test(
     name = "package_name_clash_test",
-    message = "loads two assemblies named Microsoft.TestPlatform.CoreUtilities, from",
+    message = "tests/analysis:package_name_lib so each name is unique.",
     target_under_test = ":package_name_app",
 )
 

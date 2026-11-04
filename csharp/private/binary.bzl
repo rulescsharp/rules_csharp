@@ -22,14 +22,16 @@ def _binary_common_impl(ctx, is_test = False):
 
     # The host loads one assembly per name, so a second one with the same name would silently go missing.
     # One target built for two frameworks is still one assembly. Prebuilt packages often ship the same
-    # dll, like Microsoft.TestPlatform.CoreUtilities in both test platform packages, and MSBuild keeps
-    # one of those too, so only a clash with an assembly built here fails.
+    # dll, like Microsoft.TestPlatform.CoreUtilities in both test platform packages. The app keeps the
+    # first of those in dependency order where MSBuild would pick the higher version, so only a clash
+    # with an assembly built here fails.
     assembly_owners = {}
     for f in csharp_info.transitive_runtime_dlls.to_list():
         other = assembly_owners.setdefault(f.basename.lower(), f)
         if other.owner != f.owner and not (other.is_source and f.is_source):
-            fail("""{} loads two assemblies named {}, from {} and {}. Set output_assembly on one of \
-them so each name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owner, f.owner))
+            built = other if f.is_source else f
+            fail("""{} loads two assemblies named {}, from {} and {}. Set output_assembly on {} so each \
+name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owner, f.owner, built.owner))
 
     #monikers
     tfm = csharp_info.target_framework or "net8.0"
