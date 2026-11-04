@@ -27,9 +27,22 @@ stardoc(
     deps = ["//csharp:extensions_bzl"],
 )
 
+# The proto stubs stay out of the reference. The module docstring already points to
+# rules_csharp_proto, and Bazel 7 renders their **kwargs differently from Bazel 8 and 9.
 stardoc(
     name = "docs",
     out = "defs_generated.md",
     input = "//csharp:defs.bzl",
+    symbol_names = [
+        "CSharpAnalyzerInfo",
+        "CSharpInfo",
+        "CSharpToolchainInfo",
+        "csharp_analyzer_import",
+        "csharp_analyzer_library",
+        "csharp_binary",
+        "csharp_import",
+        "csharp_library",
+        "csharp_test",
+    ],
     deps = ["//csharp:defs_bzl"],
 )
