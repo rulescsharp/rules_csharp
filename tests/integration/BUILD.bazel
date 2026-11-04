@@ -126,6 +126,13 @@ csharp_test(
     deps = ["@nuget//:System.IO.Ports"],
 )
 
+# Run with -c opt too, where the assembly is optimized and DEBUG is undefined.
+csharp_test(
+    name = "compilation_mode_test",
+    srcs = ["CompilationModeTest.cs"],
+    allow_unsafe_blocks = True,
+)
+
 # A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",

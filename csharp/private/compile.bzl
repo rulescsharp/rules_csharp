@@ -32,6 +32,13 @@ under the directory of the file, so keep a `.editorconfig` next to or above the 
 such as `dotnet_diagnostic.CS8618.severity = none` apply to compiler warnings. CA and IDE rules come from analyzers, so \
 they take effect only when the analyzer package is in `plugins` or `deps`."""
 
+ALLOW_UNSAFE_BLOCKS_DOC = """Allows `unsafe` code, the same as MSBuild `AllowUnsafeBlocks`. Without it the compiler \
+rejects any `unsafe` block or member with CS0227."""
+
+DEFINES_DOC = """Preprocessor symbols to define during compilation, the same as MSBuild `DefineConstants`. Every \
+compilation mode except `-c opt` also defines `DEBUG` and `TRACE`, like the MSBuild Debug configuration. `-c opt` \
+defines only `TRACE` and turns on optimizations, like the Release configuration."""
+
 DATA_DOC = """Files and targets needed at run time. Their files and runfiles join the runfiles of this target and of \
 every executable that depends on it, along with the `content` of libraries it depends on."""
 
@@ -148,6 +155,15 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     args.add("-warn:" + str(warning_level))
     if getattr(ctx.attr, "warn_as_error", False):
         args.add("-warnaserror+")
+    if getattr(ctx.attr, "allow_unsafe_blocks", False):
+        args.add("-unsafe+")
+
+    # -c opt is the MSBuild Release configuration, every other mode is Debug.
+    if ctx.var["COMPILATION_MODE"] == "opt":
+        args.add("-optimize+")
+        args.add("-define:TRACE")
+    else:
+        args.add("-define:DEBUG;TRACE")
 
     for d in getattr(ctx.attr, "defines", []):
         args.add("-define:" + d)
@@ -478,6 +494,10 @@ def _csharp_analyzer_import_impl(ctx):
     ]
 
 _COMMON_ATTRS = {
+    "allow_unsafe_blocks": attr.bool(
+        default = False,
+        doc = ALLOW_UNSAFE_BLOCKS_DOC,
+    ),
     "analyzers": attr.label_list(
         allow_files = [".dll"],
         default = [],
@@ -495,7 +515,7 @@ _COMMON_ATTRS = {
     ),
     "defines": attr.string_list(
         default = [],
-        doc = "Preprocessor symbols to define during compilation.",
+        doc = DEFINES_DOC,
     ),
     "deps": attr.label_list(
         default = [],

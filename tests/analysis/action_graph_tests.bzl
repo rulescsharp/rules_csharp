@@ -410,3 +410,33 @@ def _editorconfig_action_test_impl(ctx):
     return analysistest.end(env)
 
 editorconfig_action_test = analysistest.make(_editorconfig_action_test_impl)
+
+def _compilation_mode_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    argv = compile_actions[0].argv
+    for flag in ctx.attr.expected_flags:
+        asserts.true(env, flag in argv, "Expected %s, got: %s" % (flag, argv))
+    for flag in ctx.attr.unexpected_flags:
+        asserts.false(env, flag in argv, "Expected no %s, got: %s" % (flag, argv))
+
+    return analysistest.end(env)
+
+_COMPILATION_MODE_TEST_ATTRS = {
+    "expected_flags": attr.string_list(),
+    "unexpected_flags": attr.string_list(),
+}
+
+compilation_mode_action_test = analysistest.make(
+    _compilation_mode_action_test_impl,
+    attrs = _COMPILATION_MODE_TEST_ATTRS,
+    config_settings = {"//command_line_option:compilation_mode": "fastbuild"},
+)
+
+opt_compilation_mode_action_test = analysistest.make(
+    _compilation_mode_action_test_impl,
+    attrs = _COMPILATION_MODE_TEST_ATTRS,
+    config_settings = {"//command_line_option:compilation_mode": "opt"},
+)

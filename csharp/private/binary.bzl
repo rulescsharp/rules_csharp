@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "DATA_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
+load(":compile.bzl", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -668,6 +668,10 @@ _BINARY_ATTRS = {
         default = Label("//csharp/private/tools:apphost_patcher_runtimeconfig"),
         doc = "Runtime configuration file for patcher executable.",
     ),
+    "allow_unsafe_blocks": attr.bool(
+        default = False,
+        doc = ALLOW_UNSAFE_BLOCKS_DOC,
+    ),
     "data": attr.label_list(
         allow_files = True,
         default = [],
@@ -675,7 +679,7 @@ _BINARY_ATTRS = {
     ),
     "defines": attr.string_list(
         default = [],
-        doc = "Preprocessor symbols to define during compilation.",
+        doc = DEFINES_DOC,
     ),
     "deps": attr.label_list(
         default = [],
