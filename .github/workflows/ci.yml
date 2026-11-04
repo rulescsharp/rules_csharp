@@ -35,6 +35,8 @@ jobs:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}
           repository-cache: true
+          # .bazelversion pins the Bazel that writes the MODULE.bazel.lock files, so fail if one is out of date.
+          bazelrc: common --lockfile_mode=error
 
       - name: Execute all tests
         run: bazel test //...
