@@ -318,7 +318,12 @@ fetch "$WORK/v3 config" "$WORK/output base 12"
 
 echo "--- nuget_config with an index.json that is not a service index"
 echo "<html>Sign in</html>" >"$V3_FEED/index.json"
-if fetch "$WORK/v3 config" "$WORK/output base 13" >"$WORK/not_index.log" 2>&1; then
+# A module of its own, because the last case's MODULE.bazel.lock already holds
+# the package base, so Bazel would not read index.json again.
+write_module "$WORK/not index config" 'packages_lock_json = "//:packages.lock.json",
+    nuget_config = "//:NuGet.Config",'
+cp "$WORK/v3 config/NuGet.Config" "$WORK/not index config/"
+if fetch "$WORK/not index config" "$WORK/output base 13" >"$WORK/not_index.log" 2>&1; then
   cat "$WORK/not_index.log"
   echo "FAIL: a feed with a non-JSON index.json fetched" >&2
   exit 1
