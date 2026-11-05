@@ -160,3 +160,13 @@ jobs:
 
       - name: Fetch packages and an SDK from feeds and mirrors
         run: tests/nuget_fetch/fetch_test.sh grpc://localhost:9092
+
+  release-stamp:
+    name: Release version stamp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Stamp a version into both modules
+        run: .github/workflows/stamp_version.sh 9.9.9
