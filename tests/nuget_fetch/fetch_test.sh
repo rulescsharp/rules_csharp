@@ -15,7 +15,9 @@
 # 6. A nuget_config with <clear /> and nuget.org's v3 index.json fetches from
 #    nuget.org.
 # 7. A nuget_config with <clear /> and another feed's v3 index.json fetches
-#    from the PackageBaseAddress that index.json lists.
+#    from the PackageBaseAddress that index.json lists. Its <add> shares a
+#    line with <clear /> and spans two lines, and a commented-out <add> for a
+#    missing feed is skipped.
 # 8. With use_public_sources = False, an SDK patch version pinned only in
 #    sdk_checksums and coverlet.console come from a file mirror, and an empty
 #    mirror fails instead of falling back to Microsoft's CDN, also when a later
@@ -309,8 +311,11 @@ cat >"$WORK/v3 config/NuGet.Config" <<CONFIG
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
-    <clear />
-    <add key="private" value="$(file_url "$V3_FEED/index.json")" />
+    <clear /><add key="private"
+                  value="$(file_url "$V3_FEED/index.json")" />
+    <!--
+    <add key="old" value="$(file_url "$WORK/gone/index.json")" />
+    -->
   </packageSources>
 </configuration>
 CONFIG

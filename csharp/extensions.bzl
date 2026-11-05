@@ -290,18 +290,24 @@ def _parse_nuget_config(content):
     """Returns the package sources and whether a <clear /> dropped the inherited ones."""
     sources = []
     cleared = False
-    sources_block = _extract_block(content, "<packageSources>", "</packageSources>")
-    if sources_block:
-        for line in sources_block.splitlines():
-            line = line.strip()
-            if line.startswith("<clear") or "<clear/>" in line or "<clear />" in line:
-                sources = []
-                cleared = True
-            elif line.startswith("<add"):
-                val = _extract_attr(line, "value")
-                if val:
-                    sources.append(val)
+
+    # Go by tags, not lines, since a tag can share a line or span several.
+    block = _extract_block(_strip_comments(content), "<packageSources>", "</packageSources>")
+    for tag in block.split("<")[1:]:
+        tag = tag.split(">")[0]
+        name = tag.replace("/", " ").replace("\n", " ").replace("\r", " ").replace("\t", " ").strip().split(" ")[0]
+        if name == "clear":
+            sources = []
+            cleared = True
+        elif name == "add":
+            val = _extract_attr(tag, "value")
+            if val:
+                sources.append(val)
     return sources, cleared
+
+def _strip_comments(content):
+    parts = content.split("<!--")
+    return parts[0] + "".join([p[p.find("-->") + 3:] if "-->" in p else "" for p in parts[1:]])
 
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
