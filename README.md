@@ -56,7 +56,7 @@ show the `///` docs to anything that references the library.
 
 [examples/web](examples/web/) uses ASP.NET Core from a library through `framework_references`, checks
 that library against an `.editorconfig` through `editorconfig_files`, names the app assembly with
-`output_assembly` and reads a `data` file at run time. `bazel run //web` prints `200 Hello, web!`.
+`output_assembly` and reads a `data` file through [`//csharp/runfiles`](csharp/runfiles/). `bazel run //web` prints `200 Hello, web!`.
 
 These attributes do the same job as the MSBuild items and properties of a `.csproj`:
 
@@ -196,6 +196,13 @@ use_repo(nuget, "mylib_nuget")
 
 Its targets then depend on `@mylib_nuget//:Newtonsoft.Json`. Each hub has its own sources and
 versions, so two hubs can pin different versions of one package. Tags with the same name share a hub.
+
+## Locating data files
+
+Binaries and tests that need files from `data` use [`@rules_csharp//csharp/runfiles`](csharp/runfiles/).
+Call `Runfiles.Create()` then `Rlocation("_main/path/to/file")` (or the module name instead of
+`_main`). It reads `RUNFILES_MANIFEST_FILE` when Bazel sets it, which is the usual case on Windows,
+and falls back to the runfiles directory otherwise. See [examples/web](examples/web/).
 
 ## Protobuf and gRPC
 
