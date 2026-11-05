@@ -9,8 +9,8 @@ outputs are identical across machines and sandboxes. Map `/_/` to the workspace 
 step into sources.
 
 `csharp_proto_library` and `csharp_grpc_library` live in the separate `rules_csharp_proto` module, so
-the core module pulls in no protobuf. See [rules_csharp_proto](../proto/README.md) for setup. The names
-below remain as stubs that fail the build with migration steps.
+the core module pulls in no protobuf. See [rules_csharp_proto](../proto/README.md) for setup. The old names
+remain as stubs that fail the build with migration steps.
 
 <a id="csharp_analyzer_import"></a>
 
@@ -362,47 +362,5 @@ Defines resolved C# SDK tools, packs, and target monikers.
 | <a id="CSharpToolchainInfo-target_framework"></a>target_framework |  Target framework moniker string.    |
 | <a id="CSharpToolchainInfo-target_rid"></a>target_rid |  Target runtime identifier string.    |
 | <a id="CSharpToolchainInfo-vstest_dll"></a>vstest_dll |  Host File for vstest.console.dll.    |
-
-
-<a id="csharp_grpc_library"></a>
-
-## csharp_grpc_library
-
-<pre>
-load("@rules_csharp//csharp:defs.bzl", "csharp_grpc_library")
-
-csharp_grpc_library(<a href="#csharp_grpc_library-name">name</a>, <a href="#csharp_grpc_library-kwargs">**kwargs</a>)
-</pre>
-
-Moved to `@rules_csharp_proto//csharp:defs.bzl`. Fails the build with migration steps.
-
-**PARAMETERS**
-
-
-| Name  | Description | Default Value |
-| :------------- | :------------- | :------------- |
-| <a id="csharp_grpc_library-name"></a>name |  A unique name for this target.   |  none |
-| <a id="csharp_grpc_library-kwargs"></a>kwargs |  Ignored.   |  none |
-
-
-<a id="csharp_proto_library"></a>
-
-## csharp_proto_library
-
-<pre>
-load("@rules_csharp//csharp:defs.bzl", "csharp_proto_library")
-
-csharp_proto_library(<a href="#csharp_proto_library-name">name</a>, <a href="#csharp_proto_library-kwargs">**kwargs</a>)
-</pre>
-
-Moved to `@rules_csharp_proto//csharp:defs.bzl`. Fails the build with migration steps.
-
-**PARAMETERS**
-
-
-| Name  | Description | Default Value |
-| :------------- | :------------- | :------------- |
-| <a id="csharp_proto_library-name"></a>name |  A unique name for this target.   |  none |
-| <a id="csharp_proto_library-kwargs"></a>kwargs |  Ignored.   |  none |
 
 
