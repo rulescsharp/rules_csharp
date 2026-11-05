@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
+load(":compile.bzl", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "GENERATE_DOCUMENTATION_FILE_DOC", "OUTPUT_ASSEMBLY_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -557,7 +557,7 @@ exit $EXIT_CODE
     providers = [
         DefaultInfo(
             executable = executable_file,
-            files = depset([executable_file, main_dll, pdb, runtimeconfig_json, deps_json] + extra_output_files),
+            files = depset([executable_file, main_dll, pdb, runtimeconfig_json, deps_json] + ([csharp_info.xml_doc] if csharp_info.xml_doc else []) + extra_output_files),
             runfiles = runfiles,
         ),
         csharp_info,
@@ -717,6 +717,10 @@ _BINARY_ATTRS = {
     "generate_assembly_info": attr.bool(
         default = True,
         doc = "Synthesize assembly information attributes.",
+    ),
+    "generate_documentation_file": attr.bool(
+        default = False,
+        doc = GENERATE_DOCUMENTATION_FILE_DOC,
     ),
     "implicit_usings": attr.bool(
         default = True,

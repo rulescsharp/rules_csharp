@@ -35,6 +35,11 @@ they take effect only when the analyzer package is in `plugins` or `deps`."""
 ALLOW_UNSAFE_BLOCKS_DOC = """Allows `unsafe` code, the same as MSBuild `AllowUnsafeBlocks`. Without it the compiler \
 rejects any `unsafe` block or member with CS0227."""
 
+GENERATE_DOCUMENTATION_FILE_DOC = """Writes the `///` comments to `<assembly>.xml` next to the dll, the same as MSBuild \
+`GenerateDocumentationFile`. IDEs read that file to show the docs for anyone who references the assembly. Like \
+MSBuild, the compiler then warns with CS1591 for each public member that has no `///` comment, which fails the build \
+under `warn_as_error` unless `nowarn` lists it."""
+
 DEFINES_DOC = """Preprocessor symbols to define during compilation, the same as MSBuild `DefineConstants`. Every \
 compilation mode except `-c opt` also defines `DEBUG` and `TRACE`, like the MSBuild Debug configuration. `-c opt` \
 defines only `TRACE` and turns on optimizations, like the Release configuration."""
@@ -109,6 +114,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     out_dll = ctx.actions.declare_file(out_dir + assembly + ".dll")
     refout_dll = ctx.actions.declare_file(out_dir + assembly + ".ref.dll")
     pdb = ctx.actions.declare_file(out_dir + assembly + ".pdb")
+    xml_doc = ctx.actions.declare_file(out_dir + assembly + ".xml") if getattr(ctx.attr, "generate_documentation_file", False) else None
 
     direct_deps_and_exports = list(ctx.attr.deps) + list(getattr(ctx.attr, "exports", []))
 
@@ -139,6 +145,8 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     args.add("-out:" + out_dll.path.replace("\\", "/"))
     args.add("-refout:" + refout_dll.path.replace("\\", "/"))
     args.add("-pdb:" + pdb.path.replace("\\", "/"))
+    if xml_doc:
+        args.add("-doc:" + xml_doc.path.replace("\\", "/"))
 
     # Unconditional architectural invariant flags
     args.add("-noconfig")
@@ -315,7 +323,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     compile_env["PATH"] = "C:\\Windows\\System32;C:\\Windows" if is_win else "/usr/bin:/bin"
 
     ctx.actions.run(
-        outputs = [out_dll, refout_dll, pdb],
+        outputs = [out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else []),
         inputs = inputs_depset,
         executable = compiler_executable,
         arguments = compiler_args,
@@ -353,6 +361,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         compile_ref = refout_dll,
         runtime_dll = out_dll,
         pdb = pdb,
+        xml_doc = xml_doc,
         transitive_compile_refs = transitive_compile_refs,
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
@@ -361,9 +370,9 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     )
 
     default_info = DefaultInfo(
-        files = depset([out_dll, refout_dll, pdb]),
+        files = depset([out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else [])),
         runfiles = ctx.runfiles(
-            files = [out_dll, pdb] + resource_files + getattr(ctx.files, "content", []),
+            files = [out_dll, pdb] + ([xml_doc] if xml_doc else []) + resource_files + getattr(ctx.files, "content", []),
             transitive_files = depset(transitive_runtime_dlls.to_list()),
         ).merge(library_runfiles(ctx, direct_deps_and_exports)),
     )
@@ -450,6 +459,7 @@ def _csharp_import_impl(ctx):
         compile_ref = primary_compile_ref,
         runtime_dll = primary_runtime_dll,
         pdb = None,
+        xml_doc = None,
         transitive_compile_refs = transitive_compile_refs,
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
@@ -563,6 +573,10 @@ _COMMON_ATTRS = {
     "generate_assembly_info": attr.bool(
         default = True,
         doc = "Synthesize assembly information attributes.",
+    ),
+    "generate_documentation_file": attr.bool(
+        default = False,
+        doc = GENERATE_DOCUMENTATION_FILE_DOC,
     ),
     "implicit_usings": attr.bool(
         default = True,
