@@ -170,6 +170,23 @@ nuget.from_lock(
 - With public sources off, a package whose `contentHash` is empty in `packages.lock.json` fails
   instead of downloading unverified.
 
+## NuGet packages in a library module
+
+Each `nuget.from_lock` name is its own hub. A module that others depend on should pick a name of its
+own, so its packages never mix with the root's `@nuget`:
+
+```starlark
+nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget")
+nuget.from_lock(
+    name = "mylib_nuget",
+    packages_lock_json = "//:packages.lock.json",
+)
+use_repo(nuget, "mylib_nuget")
+```
+
+Its targets then depend on `@mylib_nuget//:Newtonsoft.Json`. Each hub has its own sources and
+versions, so two hubs can pin different versions of one package. Tags with the same name share a hub.
+
 ## Protobuf and gRPC
 
 `csharp_proto_library` and `csharp_grpc_library` live in the separate `rules_csharp_proto` module,

@@ -1,0 +1,13 @@
+load("//csharp:defs.bzl", "csharp_test")
+
+exports_files(["packages.lock.json"])
+
+# @pinned_nuget pins Newtonsoft.Json 13.0.3 while @nuget has 13.0.1. The test
+# depends only on Newtonsoft.Json.Bson, so the 13.0.3 it loads has to come
+# through that package's own dependency in the same hub.
+csharp_test(
+    name = "second_hub_test",
+    srcs = ["SecondHubTest.cs"],
+    target_framework = "net8.0",
+    deps = ["@pinned_nuget//:Newtonsoft.Json.Bson"],
+)

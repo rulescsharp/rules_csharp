@@ -18,5 +18,9 @@ nuget.from_lock(
     packages_lock_json = "//tests/integration:packages.lock.json",
     directory_packages_props = "//tests/integration:Directory.Packages.props",
 )
-use_repo(nuget, "nuget")
+nuget.from_lock(
+    name = "pinned_nuget",
+    packages_lock_json = "//tests/integration/second_hub:packages.lock.json",
+)
+use_repo(nuget, "nuget", "pinned_nuget")
 

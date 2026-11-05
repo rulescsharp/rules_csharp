@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "HTh/mn9Rk9RNUMmHZ0GkUF1YCERzbn8pauVBOudHPSo=",
+        "bzlTransitiveDigest": "NNLqaD6ATHOai5yj0GCknATZ/BI7Gx+A2sVv45+On60=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -652,11 +652,12 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "HTh/mn9Rk9RNUMmHZ0GkUF1YCERzbn8pauVBOudHPSo=",
-        "usagesDigest": "IMGPB1tujPhrgawPdseYsjepCrravQgw4rMvbh/J+GA=",
+        "bzlTransitiveDigest": "NNLqaD6ATHOai5yj0GCknATZ/BI7Gx+A2sVv45+On60=",
+        "usagesDigest": "j05+tZbcyZTcJsDtoH5oFTo0FPdzk8Mt6sJ1d/4McSw=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json 59d34740418b1ee6f208c5c06e862c02e0b65f4dfbdd479e38f439531a5cf71b"
+          "FILE:@@//tests/integration/packages.lock.json 59d34740418b1ee6f208c5c06e862c02e0b65f4dfbdd479e38f439531a5cf71b",
+          "FILE:@@//tests/integration/second_hub/packages.lock.json 6248083f575ff89b0612321b3ce74c4a10ccee154807dc024ef29c4533e7407b"
         ],
         "generatedRepoSpecs": {
           "nuget_commandlineparser": {
@@ -665,6 +666,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "CommandLineParser",
               "sha256": "02953dcb5c97eb475a4a33e4dca60305e27b5d9072296f21b1ef4d45919c8dea",
@@ -681,6 +683,7 @@
                 "Microsoft.TestPlatform.TestHost"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.NET.Test.Sdk",
               "sha256": "d09504b9c43697368f824ae39bf3452c14dba94d5d7e1be13774e5de6a04ea62",
@@ -697,6 +700,7 @@
                 "Microsoft.Testing.Platform.MSBuild"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "MSTest.TestAdapter",
               "sha256": "ca669e1fda5813c3b50a195f27886fa55f4a3fd795242126e318461e781aa506",
@@ -710,6 +714,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "MSTest.TestFramework",
               "sha256": "a5a081540e57b62001f0ec246c949bc3bbfe1ef4c52cdf6a1d182f41a789282d",
@@ -723,6 +728,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "PolySharp",
               "sha256": "97a873f921be7043bcd7bc5332ae036c948956745ee857ebfae246563fedd7bd",
@@ -736,6 +742,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Riok.Mapperly",
               "sha256": "6965da6f891734a2f4341562ecde47c9d51c1d28c013fdee182da7789e981a75",
@@ -751,6 +758,7 @@
                 "runtime.native.System.IO.Ports"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "System.IO.Ports",
               "sha256": "1bc8fd7347ab07365f2405655b4f17a04e7c80f862356244efcb056815767b84",
@@ -768,6 +776,7 @@
                 "xunit.core"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit",
               "sha256": "879fb24d37c29a89023f2e25a9d130f111b3425ae5b10016dc09b4261d2aee8a",
@@ -781,6 +790,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.runner.visualstudio",
               "sha256": "5257cadf8f2bf2426eadacb07dd0ada492711e4bf4e303cdce951acf850cffad",
@@ -796,6 +806,7 @@
                 "System.Diagnostics.DiagnosticSource"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.ApplicationInsights",
               "sha256": "99443addab694f4d2be3d71ae74b99bb660288b837c9deabdc7cd3af2a9cb840",
@@ -809,6 +820,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.CodeCoverage",
               "sha256": "d5d2e52b734687cf0fb85619898a53fa2cc0f7a7adc61537052822c4381db460",
@@ -825,6 +837,7 @@
                 "Microsoft.Testing.Platform"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.Testing.Extensions.Telemetry",
               "sha256": "a19f80b3219d8d60e8631fa792f7ae9e2538c81d436776e380e827b9c12d6e77",
@@ -840,6 +853,7 @@
                 "Microsoft.Testing.Platform"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
               "sha256": "437136b1f4cbe95bee2b55f6250b0da944d2f40b699c7f667f6697323d3d6f3f",
@@ -859,6 +873,7 @@
                 "Microsoft.Testing.Platform"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.Testing.Extensions.VSTestBridge",
               "sha256": "4a3c7b18180b62d5f49e68e65626475951f02199cbf1a8fe8af0cae7c19b03c9",
@@ -872,6 +887,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.Testing.Platform",
               "sha256": "2aa077fae04697479da5a1a5e90ca4b9b6f73ab553b3a21c3d6739f5443f230c",
@@ -887,6 +903,7 @@
                 "Microsoft.Testing.Platform"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.Testing.Platform.MSBuild",
               "sha256": "dbcf6185b954e79903bf36e24900054b13b286dd4c9574f87be6c443242a8a5b",
@@ -902,6 +919,7 @@
                 "System.Reflection.Metadata"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.TestPlatform.ObjectModel",
               "sha256": "e6f5febc2cc56374bbc5f31522ff0e94c305b5d79d5bd50827373458473ebe6e",
@@ -918,6 +936,7 @@
                 "Newtonsoft.Json"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Microsoft.TestPlatform.TestHost",
               "sha256": "c12918d07d5f400ab41f72dc293e2eed8e51ce10003daeb2b9e54df3883c1f15",
@@ -931,6 +950,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "Newtonsoft.Json",
               "sha256": "2b6b52556e27e1b7913f33eedeb95568110c746bd64afff74357f1683878323a",
@@ -944,6 +964,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.linux-arm.runtime.native.System.IO.Ports",
               "sha256": "9b9fa877b661973226c1213d13b42ad671f70379ae5f00a7b2fad552827bf961",
@@ -957,6 +978,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.linux-arm64.runtime.native.System.IO.Ports",
               "sha256": "2206c6dc74f7034548b569796ac13b1e4d336908d09de2904bd7fae5c4008cb2",
@@ -970,6 +992,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.linux-x64.runtime.native.System.IO.Ports",
               "sha256": "e38a2e8d21e1734365d960af2d891272b032a8d0256c67ce9e5ccfc02a1fc250",
@@ -989,6 +1012,7 @@
                 "runtime.osx-x64.runtime.native.System.IO.Ports"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.native.System.IO.Ports",
               "sha256": "06a131554ff31e3ee8fbe9b33a963dcbe8bdc996556dc1a63bf0f8991ce2818f",
@@ -1002,6 +1026,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.osx-arm64.runtime.native.System.IO.Ports",
               "sha256": "a05305eb4cb24f2ddf5f02e55c990d52dcdd473e04cb17af01421c7dc5444821",
@@ -1015,6 +1040,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "runtime.osx-x64.runtime.native.System.IO.Ports",
               "sha256": "6f627d0dcba732d0a1a6ec8d0b45cddfd674d56afbdfc1c8fecc895b59fd6df1",
@@ -1028,6 +1054,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "System.Diagnostics.DiagnosticSource",
               "sha256": "ea65b737a16f71d347fe9079f2997ea4548219683268fe217d5b42fd23160d5e",
@@ -1041,6 +1068,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "System.Reflection.Metadata",
               "sha256": "2497e068f6afed47c4878c9101074684b645d5baebd2d5163e5eaa99f356abf1",
@@ -1054,6 +1082,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.abstractions",
               "sha256": "d03d72fc2df8880448f7a81bddb00e1bcb5c18f323c7e7cc69b4cfa727469403",
@@ -1067,6 +1096,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.analyzers",
               "sha256": "3f906f97d86f1ef17c298d5858b838b4a898c657d19e61f22f5e237d20020da5",
@@ -1080,6 +1110,7 @@
               "auth_patterns": {},
               "dependencies": [],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.assert",
               "sha256": "104eabe76e90e1c1e7d0ebab7f510da57677ecb8ff3f6b8dbe89c782975c9eae",
@@ -1096,6 +1127,7 @@
                 "xunit.extensibility.execution"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.core",
               "sha256": "ce18d5d48e7187444572481310aef6b4890bc5597808f9ad7abd9407efa8c9ef",
@@ -1111,6 +1143,7 @@
                 "xunit.abstractions"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.extensibility.core",
               "sha256": "310002ff877aecdb2cbb747ea473e1eaf1e2b415d06311046645553065bbdb47",
@@ -1126,6 +1159,7 @@
                 "xunit.extensibility.core"
               ],
               "feeds": [],
+              "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "xunit.extensibility.execution",
               "sha256": "7fef547e83f22b72480e14125b462ef5ce0f1aa52a642f7a0cc20d0988b68bcd",
@@ -1170,6 +1204,45 @@
                 "xunit.core": "nuget_xunit_core",
                 "xunit.extensibility.core": "nuget_xunit_extensibility_core",
                 "xunit.extensibility.execution": "nuget_xunit_extensibility_execution"
+              }
+            }
+          },
+          "pinned_nuget_newtonsoft_json": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "pinned_nuget",
+              "local_package_dirs": [],
+              "package_id": "Newtonsoft.Json",
+              "sha256": "872fc189e638ab1056555b03aaa38f68bcb54286e221aa646eb1129babf63c77",
+              "use_public_sources": true,
+              "version": "13.0.3"
+            }
+          },
+          "pinned_nuget_newtonsoft_json_bson": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Newtonsoft.Json"
+              ],
+              "feeds": [],
+              "hub": "pinned_nuget",
+              "local_package_dirs": [],
+              "package_id": "Newtonsoft.Json.Bson",
+              "sha256": "6548fa60548c669e4266d5e26a6c38f5e6666e9d62601b8db0828d9e3c5c4730",
+              "use_public_sources": true,
+              "version": "1.0.2"
+            }
+          },
+          "pinned_nuget": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_hub_repo",
+            "attributes": {
+              "packages": {
+                "Newtonsoft.Json": "pinned_nuget_newtonsoft_json",
+                "Newtonsoft.Json.Bson": "pinned_nuget_newtonsoft_json_bson"
               }
             }
           }
