@@ -1,0 +1,56 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_csharp//csharp:defs.bzl", "csharp_test")
+load("//csharp:defs.bzl", "csharp_proto_library")
+
+proto_library(
+    name = "money_proto",
+    srcs = ["money.proto"],
+)
+
+proto_library(
+    name = "order_proto",
+    srcs = ["order.proto"],
+    deps = [
+        ":money_proto",
+        "@protobuf//:timestamp_proto",
+    ],
+)
+
+csharp_proto_library(
+    name = "money_cs_proto",
+    proto = ":money_proto",
+    deps = ["@nuget//:Google.Protobuf"],
+)
+
+# Order.cs uses Shop.Money from money_cs_proto and Timestamp from Google.Protobuf.
+csharp_proto_library(
+    name = "order_cs_proto",
+    proto = ":order_proto",
+    deps = [
+        ":money_cs_proto",
+        "@nuget//:Google.Protobuf",
+    ],
+)
+
+csharp_test(
+    name = "imports_test",
+    srcs = ["ImportsTest.cs"],
+    deps = [
+        ":order_cs_proto",
+        "@nuget//:Google.Protobuf",
+    ],
+)
+
+# The same order proto, with money_cs_proto in exports instead of deps.
+csharp_proto_library(
+    name = "order_exports_cs_proto",
+    proto = ":order_proto",
+    deps = ["@nuget//:Google.Protobuf"],
+    exports = [":money_cs_proto"],
+)
+
+build_test(
+    name = "exports_build_test",
+    targets = [":order_exports_cs_proto"],
+)

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package shop;
+
+import "google/protobuf/timestamp.proto";
+import "tests/integration/imports/money.proto";
+
+message Order {
+  string id = 1;
+  Money total = 2;
+  google.protobuf.Timestamp placed = 3;
+}
