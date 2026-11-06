@@ -41,6 +41,9 @@ jobs:
       - name: Execute all tests
         run: bazel test //...
 
+      - name: Test the Release configuration
+        run: bazel test -c opt //tests/integration:compilation_mode_test
+
       - name: Check .editorconfig sections outside the compile worker
         # bazel test compiled this library in the persistent worker. A fresh server without the action
         # cache compiles it again as a plain process, sandboxed where the OS has a sandbox.
@@ -82,7 +85,9 @@ jobs:
 
       - name: Run examples binary
         working-directory: examples
-        run: test "$(bazel run //:hello | tr -d '\r')" = "Hello, Bazel!"
+        run: |
+          test "$(bazel run //:hello | tr -d '\r')" = "$(printf 'Hello, Bazel!\nDebug build. Build with -c opt for Release.')"
+          test "$(bazel run -c opt //:hello | tr -d '\r')" = "Hello, Bazel!"
 
       - name: Run web example
         working-directory: examples

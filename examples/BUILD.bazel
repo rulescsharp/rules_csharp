@@ -5,6 +5,7 @@ package(default_visibility = ["//visibility:public"])
 csharp_library(
     name = "greeter",
     srcs = ["Greeter.cs"],
+    generate_documentation_file = True,
     target_framework = "net8.0",
 )
 

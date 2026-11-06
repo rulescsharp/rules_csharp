@@ -1,6 +1,9 @@
 # rules_csharp
 
-Bazel rules that build, run and test C# with a hermetic .NET SDK.
+Bazel rules that build, run and test C# with a hermetic .NET SDK. `csharp_library`, `csharp_binary` and
+`csharp_test` targets take the place of `.csproj` files, their attributes map to familiar MSBuild items and
+properties, and NuGet packages come from the `packages.lock.json` that `dotnet restore` writes. The rules
+cover C# only.
 
 ## Install
 
@@ -27,6 +30,7 @@ load("@rules_csharp//csharp:defs.bzl", "csharp_binary", "csharp_library", "cshar
 csharp_library(
     name = "greeter",
     srcs = ["Greeter.cs"],
+    generate_documentation_file = True,
     target_framework = "net8.0",
 )
 
@@ -44,7 +48,11 @@ csharp_test(
 )
 ```
 
-`bazel run //:hello` prints `Hello, Bazel!`, and `bazel test //:greeter_test` runs the test.
+`bazel run //:hello` prints `Hello, Bazel!` and a note that it's a Debug build, and `bazel test //:greeter_test`
+runs the test. Bazel's default and `-c dbg` builds match the MSBuild Debug configuration and define `DEBUG` and
+`TRACE`. `-c opt` matches Release, with optimizations on and only `TRACE` defined, so `bazel run -c opt //:hello`
+prints just the greeting. `generate_documentation_file` also writes `greeter.xml` next to `greeter.dll`, so IDEs
+show the `///` docs to anything that references the library.
 
 [examples/web](examples/web/) uses ASP.NET Core from a library through `framework_references`, checks
 that library against an `.editorconfig` through `editorconfig_files`, names the app assembly with
@@ -57,6 +65,10 @@ These attributes do the same job as the MSBuild items and properties of a `.cspr
 | `<FrameworkReference Include="Microsoft.AspNetCore.App" />` | `framework_references = ["Microsoft.AspNetCore.App"]` |
 | `<AssemblyName>` | `output_assembly` |
 | `<EditorConfigFiles Include=".editorconfig" />` | `editorconfig_files = [".editorconfig"]` |
+| `<AllowUnsafeBlocks>true</AllowUnsafeBlocks>` | `allow_unsafe_blocks = True` |
+| `<GenerateDocumentationFile>true</GenerateDocumentationFile>` | `generate_documentation_file = True` |
+| `<DefineConstants>` | `defines` |
+| `dotnet build -c Release` | `bazel build -c opt` |
 
 ## Testing with MSTest or xUnit
 

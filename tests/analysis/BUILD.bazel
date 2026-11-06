@@ -3,6 +3,7 @@ load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
     "analyzes_test",
+    "compilation_mode_action_test",
     "cross_linux_action_test",
     "cross_windows_action_test",
     "csc_worker_action_test",
@@ -13,6 +14,7 @@ load(
     "msbuild_parity_action_test",
     "older_csharp_info",
     "older_csharp_info_dep_test",
+    "opt_compilation_mode_action_test",
     "output_assembly_action_test",
     "proto_moved_test",
     "target_framework_action_test",
@@ -303,6 +305,35 @@ proto_moved_test(
 hermetic_sandbox_action_test(
     name = "hermetic_sandbox_action_test",
     target_under_test = ":lib_a",
+)
+
+csharp_library(
+    name = "unsafe_lib",
+    srcs = ["LibA.cs"],
+    allow_unsafe_blocks = True,
+)
+
+compilation_mode_action_test(
+    name = "debug_compilation_mode_action_test",
+    expected_flags = [
+        "-define:DEBUG;TRACE",
+        "-unsafe+",
+    ],
+    target_under_test = ":unsafe_lib",
+    unexpected_flags = ["-optimize+"],
+)
+
+opt_compilation_mode_action_test(
+    name = "opt_compilation_mode_action_test",
+    expected_flags = [
+        "-define:TRACE",
+        "-optimize+",
+    ],
+    target_under_test = ":lib_a",
+    unexpected_flags = [
+        "-define:DEBUG;TRACE",
+        "-unsafe+",
+    ],
 )
 
 target_framework_action_test(

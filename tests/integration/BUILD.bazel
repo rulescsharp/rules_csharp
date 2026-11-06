@@ -126,6 +126,26 @@ csharp_test(
     deps = ["@nuget//:System.IO.Ports"],
 )
 
+csharp_library(
+    name = "doc_lib",
+    srcs = ["DocLib.cs"],
+    generate_documentation_file = True,
+)
+
+csharp_test(
+    name = "xml_doc_test",
+    srcs = ["XmlDocTest.cs"],
+    data = [":doc_lib"],
+    deps = ["//tests/support:runfiles"],
+)
+
+# Run with -c opt too, where the assembly is optimized and DEBUG is undefined.
+csharp_test(
+    name = "compilation_mode_test",
+    srcs = ["CompilationModeTest.cs"],
+    allow_unsafe_blocks = True,
+)
+
 # A real MSTest suite run through vstest, with the adapter from the MSTest.TestAdapter package.
 csharp_test(
     name = "mstest_suite",
