@@ -32,6 +32,11 @@ under the directory of the file, so keep a `.editorconfig` next to or above the 
 such as `dotnet_diagnostic.CS8618.severity = none` apply to compiler warnings. CA and IDE rules come from analyzers, so \
 they take effect only when the analyzer package is in `plugins` or `deps`."""
 
+ADDITIONAL_COMPILER_OPTIONS_DOC = """Extra `csc` tokens appended after the rule's own flags, the same as MSBuild \
+`AdditionalOptions`. Each entry is one token such as `-checked+` or `-highentropyva-`. Prefer the dedicated attributes \
+(`defines`, `nowarn`, `langversion`, `warning_level`, `warn_as_error`) when they cover the flag. Empty entries and \
+response files that start with `@` fail analysis."""
+
 ALLOW_UNSAFE_BLOCKS_DOC = """Allows `unsafe` code, the same as MSBuild `AllowUnsafeBlocks`. Without it the compiler \
 rejects any `unsafe` block or member with CS0227."""
 
@@ -177,6 +182,12 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         args.add("-define:" + d)
     for nw in getattr(ctx.attr, "nowarn", []):
         args.add("-nowarn:" + nw)
+    for opt in getattr(ctx.attr, "additional_compiler_options", []):
+        if not opt:
+            fail("additional_compiler_options of {} has an empty entry. Pass one csc token per entry.".format(ctx.label))
+        if opt.startswith("@"):
+            fail("additional_compiler_options of {} lists \"{}\". Response files are not allowed. Pass one csc token per entry.".format(ctx.label, opt))
+        args.add(opt)
 
     # Toolchain reference assemblies
     for ref in toolchain.ref_pack.to_list():
@@ -504,6 +515,10 @@ def _csharp_analyzer_import_impl(ctx):
     ]
 
 _COMMON_ATTRS = {
+    "additional_compiler_options": attr.string_list(
+        default = [],
+        doc = ADDITIONAL_COMPILER_OPTIONS_DOC,
+    ),
     "allow_unsafe_blocks": attr.bool(
         default = False,
         doc = ALLOW_UNSAFE_BLOCKS_DOC,
