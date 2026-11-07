@@ -6,8 +6,8 @@ These rules live in the `rules_csharp_proto` module so the core `rules_csharp` m
 protobuf dependency. Add both modules to `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "rules_csharp", version = "0.4.0")
-bazel_dep(name = "rules_csharp_proto", version = "0.4.0")
+bazel_dep(name = "rules_csharp", version = "0.5.0")
+bazel_dep(name = "rules_csharp_proto", version = "0.5.0")
 ```
 
 Then load the rules from this file:

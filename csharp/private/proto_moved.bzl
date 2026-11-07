@@ -3,7 +3,7 @@
 def _moved_message(rule_name):
     return """{name} moved to the rules_csharp_proto module. Add it to MODULE.bazel:
 
-    bazel_dep(name = "rules_csharp_proto", version = "0.4.0")
+    bazel_dep(name = "rules_csharp_proto", version = "0.5.0")
 
 Then load the rule from the new module:
 

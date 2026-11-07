@@ -207,7 +207,7 @@ def _proto_moved_test_impl(ctx):
     env = analysistest.begin(ctx)
 
     asserts.expect_failure(env, "%s moved to the rules_csharp_proto module" % ctx.attr.rule_name)
-    asserts.expect_failure(env, 'bazel_dep(name = "rules_csharp_proto", version = "0.4.0")')
+    asserts.expect_failure(env, 'bazel_dep(name = "rules_csharp_proto", version = "0.5.0")')
     asserts.expect_failure(env, 'load("@rules_csharp_proto//csharp:defs.bzl", "%s")' % ctx.attr.rule_name)
 
     return analysistest.end(env)
