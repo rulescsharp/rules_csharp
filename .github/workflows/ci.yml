@@ -86,8 +86,8 @@ jobs:
       - name: Run examples binary
         working-directory: examples
         run: |
-          test "$(bazel run //:hello | tr -d '\r')" = "$(printf 'Hello, Bazel!\nDebug build. Build with -c opt for Release.')"
-          test "$(bazel run -c opt //:hello | tr -d '\r')" = "Hello, Bazel!"
+          test "$(bazel run //:hello | tr -d '\r')" = "$(printf 'Hello, Bazel!\nDebug build. Build with -c opt for Release.\nBuilt for .NET 8 or newer.')"
+          test "$(bazel run -c opt //:hello | tr -d '\r')" = "$(printf 'Hello, Bazel!\nRelease build.\nBuilt for .NET 8 or newer.')"
 
       - name: Run checked_add example
         working-directory: examples

@@ -48,10 +48,13 @@ csharp_test(
 )
 ```
 
-`bazel run //:hello` prints `Hello, Bazel!` and a note that it's a Debug build, and `bazel test //:greeter_test`
-runs the test. Bazel's default and `-c dbg` builds match the MSBuild Debug configuration and define `DEBUG` and
-`TRACE`. `-c opt` matches Release, with optimizations on and only `TRACE` defined, so `bazel run -c opt //:hello`
-prints just the greeting. `generate_documentation_file` also writes `greeter.xml` next to `greeter.dll`, so IDEs
+`bazel run //:hello` prints `Hello, Bazel!`, a note that it's a Debug build and a line guarded by
+`#if NET8_0_OR_GREATER`, and `bazel test //:greeter_test` runs the test. Bazel's default and `-c dbg` builds match
+the MSBuild Debug configuration and define `DEBUG` and `TRACE`. `-c opt` matches Release, with optimizations on and
+`TRACE` and `RELEASE` defined, so `bazel run -c opt //:hello` says it's a Release build instead. Every target also
+gets the same target framework symbols as dotnet build, such as `NET8_0` and `NET8_0_OR_GREATER` for `net8.0`. Like a
+dotnet build console app, binaries and tests run with workstation garbage collection and roll forward only within
+their own .NET major version. `generate_documentation_file` also writes `greeter.xml` next to `greeter.dll`, so IDEs
 show the `///` docs to anything that references the library.
 
 [examples/web](examples/web/) uses ASP.NET Core from a library through `framework_references`, checks

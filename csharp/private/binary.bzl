@@ -67,20 +67,20 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     runtimeconfig_content = """{{
   "runtimeOptions": {{
     "tfm": "{tfm}",
-    "rollForward": "LatestMajor",
 {framework_section}
     "additionalProbingPaths": [
       {probing_paths_str}
     ],
     "configProperties": {{
-      "System.GC.Server": true,
-      "System.Reflection.NullabilityInfoContext.IsSupported": true
+{gc_server}      "System.Reflection.NullabilityInfoContext.IsSupported": true
     }}
   }}
 }}
 """.format(
         tfm = tfm,
         framework_section = framework_section,
+        # Like dotnet build, only the Web SDK turns on server GC.
+        gc_server = '      "System.GC.Server": true,\n' if getattr(ctx.attr, "sdk", "") == "Microsoft.NET.Sdk.Web" else "",
         probing_paths_str = probing_paths_str,
     )
     ctx.actions.write(
