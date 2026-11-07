@@ -123,7 +123,13 @@ def _sdk_exec_impl(repository_ctx):
     dotnet_bin = "dotnet.exe" if is_windows else "dotnet"
     worker_name = "CscWorker.bat" if is_windows else "CscWorker"
 
+    # Keep CscWorker.dll byte-identical across output bases so CSharpCompile
+    # actions share the remote and disk cache. Absolute -r: paths and an
+    # absolute source path embed the output base into the DLL (PE timestamp
+    # and MVID) even with matching sources.
+    # https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/advanced#deterministic
     worker_src = repository_ctx.path(Label("//csharp/private/tools:CscWorker.cs"))
+    repository_ctx.symlink(worker_src, "CscWorker.cs")
     repository_ctx.file("CscWorker.runtimeconfig.json", """{
   "runtimeOptions": {
     "tfm": "net8.0",
@@ -152,7 +158,15 @@ def _sdk_exec_impl(repository_ctx):
                 for tfm_dir in ref_sub.readdir():
                     for f in tfm_dir.readdir():
                         if f.basename.endswith(".dll"):
-                            ref_dlls.append("-r:" + str(f))
+                            # Repo-relative so the argv (and thus the DLL) does
+                            # not depend on the absolute output path.
+                            rel = "packs/Microsoft.NETCore.App.Ref/{}/{}/{}/{}".format(
+                                v_dir.basename,
+                                "ref",
+                                tfm_dir.basename,
+                                f.basename,
+                            )
+                            ref_dlls.append("-r:" + rel)
 
     if csc_candidates and ref_dlls:
         csc_path = str(csc_candidates[0])
@@ -165,7 +179,9 @@ def _sdk_exec_impl(repository_ctx):
             "-out:CscWorker.dll",
             "-noconfig",
             "-nostdlib+",
-        ] + ref_dlls + [str(worker_src)]
+            "-deterministic+",
+        ] + ref_dlls + ["CscWorker.cs"]
+        # cwd is the repository root, so relative -r: and CscWorker.cs resolve.
         repository_ctx.execute(compile_cmd)
 
     if is_windows:
