@@ -10,7 +10,7 @@ cover C# only.
 Add this to `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "rules_csharp", version = "0.4.0")
+bazel_dep(name = "rules_csharp", version = "0.5.0")
 
 csharp = use_extension("@rules_csharp//csharp:extensions.bzl", "csharp")
 use_repo(csharp, "dotnet_toolchains")
