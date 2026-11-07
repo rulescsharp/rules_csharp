@@ -9,6 +9,7 @@ load(
     "cross_windows_action_test",
     "csc_worker_action_test",
     "editorconfig_action_test",
+    "friend_ref_action_test",
     "expect_failure_test",
     "framework_reference_action_test",
     "hermetic_sandbox_action_test",
@@ -35,6 +36,39 @@ csharp_library(
     name = "lib_b",
     srcs = ["LibB.cs"],
     deps = [":lib_a"],
+)
+
+# Only the friend compiles against the reference assembly that keeps internals.
+csharp_library(
+    name = "ivt_lib",
+    srcs = ["LibA.cs"],
+    internals_visible_to = ["ivt_friend"],
+)
+
+csharp_library(
+    name = "ivt_friend",
+    srcs = ["LibB.cs"],
+    deps = [":ivt_lib"],
+)
+
+csharp_library(
+    name = "ivt_other",
+    srcs = ["LibB.cs"],
+    deps = [":ivt_lib"],
+)
+
+friend_ref_action_test(
+    name = "ivt_friend_ref_action_test",
+    expected_ref = "analysis/ivt_lib.ref.dll",
+    target_under_test = ":ivt_friend",
+    unexpected_ref = "analysis/ivt_lib.dll",
+)
+
+friend_ref_action_test(
+    name = "ivt_other_ref_action_test",
+    expected_ref = "ivt_lib_public_ref/ivt_lib.dll",
+    target_under_test = ":ivt_other",
+    unexpected_ref = "analysis/ivt_lib.ref.dll",
 )
 
 csharp_library(
