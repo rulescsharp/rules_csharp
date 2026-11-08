@@ -74,7 +74,16 @@ These attributes do the same job as the MSBuild items and properties of a `.cspr
 
 Set `target_type = "library"` and depend on `Microsoft.NET.Test.Sdk` plus a framework and its adapter
 from the [`nuget` extension](csharp/extensions.bzl). The test then runs under VSTest, the same runner
-as `dotnet test`. From [examples/](examples/):
+as `dotnet test`. The packages come from a `packages.lock.json`, which `dotnet restore --use-lock-file`
+writes. Add the extension to `MODULE.bazel` and make its `@nuget` hub visible:
+
+```starlark
+nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget")
+nuget.from_lock(packages_lock_json = "//:packages.lock.json")
+use_repo(nuget, "nuget")
+```
+
+Then the test depends on the packages. From [examples/](examples/):
 
 ```starlark
 csharp_test(
@@ -153,6 +162,7 @@ nuget.from_lock(
     packages_lock_json = "//:packages.lock.json",
     use_public_sources = False,
 )
+use_repo(nuget, "nuget")
 ```
 
 - `use_public_sources = False` works like `<clear />` at the top of `<packageSources>` in a
