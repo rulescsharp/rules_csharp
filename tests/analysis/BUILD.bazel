@@ -2,6 +2,7 @@ load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_import
 load(
     ":action_graph_tests.bzl",
     "abi_refout_action_test",
+    "additional_compiler_options_action_test",
     "analyzes_test",
     "compilation_mode_action_test",
     "cross_linux_action_test",
@@ -348,6 +349,44 @@ target_framework_action_test(
     target_under_test = ":lib_a",
 )
 
+
+
+csharp_library(
+    name = "checked_lib",
+    srcs = ["LibA.cs"],
+    additional_compiler_options = ["-checked+"],
+)
+
+additional_compiler_options_action_test(
+    name = "additional_compiler_options_action_test",
+    target_under_test = ":checked_lib",
+)
+
+csharp_library(
+    name = "empty_compiler_option_lib",
+    srcs = ["LibA.cs"],
+    additional_compiler_options = [""],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "empty_compiler_option_test",
+    message = "has an empty entry",
+    target_under_test = ":empty_compiler_option_lib",
+)
+
+csharp_library(
+    name = "response_file_compiler_option_lib",
+    srcs = ["LibA.cs"],
+    additional_compiler_options = ["@flags.rsp"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "response_file_compiler_option_test",
+    message = "Response files are not allowed",
+    target_under_test = ":response_file_compiler_option_lib",
+)
 
 # The docs match the Stardoc output and avoid filler wording.
 csharp_test(

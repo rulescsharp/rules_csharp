@@ -89,6 +89,10 @@ jobs:
           test "$(bazel run //:hello | tr -d '\r')" = "$(printf 'Hello, Bazel!\nDebug build. Build with -c opt for Release.')"
           test "$(bazel run -c opt //:hello | tr -d '\r')" = "Hello, Bazel!"
 
+      - name: Run checked_add example
+        working-directory: examples
+        run: test "$(bazel run //:checked_add | tr -d '\r')" = $'3\noverflow'
+
       - name: Run web example
         working-directory: examples
         run: test "$(bazel run //web | tr -d '\r')" = "200 Hello, web!"

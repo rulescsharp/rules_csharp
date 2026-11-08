@@ -440,3 +440,16 @@ opt_compilation_mode_action_test = analysistest.make(
     attrs = _COMPILATION_MODE_TEST_ATTRS,
     config_settings = {"//command_line_option:compilation_mode": "opt"},
 )
+
+def _additional_compiler_options_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    argv = compile_actions[0].argv
+    asserts.true(env, "-checked+" in argv, "Expected -checked+, got: %s" % argv)
+
+    return analysistest.end(env)
+
+additional_compiler_options_action_test = analysistest.make(_additional_compiler_options_action_test_impl)
+

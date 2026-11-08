@@ -37,3 +37,11 @@ csharp_test(
         "@nuget//:Microsoft.NET.Test.Sdk",
     ],
 )
+
+# Passes -checked+ through additional_compiler_options (MSBuild AdditionalOptions).
+csharp_binary(
+    name = "checked_add",
+    srcs = ["Checked.cs"],
+    additional_compiler_options = ["-checked+"],
+)
+
