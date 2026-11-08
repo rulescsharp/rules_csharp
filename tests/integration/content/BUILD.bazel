@@ -1,0 +1,14 @@
+load("//csharp:defs.bzl", "csharp_test")
+
+# Content files keep their path relative to the package next to the test's assembly, so nested files
+# keep their folders and two files with the same name in different folders both arrive.
+csharp_test(
+    name = "content_layout_test",
+    srcs = ["ContentLayoutTest.cs"],
+    content = [
+        "dir_a/config.json",
+        "dir_b/config.json",
+        "top.txt",
+        "wwwroot/css/app.css",
+    ],
+)

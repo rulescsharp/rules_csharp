@@ -5,6 +5,13 @@ load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
+def _package_relative_path(f):
+    path = f.short_path
+    if path.startswith("../"):
+        path = path.split("/", 2)[2]
+    package = f.owner.package
+    return path[len(package) + 1:] if package else path
+
 def _binary_common_impl(ctx, is_test = False):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
@@ -255,9 +262,18 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
                 ctx.actions.symlink(output = declared, target_file = f)
                 extra_output_files.append(declared)
 
+    content_paths = {}
     for f in getattr(ctx.files, "content", []):
-        runfiles_symlinks[prefix + f.basename] = f
-        declared = ctx.actions.declare_file(app_dir + f.basename)
+        dest = _package_relative_path(f)
+        if dest in content_paths:
+            fail("content files {} and {} both land at {}. Use copy_to_output to give one another path.".format(
+                content_paths[dest].short_path,
+                f.short_path,
+                dest,
+            ))
+        content_paths[dest] = f
+        runfiles_symlinks[prefix + dest] = f
+        declared = ctx.actions.declare_file(app_dir + dest)
         ctx.actions.symlink(output = declared, target_file = f)
         extra_output_files.append(declared)
 
@@ -707,7 +723,9 @@ _BINARY_ATTRS = {
     "content": attr.label_list(
         allow_files = True,
         default = [],
-        doc = "Static content files copied to runtime directories.",
+        doc = "Static files placed next to the assembly at their path relative to their package, so " +
+              "`wwwroot/css/app.css` lands at `wwwroot/css/app.css`. Same as MSBuild `Content` items " +
+              "with `CopyToOutputDirectory`. Use `copy_to_output` to pick another path.",
     ),
     "copy_to_output": attr.label_keyed_string_dict(
         allow_files = True,
