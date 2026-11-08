@@ -234,7 +234,13 @@ lists as `PackageBaseAddress/3.0.0`.""",
         ),
         "name": attr.string(
             default = "nuget",
-            doc = "Hub repository name.",
+            doc = """Hub repository name. `use_repo` it to get `@<name>//:<package id>`.
+
+Each name is its own hub with its own packages, sources and settings, and its
+package repos are named `<name>_<package id>`. So a library module can keep
+its own NuGet packages under its own name without touching the root's
+`@nuget`, and two hubs can pin different versions of one package. Tags with
+the same name, from any module, share one hub.""",
         ),
         "netrc": attr.label(
             doc = "Authentication netrc configuration file label.",
@@ -255,8 +261,8 @@ sources in `nuget_config`, so Bazel never contacts nuget.org for them, and a
 package with an empty `contentHash` fails instead of downloading unverified.
 A `nuget_config` whose `<packageSources>` has `<clear />` turns this off too,
 as it does for `dotnet restore`. Setting it needs at least one directory or
-feed. Once any `nuget.from_lock` tag turns it off, other tags can't turn it
-back on.""",
+feed. Once any `nuget.from_lock` tag of a hub turns it off, other tags of
+that hub can't turn it back on.""",
         ),
     },
 )
@@ -389,73 +395,80 @@ def _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, n
     return sha256
 
 def _nuget_impl(module_ctx):
+    # Each hub name is its own package set, so modules that pick different
+    # names never share or override each other's packages and sources.
+    hubs = {}
+    for mod in module_ctx.modules:
+        for tag in mod.tags.from_lock:
+            hubs.setdefault(tag.name or "nuget", []).append(tag)
+    for hub_name, tags in hubs.items():
+        _nuget_hub(module_ctx, hub_name, tags)
+
+def _nuget_hub(module_ctx, hub_name, tags):
     packages = {}
-    hub_name = "nuget"
     feeds = []
     local_dirs = []
     netrc = None
     auth_patterns = {}
     use_public_sources = True
 
-    for mod in module_ctx.modules:
-        for tag in mod.tags.from_lock:
-            # Once any tag or <clear /> turns public sources off they stay off.
-            use_public_sources = use_public_sources and tag.use_public_sources
-            if tag.name:
-                hub_name = tag.name
-            if tag.feeds:
-                feeds = list(tag.feeds)
-            if tag.local_package_dirs:
-                local_dirs = list(tag.local_package_dirs)
-            if tag.netrc:
-                netrc = tag.netrc
-            if tag.auth_patterns:
-                auth_patterns = tag.auth_patterns
+    for tag in tags:
+        # Once any tag or <clear /> turns public sources off they stay off.
+        use_public_sources = use_public_sources and tag.use_public_sources
+        if tag.feeds:
+            feeds = list(tag.feeds)
+        if tag.local_package_dirs:
+            local_dirs = list(tag.local_package_dirs)
+        if tag.netrc:
+            netrc = tag.netrc
+        if tag.auth_patterns:
+            auth_patterns = tag.auth_patterns
 
-            if tag.nuget_config:
-                xml_content = module_ctx.read(tag.nuget_config)
-                parsed_sources, cleared = _parse_nuget_config(xml_content)
-                if parsed_sources:
-                    feeds = parsed_sources
-                if cleared:
-                    use_public_sources = False
+        if tag.nuget_config:
+            xml_content = module_ctx.read(tag.nuget_config)
+            parsed_sources, cleared = _parse_nuget_config(xml_content)
+            if parsed_sources:
+                feeds = parsed_sources
+            if cleared:
+                use_public_sources = False
 
-            content = module_ctx.read(tag.packages_lock_json)
-            data = json.decode(content)
+        content = module_ctx.read(tag.packages_lock_json)
+        data = json.decode(content)
 
-            dependencies = data.get("dependencies", {})
-            for _framework, fw_pkgs in dependencies.items():
-                for pkg_id, pkg_info in fw_pkgs.items():
-                    resolved = pkg_info.get("resolved", "")
-                    content_hash = pkg_info.get("contentHash", "")
-                    dep_dict = pkg_info.get("dependencies", {})
+        dependencies = data.get("dependencies", {})
+        for _framework, fw_pkgs in dependencies.items():
+            for pkg_id, pkg_info in fw_pkgs.items():
+                resolved = pkg_info.get("resolved", "")
+                content_hash = pkg_info.get("contentHash", "")
+                dep_dict = pkg_info.get("dependencies", {})
 
-                    if pkg_id not in packages:
-                        packages[pkg_id] = {
-                            "content_hash": content_hash,
-                            "dependencies": list(dep_dict.keys()),
-                            "version": resolved,
-                        }
-                    else:
-                        existing_deps = packages[pkg_id]["dependencies"]
-                        for d in dep_dict.keys():
-                            if d not in existing_deps:
-                                existing_deps.append(d)
+                if pkg_id not in packages:
+                    packages[pkg_id] = {
+                        "content_hash": content_hash,
+                        "dependencies": list(dep_dict.keys()),
+                        "version": resolved,
+                    }
+                else:
+                    existing_deps = packages[pkg_id]["dependencies"]
+                    for d in dep_dict.keys():
+                        if d not in existing_deps:
+                            existing_deps.append(d)
 
     if not use_public_sources and not feeds and not local_dirs:
-        fail("nuget.from_lock has public sources off (use_public_sources = False or <clear /> in nuget_config), so it needs local_package_dirs, feeds or a nuget_config with sources.")
+        fail("nuget.from_lock(name = \"{}\") has public sources off (use_public_sources = False or <clear /> in nuget_config), so it needs local_package_dirs, feeds or a nuget_config with sources.".format(hub_name))
     feeds = [_package_base(module_ctx, feed, i, netrc, auth_patterns) for i, feed in enumerate(feeds)]
     sha256 = _pin_packages(module_ctx, packages, feeds, local_dirs, use_public_sources, netrc, auth_patterns)
 
     hub_packages = {}
     for pkg_id, info in packages.items():
-        repo_name = "nuget_" + _sanitize_name(pkg_id)
+        repo_name = hub_name + "_" + _sanitize_name(pkg_id)
         hub_packages[pkg_id] = repo_name
         nuget_package_repo(
             name = repo_name,
             auth_patterns = auth_patterns,
             dependencies = info["dependencies"],
             feeds = feeds,
+            hub = hub_name,
             local_package_dirs = local_dirs,
             netrc = netrc,
             package_id = pkg_id,

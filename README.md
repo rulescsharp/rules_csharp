@@ -74,7 +74,16 @@ These attributes do the same job as the MSBuild items and properties of a `.cspr
 
 Set `target_type = "library"` and depend on `Microsoft.NET.Test.Sdk` plus a framework and its adapter
 from the [`nuget` extension](csharp/extensions.bzl). The test then runs under VSTest, the same runner
-as `dotnet test`. From [examples/](examples/):
+as `dotnet test`. The packages come from a `packages.lock.json`, which `dotnet restore --use-lock-file`
+writes. Add the extension to `MODULE.bazel` and make its `@nuget` hub visible:
+
+```starlark
+nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget")
+nuget.from_lock(packages_lock_json = "//:packages.lock.json")
+use_repo(nuget, "nuget")
+```
+
+Then the test depends on the packages. From [examples/](examples/):
 
 ```starlark
 csharp_test(
@@ -153,6 +162,7 @@ nuget.from_lock(
     packages_lock_json = "//:packages.lock.json",
     use_public_sources = False,
 )
+use_repo(nuget, "nuget")
 ```
 
 - `use_public_sources = False` works like `<clear />` at the top of `<packageSources>` in a
@@ -169,6 +179,23 @@ nuget.from_lock(
   and `coverlet.console.10.1.0.nupkg` at `{mirror}/` for `bazel coverage`.
 - With public sources off, a package whose `contentHash` is empty in `packages.lock.json` fails
   instead of downloading unverified.
+
+## NuGet packages in a library module
+
+Each `nuget.from_lock` name is its own hub. A module that others depend on should pick a name of its
+own, so its packages never mix with the root's `@nuget`:
+
+```starlark
+nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget")
+nuget.from_lock(
+    name = "mylib_nuget",
+    packages_lock_json = "//:packages.lock.json",
+)
+use_repo(nuget, "mylib_nuget")
+```
+
+Its targets then depend on `@mylib_nuget//:Newtonsoft.Json`. Each hub has its own sources and
+versions, so two hubs can pin different versions of one package. Tags with the same name share a hub.
 
 ## Protobuf and gRPC
 

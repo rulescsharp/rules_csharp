@@ -296,7 +296,7 @@ def _nuget_package_repo_impl(repository_ctx):
     # Dependencies mapping
     dep_labels = []
     for dep in repository_ctx.attr.dependencies:
-        dep_labels.append('"@nuget_{}//:{}"'.format(_sanitize_name(dep), dep))
+        dep_labels.append('"@{}_{}//:{}"'.format(repository_ctx.attr.hub, _sanitize_name(dep), dep))
 
     # Compile refs expression
     if compile_dir:
@@ -384,6 +384,10 @@ nuget_package_repo = repository_rule(
         ),
         "feeds": attr.string_list(
             doc = "Candidate package feed URLs.",
+        ),
+        "hub": attr.string(
+            default = "nuget",
+            doc = "Hub name. Dependencies resolve to its `<hub>_<package id>` repos.",
         ),
         "local_package_dirs": attr.string_list(
             doc = "Local filesystem package directory paths.",
