@@ -17,5 +17,8 @@ csharp_binary(
     srcs = ["Program.cs"],
     data = ["greeting.txt"],
     output_assembly = "RulesCsharp.Examples.Web",
-    deps = [":greeting_endpoint"],
+    deps = [
+        ":greeting_endpoint",
+        "@rules_csharp//csharp/runfiles",
+    ],
 )

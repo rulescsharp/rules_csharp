@@ -186,3 +186,11 @@ csharp_test(
         "@nuget//:xunit.runner.visualstudio",
     ],
 )
+
+# Public //csharp/runfiles resolves data files by canonical and module name (directory or manifest mode).
+csharp_test(
+    name = "runfiles_rlocation_test",
+    srcs = ["RunfilesRlocationTest.cs"],
+    data = ["runfiles_payload.txt"],
+    deps = ["//csharp/runfiles"],
+)

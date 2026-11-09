@@ -1,0 +1,8 @@
+load("//csharp:defs.bzl", "csharp_library")
+
+package(default_visibility = ["//visibility:public"])
+
+csharp_library(
+    name = "runfiles",
+    srcs = ["Runfiles.cs"],
+)
