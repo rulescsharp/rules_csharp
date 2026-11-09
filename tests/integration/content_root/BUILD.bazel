@@ -1,0 +1,11 @@
+load("//csharp:defs.bzl", "csharp_binary")
+
+# Under bazel run a Web app outside the root package reads its own appsettings.json and the
+# variables in env. CI runs it and checks the output.
+csharp_binary(
+    name = "app",
+    srcs = ["App.cs"],
+    content = ["appsettings.json"],
+    env = {"Suffix": "from env"},
+    sdk = "Microsoft.NET.Sdk.Web",
+)
