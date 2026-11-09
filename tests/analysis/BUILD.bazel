@@ -18,6 +18,7 @@ load(
     "opt_compilation_mode_action_test",
     "output_assembly_action_test",
     "proto_moved_test",
+    "runtimeconfig_action_test",
     "target_framework_action_test",
     "web_sdk_action_test",
     "worker_sdk_action_test",
@@ -40,6 +41,15 @@ csharp_library(
     name = "net8_lib",
     srcs = ["LibA.cs"],
     target_framework = "net8.0",
+)
+
+# Builds under warn_as_error because CS1701 and CS1702 are off like in MSBuild.
+csharp_library(
+    name = "net10_over_net8_strict_lib",
+    srcs = ["LibB.cs"],
+    target_framework = "net10.0",
+    warn_as_error = True,
+    deps = [":net8_lib"],
 )
 
 csharp_library(
@@ -190,6 +200,23 @@ web_sdk_action_test(
     target_under_test = ":web_lib",
 )
 
+csharp_binary(
+    name = "web_app",
+    srcs = ["CrossApp.cs"],
+    sdk = "Microsoft.NET.Sdk.Web",
+)
+
+runtimeconfig_action_test(
+    name = "web_runtimeconfig_action_test",
+    server_gc = True,
+    target_under_test = ":web_app",
+)
+
+runtimeconfig_action_test(
+    name = "runtimeconfig_action_test",
+    target_under_test = ":cross_app",
+)
+
 editorconfig_action_test(
     name = "editorconfig_action_test",
     target_under_test = "//tests/integration/editorconfig:editorconfig_lib",
@@ -318,6 +345,7 @@ compilation_mode_action_test(
     name = "debug_compilation_mode_action_test",
     expected_flags = [
         "-define:DEBUG;TRACE",
+        "-nowarn:1701,1702",
         "-unsafe+",
     ],
     target_under_test = ":unsafe_lib",
@@ -327,7 +355,7 @@ compilation_mode_action_test(
 opt_compilation_mode_action_test(
     name = "opt_compilation_mode_action_test",
     expected_flags = [
-        "-define:TRACE",
+        "-define:TRACE;RELEASE",
         "-optimize+",
     ],
     target_under_test = ":lib_a",
@@ -335,6 +363,12 @@ opt_compilation_mode_action_test(
         "-define:DEBUG;TRACE",
         "-unsafe+",
     ],
+)
+
+compilation_mode_action_test(
+    name = "net8_framework_symbols_action_test",
+    expected_flags = ["-define:NET;NET8_0;NETCOREAPP;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP1_0_OR_GREATER;NETCOREAPP1_1_OR_GREATER;NETCOREAPP2_0_OR_GREATER;NETCOREAPP2_1_OR_GREATER;NETCOREAPP2_2_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER"],
+    target_under_test = ":net8_lib",
 )
 
 target_framework_action_test(

@@ -325,6 +325,20 @@ def _framework_reference_action_test_impl(ctx):
 
 framework_reference_action_test = analysistest.make(_framework_reference_action_test_impl)
 
+def _runtimeconfig_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    runtimeconfig = _written_content(analysistest.target_actions(env), ".runtimeconfig.json")
+    asserts.equals(env, ctx.attr.server_gc, '"System.GC.Server": true' in runtimeconfig, "System.GC.Server in: %s" % runtimeconfig)
+    asserts.false(env, "rollForward" in runtimeconfig, "Expected the default roll forward, got: %s" % runtimeconfig)
+
+    return analysistest.end(env)
+
+runtimeconfig_action_test = analysistest.make(
+    _runtimeconfig_action_test_impl,
+    attrs = {"server_gc": attr.bool()},
+)
+
 def _worker_sdk_action_test_impl(ctx):
     env = analysistest.begin(ctx)
 
