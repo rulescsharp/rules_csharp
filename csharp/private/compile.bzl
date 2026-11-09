@@ -171,6 +171,8 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     args.add("-langversion:" + langversion)
     warning_level = getattr(ctx.attr, "warning_level", 4)
     args.add("-warn:" + str(warning_level))
+    # MSBuild always turns off these assembly version unification warnings.
+    args.add("-nowarn:1701,1702")
     if getattr(ctx.attr, "warn_as_error", False):
         args.add("-warnaserror+")
     if getattr(ctx.attr, "allow_unsafe_blocks", False):
@@ -584,7 +586,8 @@ _COMMON_ATTRS = {
     ),
     "nowarn": attr.string_list(
         default = [],
-        doc = "Compiler diagnostic codes to suppress.",
+        doc = "Compiler diagnostic codes to suppress, the same as MSBuild `NoWarn`. CS1701 and CS1702 are always " +
+              "suppressed like in MSBuild, so a target on a newer framework than its dependencies builds quietly.",
     ),
     "content": attr.label_list(
         allow_files = True,
@@ -641,7 +644,8 @@ _COMMON_ATTRS = {
     ),
     "warn_as_error": attr.bool(
         default = False,
-        doc = "Treat compiler warnings as errors.",
+        doc = "Treat compiler warnings as errors, the same as MSBuild `TreatWarningsAsErrors`. Warnings that " +
+              "`nowarn` suppresses, and CS1701 and CS1702, never fail the build.",
     ),
     "warning_level": attr.int(
         default = 4,

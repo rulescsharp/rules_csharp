@@ -43,6 +43,15 @@ csharp_library(
     target_framework = "net8.0",
 )
 
+# Builds under warn_as_error because CS1701 and CS1702 are off like in MSBuild.
+csharp_library(
+    name = "net10_over_net8_strict_lib",
+    srcs = ["LibB.cs"],
+    target_framework = "net10.0",
+    warn_as_error = True,
+    deps = [":net8_lib"],
+)
+
 csharp_library(
     name = "web_lib",
     srcs = ["LibA.cs"],
@@ -336,6 +345,7 @@ compilation_mode_action_test(
     name = "debug_compilation_mode_action_test",
     expected_flags = [
         "-define:DEBUG;TRACE",
+        "-nowarn:1701,1702",
         "-unsafe+",
     ],
     target_under_test = ":unsafe_lib",
