@@ -45,3 +45,24 @@ csharp_binary(
     additional_compiler_options = ["-checked+"],
 )
 
+# A csharp_binary runs as a build tool. This one generates a source file for show_version,
+# with no installed .NET needed.
+csharp_binary(
+    name = "make_version",
+    srcs = ["MakeVersion.cs"],
+)
+
+genrule(
+    name = "build_info",
+    outs = ["BuildInfo.g.cs"],
+    cmd = "$(execpath :make_version) 1.2.3 $@",
+    tools = [":make_version"],
+)
+
+csharp_binary(
+    name = "show_version",
+    srcs = [
+        "ShowVersion.cs",
+        ":build_info",
+    ],
+)

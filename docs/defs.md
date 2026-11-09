@@ -106,12 +106,18 @@ csharp_binary(<a href="#csharp_binary-name">name</a>, <a href="#csharp_binary-de
 
 Compiles a C# executable and stamps the native application host binary.
 
-`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
-With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker` it also sets `DOTNET_CONTENTROOT`
+The app runs on the toolchain's .NET runtime without an installed .NET, under `bazel run`, as a tool in
+`genrule`, `run_binary` or another rule's action, and straight from `bazel-bin`. For `net9.0` and later the
+apphost looks for the runtime in the binary's runfiles first (on Windows, next to `bazel-out`), then in
+`DOTNET_ROOT`, then in the default install location.
+
+With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker`, `bazel run` also sets `DOTNET_CONTENTROOT`
 to the app's own directory, where `content` files land, so `appsettings.json` and `wwwroot` load as they
 do from a `dotnet publish` folder. A value in `env`, or a content root the app sets itself, wins.
-Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
-default install location.
+
+Two cases still need the app's runtime in `DOTNET_ROOT` or the default install location: `net8.0`, whose
+apphost can't carry that search path, and builds with `--nobuild_runfile_links` outside Windows, which leave
+no runfiles tree next to the binary. Copying the binary out of `bazel-bin` also leaves its runfiles behind.
 
 **ATTRIBUTES**
 

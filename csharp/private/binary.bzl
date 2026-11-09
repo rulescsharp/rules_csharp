@@ -182,6 +182,16 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     is_win = "win" in toolchain.host_rid
     patch_env["PATH"] = "C:\\Windows\\System32;C:\\Windows" if is_win else "/usr/bin:/bin"
 
+    # The apphost looks for .NET relative to the app dll's real directory first, so the binary also
+    # runs as a build tool and straight from bazel-bin, where bazel run's DOTNET_ROOT doesn't apply.
+    # Elsewhere that's the host pack in the binary's own runfiles tree. Windows has no runfiles tree
+    # by default, so there it's the host pack's execroot path, which is next to bazel-out.
+    pack_ws = getattr(toolchain.host_pack.owner, "workspace_name", "") or getattr(toolchain.host_pack.owner, "repo_name", "")
+    if is_windows:
+        app_relative_dotnet = "../" * len(exe_file.path.split("/")) + toolchain.host_pack.owner.workspace_root
+    else:
+        app_relative_dotnet = "../" * app_dir.count("/") + exe_file.basename + ".runfiles/" + pack_ws
+
     ctx.actions.run(
         executable = toolchain.dotnet_muxer,
         inputs = [
@@ -194,6 +204,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
             "--apphost-template=" + toolchain.host_pack.path,
             "--output=" + exe_file.path,
             "--assembly-name=" + (app_dir.replace("/", "\\") if is_windows else app_dir) + main_dll.basename,
+            "--app-relative-dotnet=" + (app_relative_dotnet.replace("/", "\\") if is_windows else app_relative_dotnet),
         ],
         outputs = [exe_file],
         env = patch_env,
@@ -579,7 +590,6 @@ exit $EXIT_CODE
         csharp_info,
     ] + [p for p in compile_providers if type(p) == "InstrumentedFilesInfo"]
 
-    pack_ws = getattr(toolchain.host_pack.owner, "workspace_name", "") or getattr(toolchain.host_pack.owner, "repo_name", "")
     dotnet_root_rel = "../" + pack_ws if pack_ws else toolchain.dotnet_muxer.dirname
 
     if is_test:
@@ -816,12 +826,18 @@ _BINARY_ATTRS = {
 csharp_binary = rule(
     doc = """Compiles a C# executable and stamps the native application host binary.
 
-`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
-With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker` it also sets `DOTNET_CONTENTROOT`
+The app runs on the toolchain's .NET runtime without an installed .NET, under `bazel run`, as a tool in
+`genrule`, `run_binary` or another rule's action, and straight from `bazel-bin`. For `net9.0` and later the
+apphost looks for the runtime in the binary's runfiles first (on Windows, next to `bazel-out`), then in
+`DOTNET_ROOT`, then in the default install location.
+
+With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker`, `bazel run` also sets `DOTNET_CONTENTROOT`
 to the app's own directory, where `content` files land, so `appsettings.json` and `wwwroot` load as they
 do from a `dotnet publish` folder. A value in `env`, or a content root the app sets itself, wins.
-Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
-default install location.
+
+Two cases still need the app's runtime in `DOTNET_ROOT` or the default install location: `net8.0`, whose
+apphost can't carry that search path, and builds with `--nobuild_runfile_links` outside Windows, which leave
+no runfiles tree next to the binary. Copying the binary out of `bazel-bin` also leaves its runfiles behind.
 """,
     implementation = _csharp_binary_impl,
     attrs = _BINARY_ATTRS,
