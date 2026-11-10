@@ -54,6 +54,8 @@ target also gets the symbols of its target framework: `NET`, `NETCOREAPP`, `NET<
 `NET<major>_0_OR_GREATER`, and `NETCOREAPP1_0_OR_GREATER` up to `NETCOREAPP3_1_OR_GREATER`. So a `net8.0` target \
 defines `NET8_0` and `NET8_0_OR_GREATER` but not `NET9_0_OR_GREATER`."""
 
+INTERNALS_VISIBLE_TO_DOC = """Friend assembly names, the same as MSBuild `InternalsVisibleTo` items. Each friend compiles against a reference assembly that keeps internal members. Every other dependent compiles against a public reference assembly without them, so an internal edit only recompiles the friends."""
+
 DATA_DOC = """Files and targets needed at run time. Their files and runfiles join the runfiles of this target and of \
 every executable that depends on it, along with the `content` of libraries it depends on."""
 
@@ -145,72 +147,62 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
 
     analyzers_depset = depset(transitive = analyzer_depsets)
 
-    # Response file arguments
-    args = ctx.actions.args()
-    args.use_param_file("@%s", use_always = True)
-    args.set_param_file_format("multiline")
-
+    # Flags shared by the compile and the public reference assembly actions
+    args = []
     target_type = getattr(ctx.attr, "target_type", "library")
-    args.add("-target:" + target_type)
-    args.add("-out:" + out_dll.path.replace("\\", "/"))
-    args.add("-refout:" + refout_dll.path.replace("\\", "/"))
-    args.add("-pdb:" + pdb.path.replace("\\", "/"))
-    if xml_doc:
-        args.add("-doc:" + xml_doc.path.replace("\\", "/"))
+    args.append("-target:" + target_type)
 
     # Unconditional architectural invariant flags
-    args.add("-noconfig")
-    args.add("-nostdlib+")
-    args.add("-deterministic+")
-    args.add("-utf8output")
-    args.add("-debug:portable")
-    args.add("-highentropyva+")
-    args.add("-nullable:enable")
+    args.append("-noconfig")
+    args.append("-nostdlib+")
+    args.append("-deterministic+")
+    args.append("-utf8output")
+    args.append("-debug:portable")
+    args.append("-highentropyva+")
+    args.append("-nullable:enable")
     # Language and diagnostic invariant flags
     langversion = getattr(ctx.attr, "langversion", "latest")
-    args.add("-langversion:" + langversion)
+    args.append("-langversion:" + langversion)
     warning_level = getattr(ctx.attr, "warning_level", 4)
-    args.add("-warn:" + str(warning_level))
+    args.append("-warn:" + str(warning_level))
     # MSBuild always turns off these assembly version unification warnings.
-    args.add("-nowarn:1701,1702")
+    args.append("-nowarn:1701,1702")
     if getattr(ctx.attr, "warn_as_error", False):
-        args.add("-warnaserror+")
+        args.append("-warnaserror+")
     if getattr(ctx.attr, "allow_unsafe_blocks", False):
-        args.add("-unsafe+")
+        args.append("-unsafe+")
 
     # -c opt is the MSBuild Release configuration, every other mode is Debug.
     if ctx.var["COMPILATION_MODE"] == "opt":
-        args.add("-optimize+")
-        args.add("-define:TRACE;RELEASE")
+        args.append("-optimize+")
+        args.append("-define:TRACE;RELEASE")
     else:
-        args.add("-define:DEBUG;TRACE")
+        args.append("-define:DEBUG;TRACE")
 
     # The implicit target framework symbols dotnet build defines, such as NET8_0 and NET8_0_OR_GREATER.
     target_framework = getattr(ctx.attr, "target_framework", "") or toolchain.target_framework
     framework_version = target_framework.removeprefix("net")
     major = int(framework_version.split(".")[0])
-    args.add_joined(
+    args.append("-define:" + ";".join(
         ["NET", "NET%d_0" % major, "NETCOREAPP"] +
         ["NET%d_0_OR_GREATER" % v for v in range(5, major + 1)] +
         ["NETCOREAPP%s_OR_GREATER" % v for v in ["1_0", "1_1", "2_0", "2_1", "2_2", "3_0", "3_1"]],
-        join_with = ";",
-        format_joined = "-define:%s",
-    )
+    ))
 
     for d in getattr(ctx.attr, "defines", []):
-        args.add("-define:" + d)
+        args.append("-define:" + d)
     for nw in getattr(ctx.attr, "nowarn", []):
-        args.add("-nowarn:" + nw)
+        args.append("-nowarn:" + nw)
     for opt in getattr(ctx.attr, "additional_compiler_options", []):
         if not opt:
             fail("additional_compiler_options of {} has an empty entry. Pass one csc token per entry.".format(ctx.label))
         if opt.startswith("@"):
             fail("additional_compiler_options of {} lists \"{}\". Response files are not allowed. Pass one csc token per entry.".format(ctx.label, opt))
-        args.add(opt)
+        args.append(opt)
 
     # Toolchain reference assemblies
     for ref in toolchain.ref_pack.to_list():
-        args.add("-reference:" + ref.path.replace("\\", "/"))
+        args.append("-reference:" + ref.path.replace("\\", "/"))
 
     sdk_flavor = getattr(ctx.attr, "sdk", "Microsoft.NET.Sdk")
     frameworks = framework_references(ctx, direct_deps_and_exports)
@@ -219,20 +211,34 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     if uses_aspnetcore and hasattr(toolchain, "aspnetcore_ref_pack") and toolchain.aspnetcore_ref_pack:
         aspnet_depsets.append(toolchain.aspnetcore_ref_pack)
         for ref in toolchain.aspnetcore_ref_pack.to_list():
-            args.add("-reference:" + ref.path.replace("\\", "/"))
+            args.append("-reference:" + ref.path.replace("\\", "/"))
 
-    # Dependency compile references
-    all_compile_refs = depset(transitive = transitive_compile_depsets, order = "preorder").to_list()
+    # Dependency compile references. A library that names this assembly in internals_visible_to gives it the
+    # reference assembly with internals in place of the public one every other dependent compiles against.
+    friend_refs = depset(transitive = [
+        getattr(dep[CSharpInfo], "friend_refs", None) or depset()
+        for dep in direct_deps_and_exports
+        if CSharpInfo in dep
+    ])
+    internal_refs = {
+        f.public: f.internal
+        for f in friend_refs.to_list()
+        if assembly.lower() in f.friends
+    }
+    all_compile_refs = [
+        internal_refs.get(ref, ref)
+        for ref in depset(transitive = transitive_compile_depsets, order = "preorder").to_list()
+    ]
     for ref in all_compile_refs:
-        args.add("-reference:" + ref.path.replace("\\", "/"))
+        args.append("-reference:" + ref.path.replace("\\", "/"))
 
     # Analyzers
     for analyzer in analyzers_depset.to_list():
-        args.add("-analyzer:" + analyzer.path.replace("\\", "/"))
+        args.append("-analyzer:" + analyzer.path.replace("\\", "/"))
 
     editorconfig_files = getattr(ctx.files, "editorconfig_files", [])
     for f in editorconfig_files:
-        args.add("-analyzerconfig:" + f.path.replace("\\", "/"))
+        args.append("-analyzerconfig:" + f.path.replace("\\", "/"))
 
     # Synthesized GlobalUsings
     synthesized_srcs = []
@@ -294,14 +300,14 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
             "[assembly: global::System.Reflection.AssemblyVersion(\"1.0.0.0\")]",
             "[assembly: global::System.Reflection.AssemblyFileVersion(\"1.0.0.0\")]",
         ]
-        for friend in internals_visible_to:
-            info_lines.append("[assembly: global::System.Runtime.CompilerServices.InternalsVisibleTo(\"%s\")]" % friend)
+    public_info_lines = list(info_lines)
+    for friend in internals_visible_to:
+        info_lines.append("[assembly: global::System.Runtime.CompilerServices.InternalsVisibleTo(\"%s\")]" % friend)
     assembly_info_file = ctx.actions.declare_file(ctx.label.name + ".AssemblyInfo.g.cs")
     ctx.actions.write(
         output = assembly_info_file,
         content = "\n".join(info_lines) + "\n",
     )
-    synthesized_srcs.append(assembly_info_file)
 
     # Resources
     resource_files = []
@@ -311,40 +317,49 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
                 for f in res_target.files.to_list():
                     resource_files.append(f)
                     log_name = logical_name if logical_name else (assembly + "." + f.basename)
-                    args.add("-resource:" + f.path.replace("\\", "/") + "," + log_name)
+                    args.append("-resource:" + f.path.replace("\\", "/") + "," + log_name)
         else:
             for f in ctx.files.resources:
                 resource_files.append(f)
-                args.add("-resource:" + f.path.replace("\\", "/"))
+                args.append("-resource:" + f.path.replace("\\", "/"))
 
     # Sources
-    all_srcs = ctx.files.srcs + synthesized_srcs + extra_srcs
-    for s in all_srcs:
-        args.add(s.path.replace("\\", "/"))
+    shared_srcs = ctx.files.srcs + synthesized_srcs + extra_srcs
+    for s in shared_srcs:
+        args.append(s.path.replace("\\", "/"))
 
     # Inputs strictly limited to srcs, resources, toolchain ref_pack, analyzers, and transitive_compile_refs
-    direct_inputs = [toolchain.csc_dll] + all_srcs + resource_files + editorconfig_files
+    direct_inputs = [toolchain.csc_dll] + shared_srcs + resource_files + editorconfig_files + internal_refs.values()
     worker_depsets = []
     if toolchain.csc_worker:
         direct_inputs.append(toolchain.csc_worker)
         if hasattr(toolchain, "csc_worker_files") and toolchain.csc_worker_files:
             worker_depsets.append(toolchain.csc_worker_files)
 
-    inputs_depset = depset(
-        direct = direct_inputs,
-        transitive = [toolchain.ref_pack, analyzers_depset] + transitive_compile_depsets + aspnet_depsets + worker_depsets,
-    )
+    transitive_inputs = [toolchain.ref_pack, analyzers_depset] + transitive_compile_depsets + aspnet_depsets + worker_depsets
+
+    compile_args = ctx.actions.args()
+    compile_args.use_param_file("@%s", use_always = True)
+    compile_args.set_param_file_format("multiline")
+    compile_args.add("-out:" + out_dll.path.replace("\\", "/"))
+    compile_args.add("-refout:" + refout_dll.path.replace("\\", "/"))
+    compile_args.add("-pdb:" + pdb.path.replace("\\", "/"))
+    if xml_doc:
+        compile_args.add("-doc:" + xml_doc.path.replace("\\", "/"))
+    compile_args.add_all(args)
+    compile_args.add(assembly_info_file.path.replace("\\", "/"))
 
     if toolchain.csc_worker:
         compiler_executable = toolchain.csc_worker
-        compiler_args = ["--persistent_worker", args]
+        compiler_prefix = ["--persistent_worker"]
         execution_requirements = {
             "requires-worker-protocol": "proto",
             "supports-multiplex-workers": "1",
         }
     else:
         compiler_executable = toolchain.dotnet_muxer
-        compiler_args = [toolchain.csc_dll.path.replace("\\", "/"), args]
+        compiler_prefix = [toolchain.csc_dll.path.replace("\\", "/")]
+        execution_requirements = {}
     compile_env = dict(toolchain.dotnet_env) if hasattr(toolchain, "dotnet_env") and toolchain.dotnet_env else dict(SEALED_DOTNET_ENV)
     compile_env["DOTNET_ROOT"] = toolchain.dotnet_muxer.dirname
     is_win = "win" in toolchain.host_rid
@@ -352,9 +367,9 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
 
     ctx.actions.run(
         outputs = [out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else []),
-        inputs = inputs_depset,
+        inputs = depset(direct = direct_inputs + [assembly_info_file], transitive = transitive_inputs),
         executable = compiler_executable,
-        arguments = compiler_args,
+        arguments = compiler_prefix + [compile_args],
         mnemonic = "CSharpCompile",
         progress_message = "Compiling C# %{label}",
         use_default_shell_env = False,
@@ -362,8 +377,50 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         env = compile_env,
     )
 
+    # InternalsVisibleTo keeps internal members in the -refout assembly, so every dependent would recompile on an
+    # internal edit. Non-friends get a public reference assembly built without it instead.
+    # https://github.com/dotnet/roslyn/blob/main/docs/features/refout.md
+    public_ref = refout_dll
+    own_friend_refs = []
+    if internals_visible_to:
+        # csc names the assembly after the -out file, so the public reference assembly keeps the plain name in its
+        # own directory.
+        public_ref = ctx.actions.declare_file(out_dir + ctx.label.name + "_public_ref/" + assembly + ".dll")
+        public_info_file = ctx.actions.declare_file(ctx.label.name + ".PublicAssemblyInfo.g.cs")
+        ctx.actions.write(
+            output = public_info_file,
+            content = "\n".join(public_info_lines) + "\n",
+        )
+        public_args = ctx.actions.args()
+        public_args.use_param_file("@%s", use_always = True)
+        public_args.set_param_file_format("multiline")
+        public_args.add("-out:" + public_ref.path.replace("\\", "/"))
+        public_args.add("-refonly")
+        public_args.add_all(args)
+
+        # The compile action already reports every warning.
+        public_args.add_all(["-warn:0", "-warnaserror-"])
+        public_args.add(public_info_file.path.replace("\\", "/"))
+        ctx.actions.run(
+            outputs = [public_ref],
+            inputs = depset(direct = direct_inputs + [public_info_file], transitive = transitive_inputs),
+            executable = compiler_executable,
+            arguments = compiler_prefix + [public_args],
+            mnemonic = "CSharpPublicRef",
+            progress_message = "Compiling C# public reference assembly %{label}",
+            use_default_shell_env = False,
+            execution_requirements = execution_requirements,
+            env = compile_env,
+        )
+        own_friend_refs.append(struct(
+            public = public_ref,
+            internal = refout_dll,
+            # csc matches friend names ignoring case.
+            friends = tuple([f.split(",")[0].strip().lower() for f in internals_visible_to]),
+        ))
+
     transitive_compile_refs = depset(
-        direct = [refout_dll],
+        direct = [public_ref],
         transitive = transitive_compile_depsets,
         order = "preorder",
     )
@@ -395,10 +452,11 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         transitive_native_libs = transitive_native_libs,
         transitive_test_runtime_dlls = transitive_test_runtime_dlls,
         framework_references = frameworks,
+        friend_refs = depset(own_friend_refs, transitive = [friend_refs]),
     )
 
     default_info = DefaultInfo(
-        files = depset([out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else [])),
+        files = depset([out_dll, refout_dll, pdb] + ([public_ref] if internals_visible_to else []) + ([xml_doc] if xml_doc else [])),
         runfiles = ctx.runfiles(
             files = [out_dll, pdb] + ([xml_doc] if xml_doc else []) + resource_files + getattr(ctx.files, "content", []),
             transitive_files = depset(transitive_runtime_dlls.to_list()),
@@ -493,6 +551,11 @@ def _csharp_import_impl(ctx):
         transitive_native_libs = transitive_native_libs,
         transitive_test_runtime_dlls = depset(transitive = transitive_test_runtime_depsets),
         framework_references = framework_references(ctx, direct_deps),
+        friend_refs = depset(transitive = [
+            getattr(dep[CSharpInfo], "friend_refs", None) or depset()
+            for dep in direct_deps
+            if CSharpInfo in dep
+        ]),
     )
 
     all_files = list(compile_refs) + list(runtime_dlls) + list(native_libs) + list(analyzers)
@@ -617,7 +680,7 @@ _COMMON_ATTRS = {
     ),
     "internals_visible_to": attr.string_list(
         default = [],
-        doc = "Friend assembly names for InternalsVisibleTo.",
+        doc = INTERNALS_VISIBLE_TO_DOC,
     ),
     "langversion": attr.string(
         default = "latest",

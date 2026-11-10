@@ -6,3 +6,12 @@ csharp_library(
     name = "lib",
     srcs = ["Lib.cs"],
 )
+
+csharp_library(
+    name = "ivt_lib",
+    srcs = ["IvtLib.cs"],
+    internals_visible_to = [
+        "Friend",
+        "ivtfriendtest",
+    ],
+)

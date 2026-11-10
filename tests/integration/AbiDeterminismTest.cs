@@ -24,5 +24,19 @@ if (Hash("abi_var1", "lib.dll") == Hash("abi_var2", "lib.dll"))
     return 1;
 }
 
+// ivt_lib in abi_var2 adds an internal member and names a friend. Its friend still sees internals
+// and every other dependent compiles against a public reference assembly that does not change.
+if (Hash("abi_var1", "ivt_lib_public_ref/ivt_lib.dll") != Hash("abi_var2", "ivt_lib_public_ref/ivt_lib.dll"))
+{
+    Console.WriteLine("FAILED: public reference assembly hashes differ. Expected an internal edit to leave the public reference assembly alone.");
+    return 1;
+}
+
+if (Hash("abi_var1", "ivt_lib.ref.dll") == Hash("abi_var2", "ivt_lib.ref.dll"))
+{
+    Console.WriteLine("FAILED: .ref.dll hashes match. Expected the friend reference assembly to carry the new internal member.");
+    return 1;
+}
+
 Console.WriteLine("PASSED: .ref.dll outputs are identical and the .dlls differ.");
 return 0;

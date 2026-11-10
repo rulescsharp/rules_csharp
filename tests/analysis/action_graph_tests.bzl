@@ -30,6 +30,26 @@ def _abi_refout_action_test_impl(ctx):
 
 abi_refout_action_test = analysistest.make(_abi_refout_action_test_impl)
 
+def _friend_ref_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+    inputs = [f.short_path for f in compile_actions[0].inputs.to_list()]
+    has = lambda suffix: len([p for p in inputs if p.endswith("/" + suffix)]) > 0
+    asserts.true(env, has(ctx.attr.expected_ref), "Expected %s in compile inputs, got: %s" % (ctx.attr.expected_ref, inputs))
+    asserts.false(env, has(ctx.attr.unexpected_ref), "Expected %s absent from compile inputs, got: %s" % (ctx.attr.unexpected_ref, inputs))
+
+    return analysistest.end(env)
+
+friend_ref_action_test = analysistest.make(
+    _friend_ref_action_test_impl,
+    attrs = {
+        "expected_ref": attr.string(mandatory = True),
+        "unexpected_ref": attr.string(mandatory = True),
+    },
+)
+
 def _cross_windows_action_test_impl(ctx):
     env = analysistest.begin(ctx)
 

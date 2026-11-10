@@ -43,10 +43,28 @@ csharp_test(
     name = "abi_determinism_test",
     srcs = ["AbiDeterminismTest.cs"],
     data = [
+        "//tests/integration/abi_var1:Friend",
+        "//tests/integration/abi_var1:ivt_lib",
         "//tests/integration/abi_var1:lib",
+        "//tests/integration/abi_var2:ivt_lib",
         "//tests/integration/abi_var2:lib",
     ],
     deps = ["//tests/support:runfiles"],
+)
+
+# The friend name differs from the assembly name only in case, as csc allows.
+csharp_test(
+    name = "ivt_friend_test",
+    srcs = ["IvtFriendTest.cs"],
+    output_assembly = "IvtFriendTest",
+    deps = ["//tests/integration/abi_var1:ivt_lib"],
+)
+
+# A non-friend dependent of a library with internals_visible_to runs against the real assembly.
+csharp_test(
+    name = "ivt_consumer_test",
+    srcs = ["IvtConsumerTest.cs"],
+    deps = ["//tests/integration/abi_var1:ivt_lib"],
 )
 
 csharp_test(
