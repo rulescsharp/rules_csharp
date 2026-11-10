@@ -41,6 +41,9 @@ jobs:
       - name: Execute all tests
         run: bazel test //...
 
+      - name: Run a Web app from a subpackage
+        run: test "$(bazel run //tests/integration/content_root:app | tr -d '\r')" = "from appsettings, from env"
+
       - name: Test the Release configuration
         run: bazel test -c opt //tests/integration:compilation_mode_test
 

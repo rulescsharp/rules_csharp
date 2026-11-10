@@ -5,6 +5,13 @@ load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
+def _package_relative_path(f):
+    path = f.short_path
+    if path.startswith("../"):
+        path = path.split("/", 2)[2]
+    package = f.owner.package
+    return path[len(package) + 1:] if package else path
+
 def _binary_common_impl(ctx, is_test = False):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
@@ -255,9 +262,18 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
                 ctx.actions.symlink(output = declared, target_file = f)
                 extra_output_files.append(declared)
 
+    content_paths = {}
     for f in getattr(ctx.files, "content", []):
-        runfiles_symlinks[prefix + f.basename] = f
-        declared = ctx.actions.declare_file(app_dir + f.basename)
+        dest = _package_relative_path(f)
+        if dest in content_paths:
+            fail("content files {} and {} both land at {}. Use copy_to_output to give one another path.".format(
+                content_paths[dest].short_path,
+                f.short_path,
+                dest,
+            ))
+        content_paths[dest] = f
+        runfiles_symlinks[prefix + dest] = f
+        declared = ctx.actions.declare_file(app_dir + dest)
         ctx.actions.symlink(output = declared, target_file = f)
         extra_output_files.append(declared)
 
@@ -568,7 +584,7 @@ exit $EXIT_CODE
 
     if is_test:
         test_env = dict(toolchain.dotnet_env) if hasattr(toolchain, "dotnet_env") and toolchain.dotnet_env else dict(SEALED_DOTNET_ENV)
-        for k, v in getattr(ctx.attr, "env", {}).items():
+        for k, v in ctx.attr.env.items():
             test_env[k] = ctx.expand_location(v, targets = ctx.attr.data + ctx.attr.deps)
         test_env["DOTNET_ROOT"] = dotnet_root_rel
         providers.append(
@@ -585,7 +601,13 @@ exit $EXIT_CODE
             # instead of <exe>.runfiles/<workspace>. Windows resolves ".." without touching the disk,
             # so going through <workspace>/.. reaches the execroot from either one.
             run_dotnet_root = ctx.workspace_name + "/" + "../" * (len(exe_file.path.split("/")) + 1) + toolchain.host_pack.owner.workspace_root
-        providers.append(RunEnvironmentInfo(environment = {"DOTNET_ROOT": run_dotnet_root}))
+        # The web and worker hosts default the content root to the working directory, which bazel run
+        # sets to the runfiles root. "." resolves against the app's own directory, where content lands.
+        run_env = {"DOTNET_CONTENTROOT": "."} if ctx.attr.sdk != "Microsoft.NET.Sdk" else {}
+        for k, v in ctx.attr.env.items():
+            run_env[k] = ctx.expand_location(v, targets = ctx.attr.data + ctx.attr.deps)
+        run_env["DOTNET_ROOT"] = run_dotnet_root
+        providers.append(RunEnvironmentInfo(environment = run_env))
 
     return providers
 
@@ -695,6 +717,10 @@ _BINARY_ATTRS = {
         default = [],
         doc = EDITORCONFIG_FILES_DOC,
     ),
+    "env": attr.string_dict(
+        default = {},
+        doc = "Environment variables for `bazel run` of a binary and `bazel test` of a test. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`.",
+    ),
     "exports": attr.label_list(
         default = [],
         doc = "Dependencies exported to downstream consumers.",
@@ -707,7 +733,9 @@ _BINARY_ATTRS = {
     "content": attr.label_list(
         allow_files = True,
         default = [],
-        doc = "Static content files copied to runtime directories.",
+        doc = "Static files placed next to the assembly at their path relative to their package, so " +
+              "`wwwroot/css/app.css` lands at `wwwroot/css/app.css`. Same as MSBuild `Content` items " +
+              "with `CopyToOutputDirectory`. Use `copy_to_output` to pick another path.",
     ),
     "copy_to_output": attr.label_keyed_string_dict(
         allow_files = True,
@@ -789,6 +817,9 @@ csharp_binary = rule(
     doc = """Compiles a C# executable and stamps the native application host binary.
 
 `bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
+With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker` it also sets `DOTNET_CONTENTROOT`
+to the app's own directory, where `content` files land, so `appsettings.json` and `wwwroot` load as they
+do from a `dotnet publish` folder. A value in `env`, or a content root the app sets itself, wins.
 Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
 default install location.
 """,
@@ -819,10 +850,6 @@ _TEST_ATTRS.update({
         cfg = "exec",
         default = configuration_field(fragment = "coverage", name = "output_generator"),
         doc = "Bazel coverage output generator that merges LCOV reports.",
-    ),
-    "env": attr.string_dict(
-        default = {},
-        doc = "Environment variables for test execution. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`.",
     ),
     "env_inherit": attr.string_list(
         default = [],
