@@ -124,6 +124,10 @@ jobs:
           echo "$trace" | grep 'Using app-relative location'
           grep -q '"4.5.6"' "$RUNNER_TEMP/out.cs"
 
+      - name: Run localized example
+        working-directory: examples
+        run: test "$(bazel run //:localized | tr -d '\r')" = $'Hello\nBonjour'
+
       - name: Run web example
         working-directory: examples
         run: test "$(bazel run //web | tr -d '\r')" = "200 Hello, web!"

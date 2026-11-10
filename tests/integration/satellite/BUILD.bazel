@@ -1,0 +1,16 @@
+load("//csharp:defs.bzl", "csharp_test")
+
+# Culture specific resx files of the test and of a library it depends on land in fr/ as satellite assemblies.
+csharp_test(
+    name = "satellite_test",
+    srcs = ["SatelliteTest.cs"],
+    # Use the host's ICU culture data instead of the default invariant mode.
+    env = {"DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "0"},
+    output_assembly = "SatelliteApp",
+    resources = {
+        "Strings.dev.resx": "",
+        "Strings.fr.resx": "",
+        "Strings.resx": "",
+    },
+    deps = ["//tests/integration/satellite/lib"],
+)
