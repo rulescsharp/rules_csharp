@@ -92,8 +92,30 @@ def _cross_windows_action_test_impl(ctx):
         "Expected the apphost to point into cross_app_\\, got: %s" % patch_action.argv,
     )
 
-    # bazel run reaches the runtime from <exe>.runfiles and from <exe>.runfiles/<workspace>
+    # The apphost searches only <app dir>\dotnet, with no "..", since Windows resolves ".." from the
+    # bazel-bin path without following the junction. That is the one directory link per binary, to
+    # the runtime tree the toolchain builds, and it is in the default outputs.
+    asserts.true(
+        env,
+        "--app-relative-dotnet=dotnet" in patch_action.argv,
+        "Expected the apphost to search cross_app_\\dotnet only, got: %s" % patch_action.argv,
+    )
     target = analysistest.target_under_test(env)
+    links = [f for f in target[DefaultInfo].files.to_list() if f.short_path.endswith("cross_app_/dotnet")]
+    asserts.equals(env, 1, len(links), "Expected one dotnet directory in the default outputs, got: %s" % links)
+    asserts.true(env, links[0].is_directory, "Expected cross_app_/dotnet to be a directory output")
+    under = [f.short_path for f in target[DefaultInfo].files.to_list() if "cross_app_/dotnet/" in f.short_path]
+    asserts.equals(env, [], under, "Expected no per file runtime outputs under cross_app_/dotnet, got: %s" % under)
+    link_actions = [a for a in actions if a.mnemonic == "Symlink" and a.outputs.to_list()[0].short_path.endswith("cross_app_/dotnet")]
+    asserts.equals(env, 1, len(link_actions), "Expected one symlink action for cross_app_/dotnet")
+    link_input = link_actions[0].inputs.to_list()[0]
+    asserts.true(
+        env,
+        link_input.is_directory and link_input.basename.endswith("_dotnet") and "windows" in link_input.path,
+        "Expected the link to point at the toolchain's runtime tree for the target platform, got: %s" % link_input.path,
+    )
+
+    # bazel run reaches the runtime from <exe>.runfiles and from <exe>.runfiles/<workspace>
     exe = target[DefaultInfo].files_to_run.executable
     dotnet_root = target[RunEnvironmentInfo].environment["DOTNET_ROOT"]
     up = ctx.workspace_name + "/" + "../" * (len(exe.path.split("/")) + 1)

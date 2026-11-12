@@ -8,6 +8,26 @@ csharp_binary(
     srcs = ["Gen.cs"],
 )
 
+# The apphost of every target framework searches only its own dotnet directory, net8.0 included.
+csharp_binary(
+    name = "gen_net8",
+    srcs = ["Gen.cs"],
+    target_framework = "net8.0",
+)
+
+run_binary(
+    name = "generated_net8",
+    outs = ["generated_net8.txt"],
+    args = ["$(execpath generated_net8.txt)"],
+    tool = ":gen_net8",
+)
+
+diff_test(
+    name = "build_tool_net8_test",
+    file1 = ":generated_net8",
+    file2 = "expected.txt",
+)
+
 run_binary(
     name = "generated",
     outs = ["generated.txt"],

@@ -19,8 +19,9 @@ namespace RulesCsharp.Tools
         );
         private const int MaxSearchBytes = 512;
 
-        // App relative first, then DOTNET_ROOT, then the global install.
-        private const byte SearchAppRelativeThenEnvThenGlobal = (1 << 1) | (1 << 2) | (1 << 3);
+        // Only the app relative path. The apphost never looks at DOTNET_ROOT or the global install,
+        // so the runtime it runs on is the one that ships with the binary.
+        private const byte SearchAppRelative = 1 << 1;
 
         public static int Main(string[] args)
         {
@@ -77,10 +78,14 @@ namespace RulesCsharp.Tools
             Array.Copy(dllBytes, 0, data, index, dllBytes.Length);
             data[index + dllBytes.Length] = 0; // null terminator
 
-            // Older apphosts have no search options and keep finding .NET through DOTNET_ROOT.
-            int searchIndex = appRelativeDotnet == null ? -1 : IndexOf(data, SearchPlaceholder);
-            if (searchIndex != -1)
+            if (appRelativeDotnet != null)
             {
+                int searchIndex = IndexOf(data, SearchPlaceholder);
+                if (searchIndex == -1)
+                {
+                    Console.Error.WriteLine($"App host template '{resolvedTemplate}' has no .NET search options. Use the apphost of .NET 9 or later.");
+                    return 1;
+                }
                 byte[] pathBytes = Encoding.UTF8.GetBytes(appRelativeDotnet!);
                 if (pathBytes.Length > MaxSearchBytes - 3)
                 {
@@ -88,7 +93,7 @@ namespace RulesCsharp.Tools
                     return 1;
                 }
                 Array.Clear(data, searchIndex, SearchPlaceholder.Length);
-                data[searchIndex] = SearchAppRelativeThenEnvThenGlobal;
+                data[searchIndex] = SearchAppRelative;
                 data[searchIndex + 1] = 0;
                 Array.Copy(pathBytes, 0, data, searchIndex + 2, pathBytes.Length);
                 data[searchIndex + 2 + pathBytes.Length] = 0;

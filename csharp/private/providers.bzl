@@ -37,6 +37,7 @@ CSharpToolchainInfo = provider(
         "host_rid": "Host runtime identifier string.",
         "ref_pack": "Depset of reference assembly Files for target framework.",
         "runtime_pack": "Depset of runtime assembly Files for target platform.",
+        "runtime_tree": "Directory File laid out as a .NET root with host/fxr and the shared frameworks of the runtime pack, built once per configuration.",
         "target_framework": "Target framework moniker string.",
         "target_rid": "Target runtime identifier string.",
         "vstest_dll": "Host File for vstest.console.dll.",

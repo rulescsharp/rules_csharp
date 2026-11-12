@@ -16,6 +16,74 @@ SEALED_DOTNET_ENV = {
     "VBCSCOMPILER_TTL": "0",
 }
 
+def _msbuild_escape(s):
+    """Escapes the characters MSBuild treats as syntax in an item path."""
+    for ch, code in [("%", "25"), ("$", "24"), ("@", "40"), (";", "3B"), ("'", "27"), ("(", "28"), (")", "29"), ("*", "2A"), ("?", "3F")]:
+        s = s.replace(ch, "%" + code)
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+def _runtime_layout(files):
+    """Maps each shared framework and hostfxr file to its path in a .NET root."""
+    layout = {}
+    for f in files:
+        # short_path of a file in a repository is ../<repo>/<path in the repo>
+        rel = f.short_path.split("/", 2)[2] if f.short_path.startswith("../") else f.short_path
+        if rel.startswith("shared/") or rel.startswith("host/fxr/"):
+            layout[rel] = f
+    return layout
+
+def _declare_runtime_tree(ctx, runtime_files):
+    """Declares one directory laid out as a .NET root: host/fxr and the shared frameworks.
+
+    The toolchain builds it once per configuration. Every csharp_binary links to it as its
+    own `dotnet` directory, so the runtime is part of the binary's outputs and each
+    executor stages it with the binary.
+    """
+    layout = _runtime_layout(runtime_files)
+    if not layout:
+        return None
+    tree = ctx.actions.declare_directory(ctx.label.name + "_dotnet")
+
+    # MSBuild's Copy task makes the directories and copies the same way on every OS, so there is
+    # no shell or batch file to depend on. Relative paths resolve from the execroot.
+    items = []
+    for rel in sorted(layout):
+        items.append('    <F Include="{src}" Dest="{rel}" />'.format(
+            src = _msbuild_escape(layout[rel].path),
+            rel = _msbuild_escape(rel),
+        ))
+    project = ctx.actions.declare_file(ctx.label.name + "_dotnet.proj")
+    ctx.actions.write(project, "\n".join([
+        "<Project>",
+        "  <ItemGroup>",
+    ] + items + [
+        "  </ItemGroup>",
+        '  <Target Name="Build">',
+        "    <Copy SourceFiles=\"@(F->'$(MSBuildStartupDirectory)/%(Identity)')\"",
+        "          DestinationFiles=\"@(F->'{out}/%(Dest)')\" />".format(
+            out = "$(MSBuildStartupDirectory)/" + _msbuild_escape(tree.path),
+        ),
+        "  </Target>",
+        "</Project>",
+        "",
+    ]))
+
+    env = dict(SEALED_DOTNET_ENV)
+    env["DOTNET_ROOT"] = ctx.file.dotnet_muxer.dirname
+    env["DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE"] = "1"
+    env["PATH"] = "C:\\Windows\\System32;C:\\Windows" if "win" in ctx.attr.host_rid else "/usr/bin:/bin"
+    ctx.actions.run(
+        executable = ctx.file.dotnet_muxer,
+        arguments = ["msbuild", project.path, "-nologo", "-verbosity:quiet", "-nodeReuse:false", "-maxcpucount:1"],
+        inputs = [project] + layout.values(),
+        outputs = [tree],
+        env = env,
+        mnemonic = "CSharpRuntimeTree",
+        progress_message = "Laying out the .NET runtime for %{label}",
+        use_default_shell_env = False,
+    )
+    return tree
+
 def _csharp_toolchain_impl(ctx):
     ref_files = []
     if ctx.attr.ref_pack:
@@ -44,6 +112,7 @@ def _csharp_toolchain_impl(ctx):
         host_rid = ctx.attr.host_rid,
         ref_pack = depset(ref_files),
         runtime_pack = depset(runtime_files),
+        runtime_tree = _declare_runtime_tree(ctx, runtime_files),
         target_framework = ctx.attr.target_framework,
         target_rid = ctx.attr.target_rid,
         vstest_dll = ctx.file.vstest_dll if hasattr(ctx.file, "vstest_dll") else None,

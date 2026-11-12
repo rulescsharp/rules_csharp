@@ -44,6 +44,19 @@ jobs:
       - name: Run a Web app from a subpackage
         run: test "$(bazel run //tests/integration/content_root:app | tr -d '\r')" = "from appsettings, from env"
 
+      - name: Run build tools straight from bazel-bin
+        # The apphost searches only the dotnet directory next to the app, for every target framework.
+        # Without DOTNET_ROOT, the trace shows it used that runtime and the output shows the tool ran.
+        run: |
+          for tool in gen gen_net8; do
+            bazel build //tests/integration/build_tool:$tool
+            exe=$(bazel cquery --output=starlark --starlark:expr=target.files_to_run.executable.path "config(//tests/integration/build_tool:$tool, target)" 2>/dev/null | tr -d '\r')
+            out="$RUNNER_TEMP/$tool.txt"
+            trace=$(env -u DOTNET_ROOT -u DOTNET_ROOT_X64 -u DOTNET_ROOT_ARM64 COREHOST_TRACE=1 "$exe" "$out" 2>&1) || { echo "$trace"; exit 1; }
+            echo "$trace" | grep 'Using app-relative location'
+            diff tests/integration/build_tool/expected.txt <(tr -d '\r' < "$out")
+          done
+
       - name: Test the Release configuration
         run: bazel test -c opt //tests/integration:compilation_mode_test
 
@@ -100,10 +113,10 @@ jobs:
         working-directory: examples
         run: |
           test "$(bazel run //:show_version | tr -d '\r')" = "Version 1.2.3"
-          # Straight from bazel-bin, the apphost finds the runtime in its runfiles, not an installed .NET.
+          # Straight from bazel-bin, with no installed .NET to fall back on.
           bazel build //:make_version
-          exe=$(bazel cquery --output=starlark --starlark:expr=target.files_to_run.executable.path 'config(//:make_version, target)' 2>/dev/null)
-          trace=$(COREHOST_TRACE=1 "$exe" 4.5.6 "$RUNNER_TEMP/out.cs" 2>&1)
+          exe=$(bazel cquery --output=starlark --starlark:expr=target.files_to_run.executable.path 'config(//:make_version, target)' 2>/dev/null | tr -d '\r')
+          trace=$(env -u DOTNET_ROOT -u DOTNET_ROOT_X64 -u DOTNET_ROOT_ARM64 COREHOST_TRACE=1 "$exe" 4.5.6 "$RUNNER_TEMP/out.cs" 2>&1) || { echo "$trace"; exit 1; }
           echo "$trace" | grep 'Using app-relative location'
           grep -q '"4.5.6"' "$RUNNER_TEMP/out.cs"
 
