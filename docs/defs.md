@@ -106,12 +106,17 @@ csharp_binary(<a href="#csharp_binary-name">name</a>, <a href="#csharp_binary-de
 
 Compiles a C# executable and stamps the native application host binary.
 
-`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
-With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker` it also sets `DOTNET_CONTENTROOT`
+The app runs on the toolchain's .NET runtime without an installed .NET, under `bazel run`, as a tool in
+`genrule`, `run_binary` or another rule's action, and straight from `bazel-bin`, on every platform and
+for every `target_framework`. The binary's `<name>_/dotnet` directory is a link to that runtime, and the
+apphost looks there and nowhere else, so `DOTNET_ROOT` and an installed .NET never matter. The
+apphost comes from the newest configured SDK, which must be .NET 9 or later. `deps.json` and
+`runtimeconfig.json` stay framework dependent. A copy of the binary outside `bazel-bin` needs its
+`<name>_` directory with it.
+
+With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker`, `bazel run` also sets `DOTNET_CONTENTROOT`
 to the app's own directory, where `content` files land, so `appsettings.json` and `wwwroot` load as they
 do from a `dotnet publish` folder. A value in `env`, or a content root the app sets itself, wins.
-Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
-default install location.
 
 **ATTRIBUTES**
 
@@ -361,8 +366,8 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 load("@rules_csharp//csharp:defs.bzl", "CSharpToolchainInfo")
 
 CSharpToolchainInfo(<a href="#CSharpToolchainInfo-aspnetcore_ref_pack">aspnetcore_ref_pack</a>, <a href="#CSharpToolchainInfo-csc_dll">csc_dll</a>, <a href="#CSharpToolchainInfo-csc_worker">csc_worker</a>, <a href="#CSharpToolchainInfo-csc_worker_files">csc_worker_files</a>, <a href="#CSharpToolchainInfo-dotnet_env">dotnet_env</a>,
-                    <a href="#CSharpToolchainInfo-dotnet_muxer">dotnet_muxer</a>, <a href="#CSharpToolchainInfo-host_pack">host_pack</a>, <a href="#CSharpToolchainInfo-host_rid">host_rid</a>, <a href="#CSharpToolchainInfo-ref_pack">ref_pack</a>, <a href="#CSharpToolchainInfo-runtime_pack">runtime_pack</a>, <a href="#CSharpToolchainInfo-target_framework">target_framework</a>,
-                    <a href="#CSharpToolchainInfo-target_rid">target_rid</a>, <a href="#CSharpToolchainInfo-vstest_dll">vstest_dll</a>)
+                    <a href="#CSharpToolchainInfo-dotnet_muxer">dotnet_muxer</a>, <a href="#CSharpToolchainInfo-host_pack">host_pack</a>, <a href="#CSharpToolchainInfo-host_rid">host_rid</a>, <a href="#CSharpToolchainInfo-ref_pack">ref_pack</a>, <a href="#CSharpToolchainInfo-runtime_pack">runtime_pack</a>, <a href="#CSharpToolchainInfo-runtime_tree">runtime_tree</a>,
+                    <a href="#CSharpToolchainInfo-target_framework">target_framework</a>, <a href="#CSharpToolchainInfo-target_rid">target_rid</a>, <a href="#CSharpToolchainInfo-vstest_dll">vstest_dll</a>)
 </pre>
 
 Defines resolved C# SDK tools, packs, and target monikers.
@@ -381,6 +386,7 @@ Defines resolved C# SDK tools, packs, and target monikers.
 | <a id="CSharpToolchainInfo-host_rid"></a>host_rid |  Host runtime identifier string.    |
 | <a id="CSharpToolchainInfo-ref_pack"></a>ref_pack |  Depset of reference assembly Files for target framework.    |
 | <a id="CSharpToolchainInfo-runtime_pack"></a>runtime_pack |  Depset of runtime assembly Files for target platform.    |
+| <a id="CSharpToolchainInfo-runtime_tree"></a>runtime_tree |  Directory File laid out as a .NET root with host/fxr and the shared frameworks of the runtime pack, built once per configuration.    |
 | <a id="CSharpToolchainInfo-target_framework"></a>target_framework |  Target framework moniker string.    |
 | <a id="CSharpToolchainInfo-target_rid"></a>target_rid |  Target runtime identifier string.    |
 | <a id="CSharpToolchainInfo-vstest_dll"></a>vstest_dll |  Host File for vstest.console.dll.    |

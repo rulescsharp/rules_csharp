@@ -182,6 +182,9 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     is_win = "win" in toolchain.host_rid
     patch_env["PATH"] = "C:\\Windows\\System32;C:\\Windows" if is_win else "/usr/bin:/bin"
 
+    # The apphost looks for .NET in the dotnet directory next to the app dll and nowhere else, so the
+    # binary also runs as a build tool and straight from bazel-bin, where bazel run's DOTNET_ROOT
+    # doesn't apply. That directory is a link to the toolchain's runtime tree, declared below.
     ctx.actions.run(
         executable = toolchain.dotnet_muxer,
         inputs = [
@@ -194,6 +197,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
             "--apphost-template=" + toolchain.host_pack.path,
             "--output=" + exe_file.path,
             "--assembly-name=" + (app_dir.replace("/", "\\") if is_windows else app_dir) + main_dll.basename,
+            "--app-relative-dotnet=dotnet",
         ],
         outputs = [exe_file],
         env = patch_env,
@@ -237,7 +241,14 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll:
         runfiles_symlinks[prefix + "vstest.console.dll"] = toolchain.vstest_dll
 
+    # One directory link per binary, to the runtime tree the toolchain builds once. It is a declared
+    # output, so every executor stages it with the binary, and it has no "..", which the Windows
+    # apphost would resolve against the bazel-bin path without following its junction.
     extra_output_files = []
+    if toolchain.runtime_tree:
+        runtime_link = ctx.actions.declare_directory(app_dir + "dotnet")
+        ctx.actions.symlink(output = runtime_link, target_file = toolchain.runtime_tree)
+        extra_output_files.append(runtime_link)
     app_files = {main_dll.basename: True}
     for f in csharp_info.transitive_runtime_dlls.to_list() + csharp_info.transitive_native_libs.to_list():
         if f.basename not in app_files:
@@ -579,7 +590,9 @@ exit $EXIT_CODE
         csharp_info,
     ] + [p for p in compile_providers if type(p) == "InstrumentedFilesInfo"]
 
-    pack_ws = getattr(toolchain.host_pack.owner, "workspace_name", "") or getattr(toolchain.host_pack.owner, "repo_name", "")
+    # The apphost template comes from the newest SDK, so the runtime's repository is the owner of its files.
+    runtime_owner = toolchain.runtime_pack.to_list()[0].owner
+    pack_ws = getattr(runtime_owner, "workspace_name", "") or getattr(runtime_owner, "repo_name", "")
     dotnet_root_rel = "../" + pack_ws if pack_ws else toolchain.dotnet_muxer.dirname
 
     if is_test:
@@ -600,7 +613,7 @@ exit $EXIT_CODE
             # Windows has no runfiles tree by default, and then bazel run starts in <exe>.runfiles
             # instead of <exe>.runfiles/<workspace>. Windows resolves ".." without touching the disk,
             # so going through <workspace>/.. reaches the execroot from either one.
-            run_dotnet_root = ctx.workspace_name + "/" + "../" * (len(exe_file.path.split("/")) + 1) + toolchain.host_pack.owner.workspace_root
+            run_dotnet_root = ctx.workspace_name + "/" + "../" * (len(exe_file.path.split("/")) + 1) + runtime_owner.workspace_root
         # The web and worker hosts default the content root to the working directory, which bazel run
         # sets to the runfiles root. "." resolves against the app's own directory, where content lands.
         run_env = {"DOTNET_CONTENTROOT": "."} if ctx.attr.sdk != "Microsoft.NET.Sdk" else {}
@@ -816,12 +829,17 @@ _BINARY_ATTRS = {
 csharp_binary = rule(
     doc = """Compiles a C# executable and stamps the native application host binary.
 
-`bazel run` sets `DOTNET_ROOT` to the toolchain's .NET runtime, so the app runs without an installed .NET.
-With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker` it also sets `DOTNET_CONTENTROOT`
+The app runs on the toolchain's .NET runtime without an installed .NET, under `bazel run`, as a tool in
+`genrule`, `run_binary` or another rule's action, and straight from `bazel-bin`, on every platform and
+for every `target_framework`. The binary's `<name>_/dotnet` directory is a link to that runtime, and the
+apphost looks there and nowhere else, so `DOTNET_ROOT` and an installed .NET never matter. The
+apphost comes from the newest configured SDK, which must be .NET 9 or later. `deps.json` and
+`runtimeconfig.json` stay framework dependent. A copy of the binary outside `bazel-bin` needs its
+`<name>_` directory with it.
+
+With `sdk` set to `Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.Worker`, `bazel run` also sets `DOTNET_CONTENTROOT`
 to the app's own directory, where `content` files land, so `appsettings.json` and `wwwroot` load as they
 do from a `dotnet publish` folder. A value in `env`, or a content root the app sets itself, wins.
-Running the output outside Bazel needs a .NET install with the app's runtime in `DOTNET_ROOT` or the
-default install location.
 """,
     implementation = _csharp_binary_impl,
     attrs = _BINARY_ATTRS,

@@ -477,6 +477,12 @@ def _csharp_toolchains_hub_impl(repository_ctx):
 
     versions = repository_ctx.attr.dotnet_versions
     newest = max(versions, key = lambda v: [int(p) for p in v.split(".")])
+
+    # Binaries search only the dotnet directory next to the app, an option that the apphost of .NET 9
+    # and later carries. Every target framework stamps that apphost, net8.0 included.
+    if int(newest.split(".")[0]) < 9:
+        fail("csharp.toolchain dotnet_versions needs an SDK of .NET 9 or later, whose apphost csharp_binary stamps for every target_framework. Got: {}.".format(", ".join(versions)))
+    newest_slug = newest.replace(".", "_")
     for tfm in [""] + [version_to_tfm(v) for v in versions]:
         lines.append("""config_setting(
     name = "target_framework_{name}",
@@ -503,7 +509,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     csc_worker_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:csc_worker_files"],
     ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:ref_pack"],
     aspnetcore_ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:aspnetcore_ref_pack"],
-    host_pack = "@csharp_pack_{v_slug}_{target_p}//:host_pack",
+    host_pack = "@csharp_pack_{newest_slug}_{target_p}//:host_pack",
     runtime_pack = ["@csharp_pack_{v_slug}_{target_p}//:runtime_pack"],
     target_framework = "{tfm}",
     target_rid = "{target_rid}",
@@ -514,6 +520,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
                     exec_p = exec_p,
                     host_rid = exec_info["rid"],
                     impl_name = impl_name,
+                    newest_slug = newest_slug,
                     target_p = target_p,
                     target_rid = target_info["rid"],
                     tfm = tfm,
