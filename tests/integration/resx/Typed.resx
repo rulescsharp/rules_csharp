@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="Logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>logo.png;System.Byte[], mscorlib</value>
+  </data>
+</root>

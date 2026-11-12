@@ -22,6 +22,12 @@ collection and the default roll forward, which stays on their own .NET major ver
 Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the target also needs \
 `framework_references = ["Microsoft.AspNetCore.App"]` or the Microsoft.Extensions.Hosting NuGet package."""
 
+RESOURCES_DOC = """Files to embed in the assembly, the same as MSBuild `EmbeddedResource`, each mapped to its \
+manifest resource name. An empty name defaults to `<output_assembly>.<file name>`. A `.resx` file is compiled to \
+`.resources` first and its default name ends in `.resources`, so `new ResourceManager("<output_assembly>.Strings", \
+assembly)` reads `Strings.resx`. Only string entries are supported in `.resx` files, and an entry with a `type` or \
+`mimetype` fails the build."""
+
 OUTPUT_ASSEMBLY_DOC = """Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target \
 name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it \
 is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with \
@@ -157,6 +163,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     args.append("-nostdlib+")
     args.append("-deterministic+")
     args.append("-utf8output")
+    args.append("-nologo")
     args.append("-debug:portable")
     args.append("-highentropyva+")
     args.append("-nullable:enable")
@@ -316,7 +323,9 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
             for res_target, logical_name in ctx.attr.resources.items():
                 for f in res_target.files.to_list():
                     resource_files.append(f)
-                    log_name = logical_name if logical_name else (assembly + "." + f.basename)
+                    # A .resx compiles to .resources, which ResourceManager("<assembly>.<name>") looks up.
+                    default_name = f.basename[:-len(".resx")] + ".resources" if f.extension == "resx" else f.basename
+                    log_name = logical_name if logical_name else (assembly + "." + default_name)
                     args.append("-resource:" + f.path.replace("\\", "/") + "," + log_name)
         else:
             for f in ctx.files.resources:
@@ -698,7 +707,7 @@ _COMMON_ATTRS = {
     "resources": attr.label_keyed_string_dict(
         allow_files = True,
         default = {},
-        doc = "Embedded resource files mapped to logical names.",
+        doc = RESOURCES_DOC,
     ),
     "runtime_dlls": attr.label_list(
         allow_files = [".dll"],

@@ -201,8 +201,27 @@ namespace RulesCsharp.Tools
                 return (1, "Compiler entry point not initialized.");
             }
 
-            compileArgs = PreprocessArgs(compileArgs);
+            string? resxDir = null;
+            try
+            {
+                compileArgs = PreprocessArgs(compileArgs, ref resxDir);
+                return Compile(compileArgs);
+            }
+            catch (InvalidDataException ex)
+            {
+                return (1, "error: " + ex.Message + Environment.NewLine);
+            }
+            finally
+            {
+                if (resxDir != null && Directory.Exists(resxDir))
+                {
+                    Directory.Delete(resxDir, true);
+                }
+            }
+        }
 
+        private static (int exitCode, string output) Compile(string[] compileArgs)
+        {
             lock (_compileLock)
             {
                 var prevOut = Console.Out;
@@ -234,10 +253,25 @@ namespace RulesCsharp.Tools
             }
         }
 
-        private static string[] PreprocessArgs(string[] compileArgs)
+        private static string[] PreprocessArgs(string[] compileArgs, ref string? resxDir)
         {
-            var processed = new List<string>(compileArgs.Length);
+            // The worker gets the param file already split into arguments. A plain process gets @file, one argument per
+            // line, which csc would split again on spaces.
+            var expanded = new List<string>(compileArgs.Length);
             foreach (var arg in compileArgs)
+            {
+                if (arg.StartsWith("@") && File.Exists(arg.Substring(1)))
+                {
+                    expanded.AddRange(File.ReadAllLines(arg.Substring(1)));
+                }
+                else
+                {
+                    expanded.Add(arg);
+                }
+            }
+
+            var processed = new List<string>(expanded.Count);
+            foreach (var arg in expanded)
             {
                 if (arg.StartsWith("-resource:") || arg.StartsWith("/resource:"))
                 {
@@ -249,7 +283,10 @@ namespace RulesCsharp.Tools
 
                     if (resPath.EndsWith(".resx", StringComparison.OrdinalIgnoreCase) && File.Exists(resPath))
                     {
-                        string compiledPath = CompileResx(resPath);
+                        // Compile next to the outputs, never next to the input, which may sit in the source tree.
+                        // One directory per resource, so two Strings.resx in different packages don't collide.
+                        resxDir ??= Path.Combine(OutputDir(expanded), "_resx_" + Path.GetRandomFileName());
+                        string compiledPath = CompileResx(resPath, Path.Combine(resxDir, processed.Count.ToString())).Replace('\\', '/');
                         if (!string.IsNullOrEmpty(logicalName))
                         {
                             processed.Add($"{prefix}{compiledPath},{logicalName}");
@@ -268,29 +305,43 @@ namespace RulesCsharp.Tools
             return processed.ToArray();
         }
 
-        private static string CompileResx(string resxPath)
+        private static string OutputDir(List<string> args)
         {
-            string outPath = Path.ChangeExtension(resxPath, ".resources");
+            foreach (var arg in args)
+            {
+                if (arg.StartsWith("-out:"))
+                {
+                    return Path.GetDirectoryName(arg.Substring(5)) ?? ".";
+                }
+            }
+            return ".";
+        }
+
+        private static string CompileResx(string resxPath, string outDir)
+        {
+            Directory.CreateDirectory(outDir);
+            string outPath = Path.Combine(outDir, Path.GetFileNameWithoutExtension(resxPath) + ".resources");
+            XDocument doc;
             try
             {
-                var doc = XDocument.Load(resxPath);
-                using var stream = File.Create(outPath);
-                using var rw = new ResourceWriter(stream);
-                foreach (var el in doc.Descendants("data"))
-                {
-                    string? name = (string?)el.Attribute("name");
-                    string? value = (string?)el.Element("value");
-                    if (name != null && value != null)
-                    {
-                        rw.AddResource(name, value);
-                    }
-                }
-                rw.Generate();
+                doc = XDocument.Load(resxPath);
             }
-            catch (Exception ex)
+            catch (System.Xml.XmlException ex)
             {
-                Console.Error.WriteLine($"Warning: Failed to compile resx '{resxPath}': {ex.Message}");
+                throw new InvalidDataException($"{resxPath}: {ex.Message}");
             }
+            using var stream = File.Create(outPath);
+            using var rw = new ResourceWriter(stream);
+            foreach (var el in doc.Root?.Elements("data") ?? Array.Empty<XElement>())
+            {
+                string name = (string?)el.Attribute("name") ?? "";
+                if (el.Attribute("type") != null || el.Attribute("mimetype") != null)
+                {
+                    throw new InvalidDataException($"{resxPath}: entry '{name}' is not a string. Only string entries are supported in .resx resources.");
+                }
+                rw.AddResource(name, (string?)el.Element("value") ?? "");
+            }
+            rw.Generate();
             return outPath;
         }
 

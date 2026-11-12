@@ -1,0 +1,22 @@
+load("//csharp:defs.bzl", "csharp_library", "csharp_test")
+
+# Paths with spaces and a compiled .resx, checked in the compile worker by bazel test and as a plain process in CI.
+csharp_test(
+    name = "resx_test",
+    srcs = [
+        "ResxTest.cs",
+        "Spaced Source.cs",
+    ],
+    resources = {
+        "other/Strings.resx": "resx_test.Other.resources",
+        "with space/Strings.resx": "",
+    },
+)
+
+# Fails to build: only string entries are supported.
+csharp_library(
+    name = "typed_resx_lib",
+    srcs = ["Spaced Source.cs"],
+    resources = {"Typed.resx": ""},
+    tags = ["manual"],
+)
