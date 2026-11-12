@@ -142,6 +142,15 @@ jobs:
             f == "Greeter.cs" && /^DA:[0-9]+,[1-9]/ { hit = 1 }
             END { exit !hit }' bazel-out/_coverage/_coverage_report.dat
 
+      - name: Execute examples tests twice with a disk cache
+        # The second run takes its actions from the cache, which Bazel leaves undownloaded.
+        working-directory: examples
+        run: |
+          bazel clean
+          bazel test //... --disk_cache="$RUNNER_TEMP/examples_disk_cache"
+          bazel clean
+          bazel test //... --disk_cache="$RUNNER_TEMP/examples_disk_cache"
+
   bazel-versions:
     name: Examples and proto (Bazel ${{ matrix.bazel }})
     runs-on: ubuntu-latest
@@ -169,6 +178,15 @@ jobs:
       - name: Execute proto module tests
         working-directory: proto
         run: bazel test //...
+
+      - name: Execute examples tests twice with a disk cache
+        # The second run takes its actions from the cache, which Bazel leaves undownloaded.
+        working-directory: examples
+        run: |
+          bazel clean
+          bazel test //... --disk_cache="$RUNNER_TEMP/examples_disk_cache"
+          bazel clean
+          bazel test //... --disk_cache="$RUNNER_TEMP/examples_disk_cache"
 
   nuget-fetch:
     name: NuGet fetch (Bazel ${{ matrix.bazel }})

@@ -12,6 +12,17 @@ def _package_relative_path(f):
     package = f.owner.package
     return path[len(package) + 1:] if package else path
 
+def _runtime_layout(files, frameworks):
+    """Maps each hostfxr file and each file of the given shared frameworks to its path in a .NET root."""
+    prefixes = ["host/fxr/"] + ["shared/%s/" % name for name in frameworks]
+    layout = {}
+    for f in files:
+        # short_path of a file in a repository is ../<repo>/<path in the repo>
+        rel = f.short_path.split("/", 2)[2] if f.short_path.startswith("../") else f.short_path
+        if [p for p in prefixes if rel.startswith(p)]:
+            layout[rel] = f
+    return layout
+
 def _binary_common_impl(ctx, is_test = False):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
@@ -184,7 +195,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
 
     # The apphost looks for .NET in the dotnet directory next to the app dll and nowhere else, so the
     # binary also runs as a build tool and straight from bazel-bin, where bazel run's DOTNET_ROOT
-    # doesn't apply. That directory is a link to the toolchain's runtime tree, declared below.
+    # That directory holds a link to each runtime file, declared below.
     ctx.actions.run(
         executable = toolchain.dotnet_muxer,
         inputs = [
@@ -241,14 +252,15 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll:
         runfiles_symlinks[prefix + "vstest.console.dll"] = toolchain.vstest_dll
 
-    # One directory link per binary, to the runtime tree the toolchain builds once. It is a declared
-    # output, so every executor stages it with the binary, and it has no "..", which the Windows
-    # apphost would resolve against the bazel-bin path without following its junction.
+    # The runtime laid out as a .NET root next to the app, one link per file. Every link targets a
+    # source file. A link to a generated tree fails when a disk or remote cache leaves that tree
+    # undownloaded. The link has no "..", which the Windows apphost would resolve against the
+    # bazel-bin path without following its junction.
     extra_output_files = []
-    if toolchain.runtime_tree:
-        runtime_link = ctx.actions.declare_directory(app_dir + "dotnet")
-        ctx.actions.symlink(output = runtime_link, target_file = toolchain.runtime_tree)
-        extra_output_files.append(runtime_link)
+    for rel, f in _runtime_layout(toolchain.runtime_pack.to_list(), ["Microsoft.NETCore.App"] + frameworks).items():
+        declared = ctx.actions.declare_file(app_dir + "dotnet/" + rel)
+        ctx.actions.symlink(output = declared, target_file = f)
+        extra_output_files.append(declared)
     app_files = {main_dll.basename: True}
     for f in csharp_info.transitive_runtime_dlls.to_list() + csharp_info.transitive_native_libs.to_list():
         if f.basename not in app_files:
@@ -831,7 +843,7 @@ csharp_binary = rule(
 
 The app runs on the toolchain's .NET runtime without an installed .NET, under `bazel run`, as a tool in
 `genrule`, `run_binary` or another rule's action, and straight from `bazel-bin`, on every platform and
-for every `target_framework`. The binary's `<name>_/dotnet` directory is a link to that runtime, and the
+for every `target_framework`. The binary's `<name>_/dotnet` directory holds links to the runtime files, and the
 apphost looks there and nowhere else, so `DOTNET_ROOT` and an installed .NET never matter. The
 apphost comes from the newest configured SDK, which must be .NET 9 or later. `deps.json` and
 `runtimeconfig.json` stay framework dependent. A copy of the binary outside `bazel-bin` needs its
