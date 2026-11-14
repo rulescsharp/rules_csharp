@@ -1,0 +1,12 @@
+load("//csharp:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "lib",
+    srcs = ["LibStrings.cs"],
+    output_assembly = "SatelliteLib",
+    resources = {
+        "Strings.fr.resx": "",
+        "Strings.resx": "",
+    },
+    visibility = ["//tests/integration/satellite:__pkg__"],
+)

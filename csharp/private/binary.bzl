@@ -269,6 +269,19 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
 
+    # The runtime looks for satellite assemblies in a directory named after the culture, like fr/Name.resources.dll.
+    for f in (getattr(csharp_info, "transitive_satellites", None) or depset()).to_list():
+        dest = f.dirname.rsplit("/", 1)[-1] + "/" + f.basename
+        if dest not in app_files:
+            app_files[dest] = True
+            runfiles_symlinks[prefix + dest] = f
+            if f.dirname == main_dll.dirname + "/" + dest.split("/")[0]:
+                extra_output_files.append(f)
+            else:
+                declared = ctx.actions.declare_file(app_dir + dest)
+                ctx.actions.symlink(output = declared, target_file = f)
+                extra_output_files.append(declared)
+
     launcher_dll = None
     if is_test and getattr(ctx.attr, "target_type", "exe") == "library":
         launcher_dll = ctx.attr._vstest_launcher[CSharpInfo].runtime_dll
@@ -361,7 +374,7 @@ set DOTNET_CLI_TELEMETRY_OPTOUT=1
 set DOTNET_NOLOGO=1
 set VBCSCOMPILER_TTL=0
 set MSBUILDDISABLENODEREUSE=1
-set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+if not defined DOTNET_SYSTEM_GLOBALIZATION_INVARIANT set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 rem Processes started in the same second draw the same %RANDOM%, so retry until mkdir makes a new directory.
 set SCRATCH_TRIES=0
 :make_scratch
@@ -466,7 +479,7 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export DOTNET_NOLOGO=1
 export VBCSCOMPILER_TTL=0
 export MSBUILDDISABLENODEREUSE=1
-export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT="${{DOTNET_SYSTEM_GLOBALIZATION_INVARIANT:-1}}"
 SCRATCH="${{TMPDIR:-/tmp}}/.dotnet_scratch_$$"
 mkdir -p "$SCRATCH"
 export DOTNET_CLI_HOME="$SCRATCH"
@@ -744,7 +757,7 @@ _BINARY_ATTRS = {
     ),
     "env": attr.string_dict(
         default = {},
-        doc = "Environment variables for `bazel run` of a binary and `bazel test` of a test. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`.",
+        doc = "Environment variables for `bazel run` of a binary and `bazel test` of a test. Values expand `$(rlocationpath)` and the other location functions for labels in `data` and `deps`. Tests run in .NET globalization invariant mode (`DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1`) so they pass on hosts without ICU. Set it to `0` here to test culture specific behavior with the host's ICU data.",
     ),
     "exports": attr.label_list(
         default = [],

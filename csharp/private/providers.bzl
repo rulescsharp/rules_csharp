@@ -12,6 +12,7 @@ CSharpInfo = provider(
         "transitive_compile_refs": "Depset of reference assembly Files for compilation.",
         "transitive_native_libs": "Depset of target platform unmanaged shared libraries.",
         "transitive_runtime_dlls": "Depset of runtime assembly Files for execution.",
+        "transitive_satellites": "Depset of satellite resource assembly Files, each in a directory named after its culture, such as `fr/Name.resources.dll`. Providers created before this field existed lack it, so read it with getattr.",
         "transitive_test_runtime_dlls": "Depset of Files that a library csharp_test stages next to the test assembly, such as VSTest adapters. Optional, treated as empty when unset.",
         "xml_doc": "XML documentation File written with `generate_documentation_file`, or None. Providers created before this field existed lack it, so read it with getattr.",
     },

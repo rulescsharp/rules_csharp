@@ -349,6 +349,8 @@ def _nuget_package_repo_impl(repository_ctx):
     lines.append('    compile_refs = {},'.format(compile_refs_expr))
     lines.append('    runtime_dlls = {},'.format(runtime_dlls_expr))
     lines.append('    native_libs = {},'.format(native_libs_expr))
+    if default_runtime_dir and default_runtime_dir.startswith("lib/"):
+        lines.append('    satellites = glob(["{}/*/*.resources.dll"], allow_empty = True),'.format(default_runtime_dir))
     if test_runtime_dir:
         lines.append('    test_runtime_dlls = glob(["{}/*.dll"]),'.format(test_runtime_dir))
     lines.append('    deps = {},'.format(deps_expr))

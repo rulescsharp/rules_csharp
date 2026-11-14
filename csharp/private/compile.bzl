@@ -25,8 +25,11 @@ Microsoft.Extensions hosting usings and, as in MSBuild, no reference, so the tar
 RESOURCES_DOC = """Files to embed in the assembly, the same as MSBuild `EmbeddedResource`, each mapped to its \
 manifest resource name. An empty name defaults to `<output_assembly>.<file name>`. A `.resx` file is compiled to \
 `.resources` first and its default name ends in `.resources`, so `new ResourceManager("<output_assembly>.Strings", \
-assembly)` reads `Strings.resx`. Only string entries are supported in `.resx` files, and an entry with a `type` or \
-`mimetype` fails the build."""
+assembly)` reads `Strings.resx`. Like dotnet build, a culture specific file such as `Strings.fr.resx` goes into the \
+satellite assembly `fr/<output_assembly>.resources.dll` instead, named `<output_assembly>.Strings.fr.resources` by \
+default, so that ResourceManager returns its strings for the `fr` culture. A name whose part before `.resx` is not a \
+culture, such as `Strings.dev.resx`, stays in the main assembly. Only string entries are supported in `.resx` \
+files, and an entry with a `type` or `mimetype` fails the build."""
 
 OUTPUT_ASSEMBLY_DOC = """Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target \
 name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it \
@@ -79,6 +82,32 @@ def library_runfiles(ctx, deps):
     return ctx.runfiles(files = getattr(ctx.files, "data", [])).merge_all(
         [t[DefaultInfo].default_runfiles for t in data] + [d[DefaultInfo].default_runfiles for d in deps],
     )
+
+# Language subtags of the CLDR 49 "full" locales plus the qps pseudo locales. dotnet build accepts a culture the
+# host ICU knows, and ICU is built from CLDR on every OS, so this list keeps the check hermetic.
+_CULTURE_LANGUAGES = {lang: True for lang in """
+ady af agq ak am ar as asa ast az ba bal bas be bem bez bg bgc bho blo bm bn bo br brx bs bua ca ccp ce ceb cgg
+chr ckb cop cs csw cv cy da dav de dje doi dsb dua dyo dz ebu ee el en eo es et eu ewo fa ff fi fil fo fr fur fy
+ga gaa gd gl gsw gu guz gv ha haw he hi hr hsb hu hy ia id ie ig ii is it ja jgo jmc jv ka kab kam kbd kde kea
+kek kgp khq ki kk kkj kl kln km kn ko kok ks ksb ksf ksh ku kw kxv ky lag lb lg lij lkt lld lmo ln lo lrc lt lu
+luo luy lv mai mas mer mfe mg mgh mgo mi mk ml mn mni mr ms mt mua my mzn naq nb nd nds ne nl nmg nn nnh no nqo
+nso nus nyn oc om or os pa pcm pl pms prg ps pt qps qu quc raj rm rn ro rof ru rw rwk sa sah saq sat sbp sc scn
+sd se seh ses sg shi shn si sk sl smn sn so sq sr st su suz sv sw syr szl ta te teo tg th ti tk tn to tok tr tt
+twq tyv tzm ug uk ur uz vai vec vi vmw vun wae wo xh xnr xog yav yi yo yrl yue za zgh zh zu
+""".strip().replace("\n", " ").split(" ")}
+
+def _resx_culture(f):
+    # The culture of Strings.fr.resx or Strings.zh-Hans.resx, or None for a name like Strings.dev.resx.
+    parts = f.basename.split(".")
+    if f.extension != "resx" or len(parts) < 3:
+        return None
+    tags = parts[-2].split("-")
+    if tags[0].lower() not in _CULTURE_LANGUAGES:
+        return None
+    for tag in tags[1:]:
+        if not tag or len(tag) > 8 or not tag.isalnum():
+            return None
+    return parts[-2]
 
 def output_assembly(ctx):
     """Returns the assembly name a target compiles to.
@@ -316,8 +345,10 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         content = "\n".join(info_lines) + "\n",
     )
 
-    # Resources
+    # Resources. Like dotnet build, a culture specific .resx such as Strings.fr.resx goes into the satellite
+    # assembly fr/<assembly>.resources.dll, where ResourceManager looks for it, not into the main assembly.
     resource_files = []
+    culture_resources = {}
     if hasattr(ctx.attr, "resources"):
         if type(ctx.attr.resources) == "dict":
             for res_target, logical_name in ctx.attr.resources.items():
@@ -326,7 +357,11 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
                     # A .resx compiles to .resources, which ResourceManager("<assembly>.<name>") looks up.
                     default_name = f.basename[:-len(".resx")] + ".resources" if f.extension == "resx" else f.basename
                     log_name = logical_name if logical_name else (assembly + "." + default_name)
-                    args.append("-resource:" + f.path.replace("\\", "/") + "," + log_name)
+                    culture = _resx_culture(f)
+                    if culture:
+                        culture_resources.setdefault(culture, []).append((f, "-resource:" + f.path.replace("\\", "/") + "," + log_name))
+                    else:
+                        args.append("-resource:" + f.path.replace("\\", "/") + "," + log_name)
         else:
             for f in ctx.files.resources:
                 resource_files.append(f)
@@ -428,6 +463,40 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
             friends = tuple([f.split(",")[0].strip().lower() for f in internals_visible_to]),
         ))
 
+    satellites = []
+    for culture, resources in sorted(culture_resources.items()):
+        satellite = ctx.actions.declare_file(out_dir + culture + "/" + assembly + ".resources.dll")
+        satellite_info = ctx.actions.declare_file(ctx.label.name + "." + culture + ".SatelliteInfo.g.cs")
+        ctx.actions.write(
+            output = satellite_info,
+            content = "\n".join(public_info_lines + ["[assembly: global::System.Reflection.AssemblyCulture(\"%s\")]" % culture]) + "\n",
+        )
+        satellite_args = ctx.actions.args()
+        satellite_args.use_param_file("@%s", use_always = True)
+        satellite_args.set_param_file_format("multiline")
+        satellite_args.add("-out:" + satellite.path.replace("\\", "/"))
+        satellite_args.add_all(["-target:library", "-noconfig", "-nostdlib+", "-deterministic+", "-utf8output", "-nologo"])
+        satellite_args.add_all(toolchain.ref_pack, format_each = "-reference:%s")
+        satellite_args.add_all([arg for _, arg in resources])
+        satellite_args.add(satellite_info.path.replace("\\", "/"))
+        ctx.actions.run(
+            outputs = [satellite],
+            inputs = depset(direct = [toolchain.csc_dll, satellite_info] + [f for f, _ in resources] + ([toolchain.csc_worker] if toolchain.csc_worker else []), transitive = [toolchain.ref_pack] + worker_depsets),
+            executable = compiler_executable,
+            arguments = compiler_prefix + [satellite_args],
+            mnemonic = "CSharpSatellite",
+            progress_message = "Compiling C# %s satellite assembly %%{label}" % culture,
+            use_default_shell_env = False,
+            execution_requirements = execution_requirements,
+            env = compile_env,
+        )
+        satellites.append(satellite)
+    transitive_satellites = depset(satellites, transitive = [
+        getattr(dep[CSharpInfo], "transitive_satellites", None) or depset()
+        for dep in direct_deps_and_exports
+        if CSharpInfo in dep
+    ])
+
     transitive_compile_refs = depset(
         direct = [public_ref],
         transitive = transitive_compile_depsets,
@@ -462,13 +531,14 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         transitive_test_runtime_dlls = transitive_test_runtime_dlls,
         framework_references = frameworks,
         friend_refs = depset(own_friend_refs, transitive = [friend_refs]),
+        transitive_satellites = transitive_satellites,
     )
 
     default_info = DefaultInfo(
         files = depset([out_dll, refout_dll, pdb] + ([public_ref] if internals_visible_to else []) + ([xml_doc] if xml_doc else [])),
         runfiles = ctx.runfiles(
             files = [out_dll, pdb] + ([xml_doc] if xml_doc else []) + resource_files + getattr(ctx.files, "content", []),
-            transitive_files = depset(transitive_runtime_dlls.to_list()),
+            transitive_files = depset(transitive_runtime_dlls.to_list(), transitive = [transitive_satellites]),
         ).merge(library_runfiles(ctx, direct_deps_and_exports)),
     )
 
@@ -498,6 +568,7 @@ def _csharp_import_impl(ctx):
     native_libs = list(ctx.files.native_libs) if hasattr(ctx.files, "native_libs") else []
     analyzers = list(ctx.files.analyzers) if hasattr(ctx.files, "analyzers") else []
     test_runtime_dlls = list(ctx.files.test_runtime_dlls) if hasattr(ctx.files, "test_runtime_dlls") else []
+    satellites = list(getattr(ctx.files, "satellites", []))
 
     if not compile_refs and dlls:
         compile_refs = dlls
@@ -523,6 +594,7 @@ def _csharp_import_impl(ctx):
         transitive_native_depsets.append(depset(native_libs, order = "preorder"))
 
     transitive_test_runtime_depsets = [depset(test_runtime_dlls)]
+    transitive_satellite_depsets = [depset(satellites)]
 
     analyzer_depsets = []
     if analyzers:
@@ -538,6 +610,7 @@ def _csharp_import_impl(ctx):
             transitive_runtime_depsets.append(dep[CSharpInfo].transitive_runtime_dlls)
             transitive_native_depsets.append(dep[CSharpInfo].transitive_native_libs)
             transitive_test_runtime_depsets.append(getattr(dep[CSharpInfo], "transitive_test_runtime_dlls", None) or depset())
+            transitive_satellite_depsets.append(getattr(dep[CSharpInfo], "transitive_satellites", None) or depset())
         if CSharpAnalyzerInfo in dep:
             analyzer_depsets.append(dep[CSharpAnalyzerInfo].analyzers)
 
@@ -559,6 +632,7 @@ def _csharp_import_impl(ctx):
         transitive_runtime_dlls = transitive_runtime_dlls,
         transitive_native_libs = transitive_native_libs,
         transitive_test_runtime_dlls = depset(transitive = transitive_test_runtime_depsets),
+        transitive_satellites = depset(transitive = transitive_satellite_depsets),
         framework_references = framework_references(ctx, direct_deps),
         friend_refs = depset(transitive = [
             getattr(dep[CSharpInfo], "friend_refs", None) or depset()
@@ -572,7 +646,7 @@ def _csharp_import_impl(ctx):
         files = depset(all_files),
         runfiles = ctx.runfiles(
             files = runtime_dlls + native_libs,
-            transitive_files = depset(transitive = [transitive_runtime_dlls, transitive_native_libs]),
+            transitive_files = depset(transitive = [transitive_runtime_dlls, transitive_native_libs] + transitive_satellite_depsets),
         ).merge(library_runfiles(ctx, direct_deps)),
     )
 
@@ -788,6 +862,11 @@ _IMPORT_ATTRS = {
         allow_files = [".dll"],
         default = [],
         doc = "Precompiled runtime implementation assembly DLL files.",
+    ),
+    "satellites": attr.label_list(
+        allow_files = [".dll"],
+        default = [],
+        doc = "Satellite resource assemblies, each in a directory named after its culture such as `fr/Name.resources.dll`. An executable places them in that directory next to its assembly.",
     ),
     "test_runtime_dlls": attr.label_list(
         allow_files = [".dll"],

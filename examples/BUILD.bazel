@@ -38,6 +38,16 @@ csharp_test(
     ],
 )
 
+# Strings.fr.resx goes into the satellite assembly fr/localized.resources.dll, like dotnet build.
+csharp_binary(
+    name = "localized",
+    srcs = ["Localized.cs"],
+    resources = {
+        "Strings.fr.resx": "",
+        "Strings.resx": "",
+    },
+)
+
 # Passes -checked+ through additional_compiler_options (MSBuild AdditionalOptions).
 csharp_binary(
     name = "checked_add",
