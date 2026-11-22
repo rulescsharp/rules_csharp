@@ -85,6 +85,17 @@ def _resolve_netrc_auth(repository_ctx, urls):
     auth_patterns = repository_ctx.attr.auth_patterns if hasattr(repository_ctx.attr, "auth_patterns") else {}
     return use_netrc(netrc_data, urls, auth_patterns)
 
+def _host_rid(repository_ctx):
+    name = repository_ctx.os.name.lower()
+    if name.startswith("mac") or name.startswith("darwin"):
+        os = "osx"
+    elif name.startswith("windows"):
+        os = "win"
+    else:
+        os = "linux"
+    cpu = "arm64" if repository_ctx.os.arch.lower() in ("aarch64", "arm64") else "x64"
+    return os + "-" + cpu
+
 def _sdk_exec_impl(repository_ctx):
     version = repository_ctx.attr.dotnet_version
     rid = repository_ctx.attr.rid
@@ -129,6 +140,9 @@ def _sdk_exec_impl(repository_ctx):
     # and MVID) even with matching sources.
     # https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/advanced#deterministic
     worker_src = repository_ctx.path(Label("//csharp/private/tools:CscWorker.cs"))
+
+    # Refetch when CscWorker.cs changes, such as on a rules_csharp upgrade.
+    repository_ctx.watch(worker_src)
     repository_ctx.symlink(worker_src, "CscWorker.cs")
     repository_ctx.file("CscWorker.runtimeconfig.json", """{
   "runtimeOptions": {
@@ -168,8 +182,17 @@ def _sdk_exec_impl(repository_ctx):
                             )
                             ref_dlls.append("-r:" + rel)
 
-    if csc_candidates and ref_dlls:
-        csc_path = str(csc_candidates[0])
+    if not csc_candidates:
+        fail("No sdk/*/Roslyn/bincore/csc.dll in the .NET SDK archive " + archive)
+    csc_path = str(csc_candidates[0])
+
+    # The host can only run its own dotnet, so only the host's SDK builds CscWorker.dll. An exec platform
+    # with another OS or CPU runs remotely, where there is no local worker, and the toolchain hub gives it
+    # no csc_worker. Its wrapper still exists for the exported label and runs csc.dll directly.
+    is_host = rid == _host_rid(repository_ctx)
+    if is_host:
+        if not ref_dlls:
+            fail("No packs/Microsoft.NETCore.App.Ref/*/ref/*/*.dll in the .NET SDK archive " + archive)
         dotnet_path = str(repository_ctx.path(dotnet_bin))
         compile_cmd = [
             dotnet_path,
@@ -182,13 +205,34 @@ def _sdk_exec_impl(repository_ctx):
             "-deterministic+",
         ] + ref_dlls + ["CscWorker.cs"]
         # cwd is the repository root, so relative -r: and CscWorker.cs resolve.
-        repository_ctx.execute(compile_cmd)
+        result = repository_ctx.execute(compile_cmd)
+        if result.return_code != 0:
+            fail("Compiling CscWorker.cs failed with exit code {}:\n{}{}".format(result.return_code, result.stdout, result.stderr))
+    csc_rel = "sdk/{}/Roslyn/bincore/csc.dll".format(csc_candidates[0].dirname.dirname.dirname.basename)
+
+    if is_host:
+        bat_run = '"%SCRIPT_DIR%dotnet.exe" exec "%SCRIPT_DIR%CscWorker.dll" %*'
+        sh_run = 'exec "$SCRIPT_DIR/dotnet" exec "$SCRIPT_DIR/CscWorker.dll" "$@"'
+    else:
+        bat_run = """set ARGS=
+:loop
+if "%~1"=="" goto :run
+if not "%~1"=="--persistent_worker" set ARGS=%ARGS% "%~1"
+shift
+goto :loop
+:run
+"%SCRIPT_DIR%dotnet.exe" exec "%SCRIPT_DIR%{csc}" %ARGS%""".replace("{csc}", csc_rel.replace("/", "\\"))
+        sh_run = """ARGS=()
+for arg in "$@"; do
+    [ "$arg" = "--persistent_worker" ] || ARGS+=("$arg")
+done
+exec "$SCRIPT_DIR/dotnet" exec "$SCRIPT_DIR/{csc}" "${ARGS[@]}\"""".replace("{csc}", csc_rel)
 
     if is_windows:
         repository_ctx.file(
             worker_name,
             content = """@echo off
-setlocal enabledelayedexpansion
+setlocal
 set SCRIPT_DIR=%~dp0
 set DOTNET_ROOT=%SCRIPT_DIR%
 set DOTNET_MULTILEVEL_LOOKUP=0
@@ -198,43 +242,9 @@ set DOTNET_NOLOGO=1
 set VBCSCOMPILER_TTL=0
 set MSBUILDDISABLENODEREUSE=1
 set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-rem Processes started in the same second draw the same %RANDOM%, so retry until mkdir makes a new directory.
-set SCRATCH_TRIES=0
-:make_scratch
-set /a SCRATCH_TRIES+=1
-set SCRATCH=%TEMP%\\.dotnet_scratch_%RANDOM%
-mkdir "%SCRATCH%" 2>nul || if !SCRATCH_TRIES! lss 100 goto make_scratch
-set DOTNET_CLI_HOME=%SCRATCH%
-set HOME=%SCRATCH%
-set USERPROFILE=%SCRATCH%
-set APPDATA=%SCRATCH%
-
-if exist "%SCRIPT_DIR%CscWorker.dll" (
-    "%SCRIPT_DIR%dotnet.exe" exec "%SCRIPT_DIR%CscWorker.dll" %*
-    set EXIT_CODE=!ERRORLEVEL!
-    rmdir /s /q "%SCRATCH%" 2>nul
-    exit /b !EXIT_CODE!
-)
-set CSC_DLL=
-for /f "delims=" %%f in ('dir /b /s "%SCRIPT_DIR%sdk\\*\\Roslyn\\bincore\\csc.dll" 2^>nul') do (
-    set CSC_DLL=%%f
-    goto :found_csc
-)
-:found_csc
-set ARGS=
-:loop
-if "%~1"=="" goto :done
-if "%~1"=="--persistent_worker" goto :next
-set ARGS=%ARGS% "%~1"
-:next
-shift
-goto :loop
-:done
-"%SCRIPT_DIR%dotnet.exe" exec "%CSC_DLL%" %ARGS%
-set EXIT_CODE=%ERRORLEVEL%
-rmdir /s /q "%SCRATCH%" 2>nul
-exit /b %EXIT_CODE%
-""",
+{run}
+exit /b %ERRORLEVEL%
+""".replace("{run}", bat_run),
             executable = True,
         )
     else:
@@ -250,30 +260,8 @@ export DOTNET_NOLOGO=1
 export VBCSCOMPILER_TTL=0
 export MSBUILDDISABLENODEREUSE=1
 export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-SCRATCH="${TMPDIR:-/tmp}/.dotnet_scratch_$$"
-mkdir -p "$SCRATCH"
-export DOTNET_CLI_HOME="$SCRATCH"
-export HOME="$SCRATCH"
-export USERPROFILE="$SCRATCH"
-export APPDATA="$SCRATCH"
-
-cleanup() {
-    rm -rf "$SCRATCH"
-}
-trap cleanup EXIT
-
-if [ -f "$SCRIPT_DIR/CscWorker.dll" ]; then
-    exec "$SCRIPT_DIR/dotnet" exec "$SCRIPT_DIR/CscWorker.dll" "$@"
-fi
-CSC_DLL="$(ls "$SCRIPT_DIR"/sdk/*/Roslyn/bincore/csc.dll 2>/dev/null | head -n 1)"
-NEW_ARGS=()
-for arg in "$@"; do
-    if [ "$arg" != "--persistent_worker" ]; then
-        NEW_ARGS+=("$arg")
-    fi
-done
-exec "$SCRIPT_DIR/dotnet" exec "$CSC_DLL" "${NEW_ARGS[@]}"
-""",
+{run}
+""".replace("{run}", sh_run),
             executable = True,
         )
 
@@ -483,6 +471,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     if int(newest.split(".")[0]) < 9:
         fail("csharp.toolchain dotnet_versions needs an SDK of .NET 9 or later, whose apphost csharp_binary stamps for every target_framework. Got: {}.".format(", ".join(versions)))
     newest_slug = newest.replace(".", "_")
+    host_rid = _host_rid(repository_ctx)
     for tfm in [""] + [version_to_tfm(v) for v in versions]:
         lines.append("""config_setting(
     name = "target_framework_{name}",
@@ -497,6 +486,14 @@ def _csharp_toolchains_hub_impl(repository_ctx):
 
         for exec_p, exec_info in PLATFORMS.items():
             worker_name = "CscWorker.bat" if "win" in exec_info["rid"] else "CscWorker"
+            # Only the host's SDK repo builds CscWorker.dll. Other exec platforms compile with csc.dll directly,
+            # which still needs the dotnet runtime from csc_worker_files.
+            worker_attr = """
+    csc_worker = "@dotnet_sdk_{v_slug}_{exec_p}//:{worker_name}",""".format(
+                exec_p = exec_p,
+                v_slug = v_slug,
+                worker_name = worker_name,
+            ) if exec_info["rid"] == host_rid else ""
             for target_p, target_info in PLATFORMS.items():
                 impl_name = "csharp_toolchain_{}_{}_{}".format(v_slug, exec_p, target_p)
                 tc_name = "toolchain_{}_{}_{}".format(v_slug, exec_p, target_p)
@@ -504,8 +501,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
                 lines.append("""csharp_toolchain(
     name = "{impl_name}",
     dotnet_muxer = "@dotnet_sdk_{v_slug}_{exec_p}//:dotnet_muxer",
-    csc_dll = "@dotnet_sdk_{v_slug}_{exec_p}//:csc_dll",
-    csc_worker = "@dotnet_sdk_{v_slug}_{exec_p}//:{worker_name}",
+    csc_dll = "@dotnet_sdk_{v_slug}_{exec_p}//:csc_dll",{worker_attr}
     csc_worker_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:csc_worker_files"],
     ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:ref_pack"],
     aspnetcore_ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:aspnetcore_ref_pack"],
@@ -525,7 +521,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
                     target_rid = target_info["rid"],
                     tfm = tfm,
                     v_slug = v_slug,
-                    worker_name = worker_name,
+                    worker_attr = worker_attr,
                 ))
 
                 for setting in target_settings:

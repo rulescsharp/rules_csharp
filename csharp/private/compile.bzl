@@ -374,13 +374,11 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
 
     # Inputs strictly limited to srcs, resources, toolchain ref_pack, analyzers, and transitive_compile_refs
     direct_inputs = [toolchain.csc_dll] + shared_srcs + resource_files + editorconfig_files + internal_refs.values()
-    worker_depsets = []
-    if toolchain.csc_worker:
-        direct_inputs.append(toolchain.csc_worker)
-        if hasattr(toolchain, "csc_worker_files") and toolchain.csc_worker_files:
-            worker_depsets.append(toolchain.csc_worker_files)
+    transitive_inputs = [toolchain.ref_pack, analyzers_depset] + transitive_compile_depsets + aspnet_depsets
 
-    transitive_inputs = [toolchain.ref_pack, analyzers_depset] + transitive_compile_depsets + aspnet_depsets + worker_depsets
+    # Bazel keys a persistent worker on its tools, so a changed CscWorker.dll starts a new worker.
+    csc_worker = getattr(toolchain, "csc_worker", None)
+    worker_tools = getattr(toolchain, "csc_worker_files", None) or depset()
 
     compile_args = ctx.actions.args()
     compile_args.use_param_file("@%s", use_always = True)
@@ -393,12 +391,13 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     compile_args.add_all(args)
     compile_args.add(assembly_info_file.path.replace("\\", "/"))
 
-    if toolchain.csc_worker:
-        compiler_executable = toolchain.csc_worker
+    if csc_worker:
+        compiler_executable = csc_worker
         compiler_prefix = ["--persistent_worker"]
         execution_requirements = {
             "requires-worker-protocol": "proto",
-            "supports-multiplex-workers": "1",
+            # CscWorker handles one request at a time, so Bazel runs one worker per concurrent compile.
+            "supports-workers": "1",
         }
     else:
         compiler_executable = toolchain.dotnet_muxer
@@ -413,6 +412,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         toolchain = Label("//csharp:toolchain_type"),
         outputs = [out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else []),
         inputs = depset(direct = direct_inputs + [assembly_info_file], transitive = transitive_inputs),
+        tools = worker_tools,
         executable = compiler_executable,
         arguments = compiler_prefix + [compile_args],
         mnemonic = "CSharpCompile",
@@ -450,6 +450,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
             toolchain = Label("//csharp:toolchain_type"),
             outputs = [public_ref],
             inputs = depset(direct = direct_inputs + [public_info_file], transitive = transitive_inputs),
+            tools = worker_tools,
             executable = compiler_executable,
             arguments = compiler_prefix + [public_args],
             mnemonic = "CSharpPublicRef",
@@ -484,7 +485,8 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         ctx.actions.run(
             toolchain = Label("//csharp:toolchain_type"),
             outputs = [satellite],
-            inputs = depset(direct = [toolchain.csc_dll, satellite_info] + [f for f, _ in resources] + ([toolchain.csc_worker] if toolchain.csc_worker else []), transitive = [toolchain.ref_pack] + worker_depsets),
+            inputs = depset(direct = [toolchain.csc_dll, satellite_info] + [f for f, _ in resources], transitive = [toolchain.ref_pack]),
+            tools = worker_tools,
             executable = compiler_executable,
             arguments = compiler_prefix + [satellite_args],
             mnemonic = "CSharpSatellite",

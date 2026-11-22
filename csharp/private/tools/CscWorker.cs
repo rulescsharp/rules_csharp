@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.Loader;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace RulesCsharp.Tools
@@ -14,8 +12,6 @@ namespace RulesCsharp.Tools
     public static class CscWorker
     {
         private static MethodInfo? _compilerEntryPoint;
-        private static readonly object _compileLock = new object();
-        private static readonly object _outputLock = new object();
 
         public static int Main(string[] args)
         {
@@ -222,34 +218,31 @@ namespace RulesCsharp.Tools
 
         private static (int exitCode, string output) Compile(string[] compileArgs)
         {
-            lock (_compileLock)
+            var prevOut = Console.Out;
+            var prevErr = Console.Error;
+            using var sw = new StringWriter();
+
+            try
             {
-                var prevOut = Console.Out;
-                var prevErr = Console.Error;
-                using var sw = new StringWriter();
+                Console.SetOut(sw);
+                Console.SetError(sw);
 
-                try
-                {
-                    Console.SetOut(sw);
-                    Console.SetError(sw);
-
-                    object? result = _compilerEntryPoint.Invoke(null, new object[] { compileArgs });
-                    int exitCode = result is int code ? code : 0;
-                    return (exitCode, sw.ToString());
-                }
-                catch (TargetInvocationException tie)
-                {
-                    return (1, tie.InnerException?.ToString() ?? tie.ToString());
-                }
-                catch (Exception ex)
-                {
-                    return (1, ex.ToString());
-                }
-                finally
-                {
-                    Console.SetOut(prevOut);
-                    Console.SetError(prevErr);
-                }
+                object? result = _compilerEntryPoint.Invoke(null, new object[] { compileArgs });
+                int exitCode = result is int code ? code : 0;
+                return (exitCode, sw.ToString());
+            }
+            catch (TargetInvocationException tie)
+            {
+                return (1, tie.InnerException?.ToString() ?? tie.ToString());
+            }
+            catch (Exception ex)
+            {
+                return (1, ex.ToString());
+            }
+            finally
+            {
+                Console.SetOut(prevOut);
+                Console.SetError(prevErr);
             }
         }
 
@@ -425,12 +418,9 @@ namespace RulesCsharp.Tools
 
             byte[] payload = ms.ToArray();
 
-            lock (_outputLock)
-            {
-                WriteVarint(stream, (ulong)payload.Length);
-                stream.Write(payload, 0, payload.Length);
-                stream.Flush();
-            }
+            WriteVarint(stream, (ulong)payload.Length);
+            stream.Write(payload, 0, payload.Length);
+            stream.Flush();
         }
 
         private static byte[]? ReadVarintDelimited(Stream stream)
