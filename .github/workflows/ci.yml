@@ -92,7 +92,8 @@ jobs:
 
       - name: Check --incompatible_auto_exec_groups
         # Bazel plans to flip it, https://github.com/bazelbuild/bazel/issues/17134. The docs targets need stardoc's
-        # protobuf, which doesn't pass it yet.
+        # protobuf, whose protoc check runs an action without passing its toolchain:
+        # https://github.com/protocolbuffers/protobuf/blob/edaa823d8b36a8656d7b2b9241b7d0bfe50af878/bazel/private/toolchains/prebuilt/protoc_authenticity.bzl#L18
         run: |
           bazel test --incompatible_auto_exec_groups -- //... -//docs/... -//tests/analysis:docs_test
           cd examples && bazel test --incompatible_auto_exec_groups //...
