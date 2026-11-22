@@ -12,6 +12,12 @@ def _package_relative_path(f):
     package = f.owner.package
     return path[len(package) + 1:] if package else path
 
+def _rlocation_path(ctx, f):
+    # A file from another repository has a short path of ../<repo>/<path>.
+    if f.short_path.startswith("../"):
+        return f.short_path[3:]
+    return ctx.workspace_name + "/" + f.short_path
+
 def _runtime_layout(files, frameworks):
     """Maps each hostfxr file and each file of the given shared frameworks to its path in a .NET root."""
     prefixes = ["host/fxr/"] + ["shared/%s/" % name for name in frameworks]
@@ -199,11 +205,11 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     ctx.actions.run(
         toolchain = Label("//csharp:toolchain_type"),
         executable = toolchain.dotnet_muxer,
-        inputs = [
-            toolchain.host_pack,
-            patcher_dll,
-            patcher_runtimeconfig,
-        ] + toolchain.ref_pack.to_list() + toolchain.runtime_pack.to_list(),
+        # DOTNET_ROOT is the directory of the exec SDK's dotnet, so its host/fxr and shared runtime are inputs.
+        inputs = depset(
+            [toolchain.host_pack, patcher_dll, patcher_runtimeconfig],
+            transitive = [toolchain.ref_pack, toolchain.runtime_pack] + ([toolchain.dotnet_runtime_files] if getattr(toolchain, "dotnet_runtime_files", None) else []),
+        ),
         arguments = [
             patcher_dll.path,
             "--apphost-template=" + toolchain.host_pack.path,
@@ -250,8 +256,6 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     runfiles_symlinks[prefix + runtimeconfig_json.basename] = runtimeconfig_json
     runfiles_symlinks[prefix + deps_json.basename] = deps_json
     runfiles_symlinks[prefix + toolchain.dotnet_muxer.basename] = toolchain.dotnet_muxer
-    if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll:
-        runfiles_symlinks[prefix + "vstest.console.dll"] = toolchain.vstest_dll
 
     # The runtime laid out as a .NET root next to the app, one link per file. Every link targets a
     # source file. A link to a generated tree fails when a disk or remote cache leaves that tree
@@ -353,6 +357,11 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
         runner_ext = ".bat" if is_windows else ".sh"
         runner_file = ctx.actions.declare_file(ctx.label.name + "_runner" + runner_ext)
         vstest_path = toolchain.vstest_dll.path if hasattr(toolchain, "vstest_dll") and toolchain.vstest_dll else ""
+
+        # vstest runs from its own SDK directory in the runfiles, next to the files it loads. The runner sits
+        # in <runfiles>/<workspace>/<package>, so the runfiles root is one level up per package segment, plus one.
+        to_root = "../" * (len(pkg.split("/")) + 1 if pkg else 1)
+        vstest_rlocation = _rlocation_path(ctx, toolchain.vstest_dll) if vstest_path else ""
         dotnet_path = toolchain.dotnet_muxer.path
         test_filter = getattr(ctx.attr, "test_filter", "")
 
@@ -388,7 +397,7 @@ set USERPROFILE=%SCRATCH%
 set APPDATA=%SCRATCH%
 
 set DOTNET_BIN=%SCRIPT_DIR%{dotnet_bin}
-set VSTEST_DLL=%SCRIPT_DIR%vstest.console.dll
+set VSTEST_DLL=%SCRIPT_DIR%{vstest_runfile}
 set EXE_PATH=%SCRIPT_DIR%{exe_name}
 set MAIN_DLL_PATH=%SCRIPT_DIR%{main_dll_name}
 set LAUNCHER_DLL=%SCRIPT_DIR%{launcher_name}
@@ -467,6 +476,7 @@ exit /b %EXIT_CODE%
                 # The line also expands !FILTER!, so cmd reads ^ and ! as escapes in it.
                 test_filter = test_filter.replace("%", "%%").replace("^", "^^").replace("!", "^!"),
                 vstest_path = vstest_path,
+                vstest_runfile = (to_root + vstest_rlocation).replace("/", "\\"),
             )
         else:
             runner_content = """#!/usr/bin/env bash
@@ -491,7 +501,7 @@ export APPDATA="$SCRATCH"
 FILTER="${{TESTBRIDGE_TEST_ONLY:-{test_filter}}}"
 
 DOTNET_BIN="$DIR/{dotnet_bin}"
-VSTEST_DLL="$DIR/vstest.console.dll"
+VSTEST_DLL="$DIR/{vstest_runfile}"
 EXE_PATH="$DIR/{exe_name}"
 MAIN_DLL_PATH="$DIR/{main_dll_name}"
 LAUNCHER_DLL="$DIR/{launcher_name}"
@@ -586,6 +596,7 @@ exit $EXIT_CODE
                 target_type = target_type,
                 test_filter = test_filter,
                 vstest_path = vstest_path,
+                vstest_runfile = to_root + vstest_rlocation,
             )
 
         ctx.actions.write(
@@ -604,6 +615,7 @@ exit $EXIT_CODE
         transitive_files = depset(
             csharp_info.transitive_runtime_dlls.to_list() +
             csharp_info.transitive_native_libs.to_list(),
+            transitive = [toolchain.vstest_files] if is_test and getattr(toolchain, "vstest_files", None) else [],
         ),
     ).merge(library_runfiles(ctx, list(ctx.attr.deps) + list(ctx.attr.exports)))
 

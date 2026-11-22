@@ -40,6 +40,7 @@ def _csharp_toolchain_impl(ctx):
         csc_worker_files = depset(worker_files),
         dotnet_env = dict(SEALED_DOTNET_ENV),
         dotnet_muxer = ctx.file.dotnet_muxer,
+        dotnet_runtime_files = depset(ctx.files.dotnet_runtime_files),
         host_pack = ctx.file.host_pack,
         host_rid = ctx.attr.host_rid,
         ref_pack = depset(ref_files),
@@ -47,6 +48,7 @@ def _csharp_toolchain_impl(ctx):
         target_framework = ctx.attr.target_framework,
         target_rid = ctx.attr.target_rid,
         vstest_dll = ctx.file.vstest_dll if hasattr(ctx.file, "vstest_dll") else None,
+        vstest_files = depset(ctx.files.vstest_files),
     )
 
     return [
@@ -90,6 +92,11 @@ csharp_toolchain = rule(
             doc = "Host executable file for dotnet driver binary.",
             mandatory = True,
         ),
+        "dotnet_runtime_files": attr.label_list(
+            allow_files = True,
+            cfg = "exec",
+            doc = "The dotnet_muxer with the host/fxr and shared/Microsoft.NETCore.App files it needs to run an app.",
+        ),
         "host_pack": attr.label(
             allow_single_file = True,
             cfg = "target",
@@ -121,6 +128,11 @@ csharp_toolchain = rule(
             allow_single_file = True,
             cfg = "exec",
             doc = "Host file for vstest.console.dll test runner assembly.",
+        ),
+        "vstest_files": attr.label_list(
+            allow_files = True,
+            cfg = "exec",
+            doc = "Files that vstest.console.dll loads from its own directory.",
         ),
     },
 )

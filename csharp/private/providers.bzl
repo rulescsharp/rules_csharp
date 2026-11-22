@@ -34,6 +34,7 @@ CSharpToolchainInfo = provider(
         "csc_worker_files": "Depset of the dotnet runtime and compiler files that compiles run with, CscWorker included.",
         "dotnet_env": "Dictionary of sealed environment variables for hermetic dotnet execution.",
         "dotnet_muxer": "Host executable File for dotnet driver.",
+        "dotnet_runtime_files": "Depset of the dotnet driver and the runtime files it needs to run an app.",
         "host_pack": "Binary template File for target platform application host.",
         "host_rid": "Host runtime identifier string.",
         "ref_pack": "Depset of reference assembly Files for target framework.",
@@ -41,5 +42,6 @@ CSharpToolchainInfo = provider(
         "target_framework": "Target framework moniker string.",
         "target_rid": "Target runtime identifier string.",
         "vstest_dll": "Host File for vstest.console.dll.",
+        "vstest_files": "Depset of the files vstest.console.dll loads from its directory.",
     },
 )
