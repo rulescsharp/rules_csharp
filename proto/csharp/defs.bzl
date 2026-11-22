@@ -54,7 +54,7 @@ load("@protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
 load("@rules_csharp//csharp/private:common.bzl", "target_framework_transition")
 load("@rules_csharp//csharp/private:compile.bzl", "COMMON_ATTRS", "compile_impl")
 
-_PROTO_TOOLCHAIN = "@protobuf//bazel/private:proto_toolchain_type"
+_PROTO_TOOLCHAIN = Label("@protobuf//bazel/private:proto_toolchain_type")
 
 _PROTOBUF_REPO = Label("@protobuf//:BUILD").repo_name
 
@@ -153,6 +153,7 @@ def _proto_common_impl(ctx, is_grpc = False):
         args.add(p.path)
 
     ctx.actions.run(
+        toolchain = _PROTO_TOOLCHAIN,
         mnemonic = "ProtocGenCSharp" if not is_grpc else "ProtocGenCSharpGrpc",
         executable = ctx.toolchains[_PROTO_TOOLCHAIN].proto.proto_compiler,
         arguments = [args],

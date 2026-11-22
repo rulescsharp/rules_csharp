@@ -410,6 +410,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     compile_env["PATH"] = "C:\\Windows\\System32;C:\\Windows" if is_win else "/usr/bin:/bin"
 
     ctx.actions.run(
+        toolchain = Label("//csharp:toolchain_type"),
         outputs = [out_dll, refout_dll, pdb] + ([xml_doc] if xml_doc else []),
         inputs = depset(direct = direct_inputs + [assembly_info_file], transitive = transitive_inputs),
         executable = compiler_executable,
@@ -446,6 +447,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         public_args.add_all(["-warn:0", "-warnaserror-"])
         public_args.add(public_info_file.path.replace("\\", "/"))
         ctx.actions.run(
+            toolchain = Label("//csharp:toolchain_type"),
             outputs = [public_ref],
             inputs = depset(direct = direct_inputs + [public_info_file], transitive = transitive_inputs),
             executable = compiler_executable,
@@ -480,6 +482,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         satellite_args.add_all([arg for _, arg in resources])
         satellite_args.add(satellite_info.path.replace("\\", "/"))
         ctx.actions.run(
+            toolchain = Label("//csharp:toolchain_type"),
             outputs = [satellite],
             inputs = depset(direct = [toolchain.csc_dll, satellite_info] + [f for f, _ in resources] + ([toolchain.csc_worker] if toolchain.csc_worker else []), transitive = [toolchain.ref_pack] + worker_depsets),
             executable = compiler_executable,

@@ -197,6 +197,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     # binary also runs as a build tool and straight from bazel-bin, where bazel run's DOTNET_ROOT
     # That directory holds a link to each runtime file, declared below.
     ctx.actions.run(
+        toolchain = Label("//csharp:toolchain_type"),
         executable = toolchain.dotnet_muxer,
         inputs = [
             toolchain.host_pack,
