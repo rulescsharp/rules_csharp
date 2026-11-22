@@ -67,6 +67,21 @@ csharp_test(
     deps = ["//tests/integration/abi_var1:ivt_lib"],
 )
 
+# generate_assembly_info = False drops the generated version attributes even with friends,
+# so a source can set its own AssemblyVersion. InternalsVisibleTo still reaches the friend.
+csharp_library(
+    name = "own_version_lib",
+    srcs = ["OwnVersionLib.cs"],
+    generate_assembly_info = False,
+    internals_visible_to = ["own_version_test"],
+)
+
+csharp_test(
+    name = "own_version_test",
+    srcs = ["OwnVersionTest.cs"],
+    deps = [":own_version_lib"],
+)
+
 csharp_test(
     name = "reproducible_paths_test",
     srcs = ["ReproduciblePathsTest.cs"],
