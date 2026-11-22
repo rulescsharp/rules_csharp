@@ -90,6 +90,13 @@ jobs:
       - name: Execute examples tests
         run: cd examples && bazel test //...
 
+      - name: Check --incompatible_auto_exec_groups
+        # Bazel plans to flip it, https://github.com/bazelbuild/bazel/issues/17134. The docs targets need stardoc's
+        # protobuf, which doesn't pass it yet.
+        run: |
+          bazel test --incompatible_auto_exec_groups -- //... -//docs/... -//tests/analysis:docs_test
+          cd examples && bazel test --incompatible_auto_exec_groups //...
+
       - name: Check examples per-test results
         working-directory: examples
         run: |
