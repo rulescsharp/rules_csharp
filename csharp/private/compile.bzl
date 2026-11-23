@@ -385,6 +385,10 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     csc_worker = getattr(toolchain, "csc_worker", None)
     worker_tools = getattr(toolchain, "csc_worker_files", None) or depset()
 
+    # Without the worker files, a plain dotnet run of csc.dll still needs the runtime next to dotnet.
+    if not getattr(toolchain, "csc_worker_files", None) and getattr(toolchain, "dotnet_runtime_files", None):
+        transitive_inputs.append(toolchain.dotnet_runtime_files)
+
     compile_args = ctx.actions.args()
     compile_args.use_param_file("@%s", use_always = True)
     compile_args.set_param_file_format("multiline")

@@ -291,6 +291,16 @@ filegroup(
     ], allow_empty = True),
 )
 
+# What the SDK dotnet needs to run a framework-dependent app, such as the apphost patcher.
+filegroup(
+    name = "dotnet_runtime_files",
+    srcs = glob([
+        "{dotnet_bin}",
+        "host/fxr/**",
+        "shared/Microsoft.NETCore.App/**",
+    ], allow_empty = True),
+)
+
 filegroup(
     name = "csc_dll",
     srcs = glob(["sdk/*/Roslyn/bincore/csc.dll"]),
@@ -299,6 +309,24 @@ filegroup(
 filegroup(
     name = "vstest_dll",
     srcs = glob(["sdk/*/vstest.console.dll"]),
+)
+
+# vstest.console.dll loads its siblings, its extensions and testhost from its own directory.
+filegroup(
+    name = "vstest_files",
+    srcs = glob([
+        "sdk/*/vstest.console*",
+        "sdk/*/testhost*",
+        "sdk/*/Microsoft.TestPlatform.*",
+        "sdk/*/Microsoft.VisualStudio.TestPlatform.*",
+        "sdk/*/Microsoft.Extensions.DependencyModel.dll",
+        "sdk/*/Microsoft.Extensions.FileSystemGlobbing.dll",
+        "sdk/*/Newtonsoft.Json.dll",
+        "sdk/*/Extensions/**",
+        "sdk/*/*/vstest.console.resources.dll",
+        "sdk/*/*/Microsoft.TestPlatform.*.resources.dll",
+        "sdk/*/*/Microsoft.VisualStudio.TestPlatform.*.resources.dll",
+    ], allow_empty = True),
 )
 
 filegroup(
@@ -503,6 +531,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     dotnet_muxer = "@dotnet_sdk_{v_slug}_{exec_p}//:dotnet_muxer",
     csc_dll = "@dotnet_sdk_{v_slug}_{exec_p}//:csc_dll",{worker_attr}
     csc_worker_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:csc_worker_files"],
+    dotnet_runtime_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:dotnet_runtime_files"],
     ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:ref_pack"],
     aspnetcore_ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:aspnetcore_ref_pack"],
     host_pack = "@csharp_pack_{newest_slug}_{target_p}//:host_pack",
@@ -511,6 +540,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     target_rid = "{target_rid}",
     host_rid = "{host_rid}",
     vstest_dll = "@dotnet_sdk_{v_slug}_{exec_p}//:vstest_dll",
+    vstest_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:vstest_files"],
 )
 """.format(
                     exec_p = exec_p,

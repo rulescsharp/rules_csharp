@@ -106,6 +106,17 @@ jobs:
           bazel test --incompatible_auto_exec_groups -- //... -//docs/... -//tests/analysis:docs_test
           cd examples && bazel test --incompatible_auto_exec_groups //...
 
+      - name: Build and test in the hermetic sandbox
+        # The hermetic sandbox mounts only declared inputs, like a remote executor, so an action or test that
+        # reads an undeclared SDK file fails here. Skip the caches so every action runs in it.
+        if: runner.os == 'Linux'
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          flags="--spawn_strategy=linux-sandbox --experimental_use_hermetic_linux_sandbox --nouse_action_cache --disk_cache= --noremote_accept_cached --nocache_test_results"
+          for d in /usr /lib /lib64 /bin /etc; do flags="$flags --sandbox_add_mount_pair=$d"; done
+          bazel test //tests/integration:mstest_sharded $flags
+          cd examples && bazel test //... $flags
+
       - name: Check examples per-test results
         working-directory: examples
         run: |
