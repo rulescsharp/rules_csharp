@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "GENERATE_DOCUMENTATION_FILE_DOC", "INTERNALS_VISIBLE_TO_DOC", "OUTPUT_ASSEMBLY_DOC", "RESOURCES_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
+load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "GENERATE_ASSEMBLY_INFO_DOC", "GENERATE_DOCUMENTATION_FILE_DOC", "INTERNALS_VISIBLE_TO_DOC", "OUTPUT_ASSEMBLY_DOC", "RESOURCES_DOC", "SDK_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -787,7 +787,7 @@ _BINARY_ATTRS = {
     ),
     "generate_assembly_info": attr.bool(
         default = True,
-        doc = "Synthesize assembly information attributes.",
+        doc = GENERATE_ASSEMBLY_INFO_DOC,
     ),
     "generate_documentation_file": attr.bool(
         default = False,

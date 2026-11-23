@@ -31,6 +31,11 @@ default, so that ResourceManager returns its strings for the `fr` culture. A nam
 culture, such as `Strings.dev.resx`, stays in the main assembly. Only string entries are supported in `.resx` \
 files, and an entry with a `type` or `mimetype` fails the build."""
 
+GENERATE_ASSEMBLY_INFO_DOC = """Generate `AssemblyTitle`, `AssemblyProduct`, `AssemblyVersion` and \
+`AssemblyFileVersion` attributes, like MSBuild `GenerateAssemblyInfo`. Title and product are the assembly name and \
+both versions are `1.0.0.0`. Set it to False to declare them in a source instead, for example one from a stamped \
+genrule. The `TargetFramework` and `InternalsVisibleTo` attributes are generated either way."""
+
 OUTPUT_ASSEMBLY_DOC = """Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target \
 name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it \
 is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with \
@@ -329,7 +334,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     ]
     generate_assembly_info = getattr(ctx.attr, "generate_assembly_info", True)
     internals_visible_to = getattr(ctx.attr, "internals_visible_to", [])
-    if generate_assembly_info or internals_visible_to:
+    if generate_assembly_info:
         info_lines += [
             "[assembly: global::System.Reflection.AssemblyTitle(\"%s\")]" % assembly,
             "[assembly: global::System.Reflection.AssemblyProduct(\"%s\")]" % assembly,
@@ -756,7 +761,7 @@ _COMMON_ATTRS = {
     ),
     "generate_assembly_info": attr.bool(
         default = True,
-        doc = "Synthesize assembly information attributes.",
+        doc = GENERATE_ASSEMBLY_INFO_DOC,
     ),
     "generate_documentation_file": attr.bool(
         default = False,
