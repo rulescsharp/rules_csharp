@@ -680,7 +680,7 @@
         "usagesDigest": "psEk0bZi+vLZLnGdksNnTRwh5BLQ4zh2dV3FzPizzUk=",
         "recordedInputs": [
           "REPO_MAPPING:rules_csharp+,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json 030468986c7486f268d552d10bf2ea70c1a1a222dd0ffad98a12e93009b1362e"
+          "FILE:@@//tests/integration/packages.lock.json 4f5a1e1f9b1a872fd901159c916534b05ed87187c16050fc2ba64084c46d3323"
         ],
         "generatedRepoSpecs": {
           "nuget_google_protobuf": {
@@ -697,11 +697,26 @@
               "version": "3.30.0"
             }
           },
+          "nuget_grpc_core_api": {
+            "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Grpc.Core.Api",
+              "sha256": "321a9cab545678fb701292fe00bf0a8d96d2db0c8de603b68bc378918bf36ee0",
+              "use_public_sources": true,
+              "version": "2.85.0"
+            }
+          },
           "nuget": {
             "repoRuleId": "@@rules_csharp+//csharp/private:nuget_repo.bzl%nuget_hub_repo",
             "attributes": {
               "packages": {
-                "Google.Protobuf": "nuget_google_protobuf"
+                "Google.Protobuf": "nuget_google_protobuf",
+                "Grpc.Core.Api": "nuget_grpc_core_api"
               }
             }
           }

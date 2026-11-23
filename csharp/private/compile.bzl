@@ -161,6 +161,9 @@ def framework_references(ctx, deps):
     transitive = [getattr(dep[CSharpInfo], "framework_references", None) for dep in deps if CSharpInfo in dep]
     return depset(own, transitive = [d for d in transitive if d])
 
+def _slash_path(f):
+    return f.path.replace("\\", "/")
+
 def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     toolchain = ctx.toolchains["@rules_csharp//csharp:toolchain_type"].csharp_info
 
@@ -405,8 +408,12 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
 
     # Sources
     shared_srcs = ctx.files.srcs + synthesized_srcs + extra_srcs
+
+    # A directory in extra_srcs, such as a generator's tree artifact, adds the .cs files it holds when the action runs.
+    src_dirs = [s for s in shared_srcs if s.is_directory]
     for s in shared_srcs:
-        args.append(s.path.replace("\\", "/"))
+        if not s.is_directory:
+            args.append(s.path.replace("\\", "/"))
 
     # Inputs strictly limited to srcs, resources, toolchain ref_pack, analyzers, and transitive_compile_refs
     direct_inputs = [toolchain.csc_dll] + shared_srcs + resource_files + editorconfig_files + internal_refs.values()
@@ -429,6 +436,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     if xml_doc:
         compile_args.add("-doc:" + xml_doc.path.replace("\\", "/"))
     compile_args.add_all(args)
+    compile_args.add_all(src_dirs, map_each = _slash_path)
     compile_args.add(assembly_info_file.path.replace("\\", "/"))
 
     if csc_worker:
@@ -482,6 +490,7 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         public_args.add("-out:" + public_ref.path.replace("\\", "/"))
         public_args.add("-refonly")
         public_args.add_all(args)
+        public_args.add_all(src_dirs, map_each = _slash_path)
 
         # The compile action already reports every warning.
         public_args.add_all(["-warn:0", "-warnaserror-"])
