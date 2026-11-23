@@ -208,6 +208,31 @@ Call `Runfiles.Create()` then `Rlocation("_main/path/to/file")` (or the module n
 `_main`). It reads `RUNFILES_MANIFEST_FILE` when Bazel sets it, which is the usual case on Windows,
 and falls back to the runfiles directory otherwise. See [examples/web](examples/web/).
 
+## Ship a binary
+
+`bazel build` of a `csharp_binary` lists the launcher, dll, pdb, runtimeconfig, deps.json and one
+`<name>_/dotnet` directory with the .NET runtime it links. The launcher finds everything through
+`<name>_/`, so a package has to keep that layout. With
+[rules_pkg](https://github.com/bazelbuild/rules_pkg):
+
+```starlark
+pkg_files(
+    name = "hello_files",
+    srcs = [":hello"],
+    attributes = pkg_attributes(mode = "0755"),
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "hello_tar",
+    srcs = [":hello_files"],
+)
+```
+
+Unpack the tar anywhere and run `./hello`. No installed .NET is needed. A plain
+`pkg_tar(srcs = [":hello"])` flattens every path into the tar root, so the launcher can't find
+`hello_/hello.dll` there. [examples/BUILD.bazel](examples/BUILD.bazel) has the full setup.
+
 ## Protobuf and gRPC
 
 `csharp_proto_library` and `csharp_grpc_library` live in the separate `rules_csharp_proto` module,

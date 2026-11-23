@@ -4,6 +4,7 @@ module(
 )
 
 bazel_dep(name = "rules_csharp", version = "0.0.0")
+bazel_dep(name = "rules_pkg", version = "1.1.0")
 local_path_override(
     module_name = "rules_csharp",
     path = "..",
