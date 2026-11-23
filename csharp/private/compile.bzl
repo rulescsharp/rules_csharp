@@ -130,6 +130,8 @@ def output_assembly(ctx):
         fail("output_assembly of {} is \"{}\". Use an assembly name without a directory or extension.".format(ctx.label, name))
     return name
 
+_INTERCEPTORS_FEATURE = "features:interceptorsnamespaces="
+
 def framework_references(ctx, deps):
     """Returns the shared frameworks a target and its dependencies use.
 
@@ -234,12 +236,28 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         args.append("-define:" + d)
     for nw in getattr(ctx.attr, "nowarn", []):
         args.append("-nowarn:" + nw)
+    # csc keeps only the last -features:InterceptorsNamespaces=, so the packages' namespaces and the user's
+    # go into one flag.
+    # https://github.com/dotnet/roslyn/blob/9d42b6a3daa5f222206978ef2bd59ebd14d3926b/src/Compilers/Core/Portable/InternalUtilities/CompilerOptionParseUtilities.cs#L66
+    interceptors_namespaces = []
+    for dep in direct_deps_and_exports:
+        if CSharpInfo in dep:
+            for ns in (getattr(dep[CSharpInfo], "interceptors_namespaces", None) or depset()).to_list():
+                if ns not in interceptors_namespaces:
+                    interceptors_namespaces.append(ns)
     for opt in getattr(ctx.attr, "additional_compiler_options", []):
         if not opt:
             fail("additional_compiler_options of {} has an empty entry. Pass one csc token per entry.".format(ctx.label))
         if opt.startswith("@"):
             fail("additional_compiler_options of {} lists \"{}\". Response files are not allowed. Pass one csc token per entry.".format(ctx.label, opt))
+        if opt[1:].lower().startswith(_INTERCEPTORS_FEATURE) and opt[0] in "-/":
+            for ns in opt[1 + len(_INTERCEPTORS_FEATURE):].split(";"):
+                if ns and ns not in interceptors_namespaces:
+                    interceptors_namespaces.append(ns)
+            continue
         args.append(opt)
+    if interceptors_namespaces:
+        args.append("-features:InterceptorsNamespaces=" + ";".join(interceptors_namespaces))
 
     # Toolchain reference assemblies
     for ref in toolchain.ref_pack.to_list():
@@ -650,6 +668,11 @@ def _csharp_import_impl(ctx):
         transitive_test_runtime_dlls = depset(transitive = transitive_test_runtime_depsets),
         transitive_satellites = depset(transitive = transitive_satellite_depsets),
         framework_references = framework_references(ctx, direct_deps),
+        interceptors_namespaces = depset(getattr(ctx.attr, "interceptors_namespaces", []), transitive = [
+            getattr(dep[CSharpInfo], "interceptors_namespaces", None) or depset()
+            for dep in direct_deps
+            if CSharpInfo in dep
+        ]),
         friend_refs = depset(transitive = [
             getattr(dep[CSharpInfo], "friend_refs", None) or depset()
             for dep in direct_deps
@@ -863,6 +886,10 @@ _IMPORT_ATTRS = {
         default = [],
         doc = "Dependencies exported to downstream consumers.",
         providers = [[CSharpInfo]],
+    ),
+    "interceptors_namespaces": attr.string_list(
+        default = [],
+        doc = "Namespaces to enable interceptors in for targets that compile against this import, merged into one `-features:InterceptorsNamespaces=` with those of other imports and `additional_compiler_options`. NuGet package repos set it from the InterceptorsNamespaces their MSBuild targets always add.",
     ),
     "native_libs": attr.label_list(
         allow_files = True,

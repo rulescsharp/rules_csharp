@@ -216,3 +216,59 @@ def sha512_files(ctx, paths):
     if result.return_code != 0 or len(lines) != len(paths):
         fail("{} failed:\n{}{}".format(" ".join([str(c) for c in cmd]), result.stdout, result.stderr))
     return [line.split(" ")[0].lstrip("\\").lower() for line in lines]
+
+def _version(text):
+    parts = text.split(".")
+    if not all([x.isdigit() for x in parts]):
+        return None
+    return tuple([int(x) for x in parts])
+
+def _parse_framework(folder):
+    """Returns (rank, version) for a package framework folder, or None when it isn't one we know.
+
+    Ranks follow NuGet's nearest framework rule: .NET (netcoreappX.Y and netN.0) beats .NET Standard,
+    which beats the .NET Framework folders the SDK falls back to.
+    """
+    name = folder.lower()
+    if name.startswith("netstandard"):
+        version = _version(name[len("netstandard"):])
+        return (1, version) if version else None
+    if name.startswith("netcoreapp"):
+        version = _version(name[len("netcoreapp"):])
+        return (2, version) if version else None
+    if not name.startswith("net"):
+        return None
+    rest = name[len("net"):]
+    if "." in rest:
+        version = _version(rest)
+        return (2, version) if version and version[0] >= 5 else None
+    if rest.isdigit():
+        return (0, tuple([int(c) for c in rest.elems()]))
+    return None
+
+def nearest_framework(folders, tfm):
+    """Returns the folder restore picks for a netN.0 consumer, or the newest when tfm is None.
+
+    Folders for a newer framework, a platform such as net8.0-windows, or another family such as
+    netcore50 are never picked. Names we don't know rank last, so a package with only those still
+    gets one.
+    """
+    consumer = _parse_framework(tfm)[1] if tfm else (1000,)
+    best = None
+    best_key = None
+    for folder in sorted(folders):
+        parsed = _parse_framework(folder)
+        if parsed == None:
+            if folder.lower().startswith("net") and "-" in folder:
+                continue
+            key = (-1, ())
+        else:
+            rank, version = parsed
+            if rank == 2 and version > consumer:
+                continue
+            if rank == 1 and version > (2, 1):
+                continue
+            key = parsed
+        if best_key == None or key > best_key:
+            best, best_key = folder, key
+    return best

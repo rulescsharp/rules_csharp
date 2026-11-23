@@ -159,8 +159,8 @@ do from a `dotnet publish` folder. A value in `env`, or a content root the app s
 <pre>
 load("@rules_csharp//csharp:defs.bzl", "csharp_import")
 
-csharp_import(<a href="#csharp_import-name">name</a>, <a href="#csharp_import-deps">deps</a>, <a href="#csharp_import-analyzers">analyzers</a>, <a href="#csharp_import-compile_refs">compile_refs</a>, <a href="#csharp_import-dlls">dlls</a>, <a href="#csharp_import-exports">exports</a>, <a href="#csharp_import-native_libs">native_libs</a>, <a href="#csharp_import-plugins">plugins</a>,
-              <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-satellites">satellites</a>, <a href="#csharp_import-target_framework">target_framework</a>, <a href="#csharp_import-test_runtime_dlls">test_runtime_dlls</a>)
+csharp_import(<a href="#csharp_import-name">name</a>, <a href="#csharp_import-deps">deps</a>, <a href="#csharp_import-analyzers">analyzers</a>, <a href="#csharp_import-compile_refs">compile_refs</a>, <a href="#csharp_import-dlls">dlls</a>, <a href="#csharp_import-exports">exports</a>, <a href="#csharp_import-interceptors_namespaces">interceptors_namespaces</a>,
+              <a href="#csharp_import-native_libs">native_libs</a>, <a href="#csharp_import-plugins">plugins</a>, <a href="#csharp_import-runtime_dlls">runtime_dlls</a>, <a href="#csharp_import-satellites">satellites</a>, <a href="#csharp_import-target_framework">target_framework</a>, <a href="#csharp_import-test_runtime_dlls">test_runtime_dlls</a>)
 </pre>
 
 Imports precompiled reference and implementation assemblies.
@@ -176,6 +176,7 @@ Imports precompiled reference and implementation assemblies.
 | <a id="csharp_import-compile_refs"></a>compile_refs |  Precompiled reference assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-dlls"></a>dlls |  Precompiled implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-exports"></a>exports |  Dependencies exported to downstream consumers.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="csharp_import-interceptors_namespaces"></a>interceptors_namespaces |  Namespaces to enable interceptors in for targets that compile against this import, merged into one `-features:InterceptorsNamespaces=` with those of other imports and `additional_compiler_options`. NuGet package repos set it from the InterceptorsNamespaces their MSBuild targets always add.   | List of strings | optional |  `[]`  |
 | <a id="csharp_import-native_libs"></a>native_libs |  Unmanaged target platform shared libraries.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_import-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
@@ -335,9 +336,9 @@ Propagates Roslyn analyzer and source generator assembly files.
 <pre>
 load("@rules_csharp//csharp:defs.bzl", "CSharpInfo")
 
-CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-friend_refs">friend_refs</a>, <a href="#CSharpInfo-framework_references">framework_references</a>, <a href="#CSharpInfo-pdb">pdb</a>, <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>,
-           <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>, <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>, <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>,
-           <a href="#CSharpInfo-transitive_satellites">transitive_satellites</a>, <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>, <a href="#CSharpInfo-xml_doc">xml_doc</a>)
+CSharpInfo(<a href="#CSharpInfo-compile_ref">compile_ref</a>, <a href="#CSharpInfo-friend_refs">friend_refs</a>, <a href="#CSharpInfo-framework_references">framework_references</a>, <a href="#CSharpInfo-interceptors_namespaces">interceptors_namespaces</a>, <a href="#CSharpInfo-pdb">pdb</a>,
+           <a href="#CSharpInfo-runtime_dll">runtime_dll</a>, <a href="#CSharpInfo-target_framework">target_framework</a>, <a href="#CSharpInfo-transitive_compile_refs">transitive_compile_refs</a>, <a href="#CSharpInfo-transitive_native_libs">transitive_native_libs</a>,
+           <a href="#CSharpInfo-transitive_runtime_dlls">transitive_runtime_dlls</a>, <a href="#CSharpInfo-transitive_satellites">transitive_satellites</a>, <a href="#CSharpInfo-transitive_test_runtime_dlls">transitive_test_runtime_dlls</a>, <a href="#CSharpInfo-xml_doc">xml_doc</a>)
 </pre>
 
 Propagates compilation references, runtime assemblies, and unmanaged libraries.
@@ -349,6 +350,7 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 | <a id="CSharpInfo-compile_ref"></a>compile_ref |  Metadata-only reference assembly File produced by -refout.    |
 | <a id="CSharpInfo-friend_refs"></a>friend_refs |  Depset of structs with `public` and `internal` reference assembly Files and the `friends` assembly names of each library with `internals_visible_to`. A friend compiles against `internal`, every other dependent against `public`. Providers created before this field existed lack it, so read it with getattr.    |
 | <a id="CSharpInfo-framework_references"></a>framework_references |  Depset of shared framework names (for example Microsoft.AspNetCore.App) this target and its dependencies need at compile time and run time. Providers created before this field existed lack it, so read it with getattr.    |
+| <a id="CSharpInfo-interceptors_namespaces"></a>interceptors_namespaces |  Depset of namespace strings that NuGet packages among the direct dependencies, and the imports they pull in, enable interceptors in, the way their MSBuild targets add to InterceptorsNamespaces. Compiling dependents pass them to csc. Providers created before this field existed lack it, so read it with getattr.    |
 | <a id="CSharpInfo-pdb"></a>pdb |  Portable program database symbol File.    |
 | <a id="CSharpInfo-runtime_dll"></a>runtime_dll |  Implementation assembly File.    |
 | <a id="CSharpInfo-target_framework"></a>target_framework |  Target framework moniker string (for example net8.0).    |

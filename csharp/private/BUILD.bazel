@@ -73,6 +73,7 @@ bzl_library(
     name = "nuget_repo_bzl",
     srcs = ["nuget_repo.bzl"],
     deps = [
+        ":common_bzl",
         ":nupkg_bzl",
         "@bazel_tools//tools/build_defs/repo:utils.bzl",
     ],

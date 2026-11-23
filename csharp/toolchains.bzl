@@ -605,6 +605,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
                     ))
 
     repository_ctx.file("BUILD.bazel", "\n".join(lines))
+    repository_ctx.file("defs.bzl", "DEFAULT_TARGET_FRAMEWORK = \"{}\"\n".format(version_to_tfm(default)))
 
 csharp_toolchains_hub = repository_rule(
     doc = "Generates toolchain target declarations for all platform combinations.",

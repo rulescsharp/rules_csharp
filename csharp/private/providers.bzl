@@ -6,6 +6,7 @@ CSharpInfo = provider(
         "compile_ref": "Metadata-only reference assembly File produced by -refout.",
         "friend_refs": "Depset of structs with `public` and `internal` reference assembly Files and the `friends` assembly names of each library with `internals_visible_to`. A friend compiles against `internal`, every other dependent against `public`. Providers created before this field existed lack it, so read it with getattr.",
         "framework_references": "Depset of shared framework names (for example Microsoft.AspNetCore.App) this target and its dependencies need at compile time and run time. Providers created before this field existed lack it, so read it with getattr.",
+        "interceptors_namespaces": "Depset of namespace strings that NuGet packages among the direct dependencies, and the imports they pull in, enable interceptors in, the way their MSBuild targets add to InterceptorsNamespaces. Compiling dependents pass them to csc. Providers created before this field existed lack it, so read it with getattr.",
         "pdb": "Portable program database symbol File.",
         "runtime_dll": "Implementation assembly File.",
         "target_framework": "Target framework moniker string (for example net8.0).",

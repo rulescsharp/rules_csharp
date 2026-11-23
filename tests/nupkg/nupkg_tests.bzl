@@ -1,7 +1,7 @@
 """Unit tests for the NuGet package helpers."""
 
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
-load("//csharp/private:nupkg.bzl", "base64_to_hex", "build_references", "file_url", "hex_to_sri", "strip_signature")
+load("//csharp/private:nupkg.bzl", "base64_to_hex", "build_references", "file_url", "hex_to_sri", "nearest_framework", "strip_signature")
 
 # Stored zips written by Python's zipfile. UNSIGNED holds lib/a.txt and
 # lib/b.txt. The signed ones add a .signature.p7s entry after or between them,
@@ -114,6 +114,38 @@ def _build_references_impl(ctx):
 
 build_references_test = unittest.make(_build_references_impl)
 
+def _nearest_framework_impl(ctx):
+    env = unittest.begin(ctx)
+
+    # Microsoft.Extensions.Logging.Abstractions 10.0.0 lib/
+    logging = ["net10.0", "net462", "net8.0", "net9.0", "netstandard2.0"]
+    asserts.equals(env, "net8.0", nearest_framework(logging, "net8.0"))
+    asserts.equals(env, "net10.0", nearest_framework(logging, "net10.0"))
+    asserts.equals(env, "net10.0", nearest_framework(logging, None))
+
+    # Microsoft.Build.Locator 1.4.1 lib/ and System.Drawing.Common 4.5.0 runtimes/unix/lib/
+    asserts.equals(env, "netcoreapp2.0", nearest_framework(["net46", "netcoreapp2.0"], "net10.0"))
+    asserts.equals(env, "netcoreapp2.0", nearest_framework(["netcoreapp2.0"], "net8.0"))
+    asserts.equals(env, "netcoreapp1.0", nearest_framework(["netcoreapp1.0"], "net8.0"))
+
+    # .NET beats .NET Standard whatever the versions, which beats the .NET Framework fallback.
+    asserts.equals(env, "netcoreapp3.1", nearest_framework(["netstandard2.1", "netcoreapp3.1"], "net8.0"))
+    asserts.equals(env, "net5.0", nearest_framework(["netstandard2.1", "net5.0"], None))
+    asserts.equals(env, "netstandard1.3", nearest_framework(["net45", "netstandard1.3"], "net8.0"))
+    asserts.equals(env, "net461", nearest_framework(["net45", "net461"], "net8.0"))
+
+    # Newer and platform folders never match, unknown names only as a last resort.
+    asserts.equals(env, None, nearest_framework(["net10.0"], "net8.0"))
+    asserts.equals(env, "netstandard2.0", nearest_framework(["net8.0-windows7.0", "netstandard2.0"], "net8.0"))
+    asserts.equals(env, None, nearest_framework(["net8.0-windows7.0"], "net8.0"))
+    asserts.equals(env, "portable-net45+win8", nearest_framework(["portable-net45+win8"], "net8.0"))
+    asserts.equals(env, "netstandard2.0", nearest_framework(["portable-net45+win8", "netstandard2.0"], "net8.0"))
+    asserts.equals(env, "NetStandard2.0", nearest_framework(["NetStandard2.0"], "net8.0"))
+    asserts.equals(env, None, nearest_framework([], "net8.0"))
+    return unittest.end(env)
+
+nearest_framework_test = unittest.make(_nearest_framework_impl)
+
 def nupkg_test_suite(name):
     unittest.suite(
         name,
@@ -125,4 +157,5 @@ def nupkg_test_suite(name):
         hex_to_sri_test,
         file_url_test,
         build_references_test,
+        nearest_framework_test,
     )

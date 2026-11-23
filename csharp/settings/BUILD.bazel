@@ -1,9 +1,11 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@dotnet_toolchains//:defs.bzl", "DEFAULT_TARGET_FRAMEWORK")
 
 package(default_visibility = ["//visibility:public"])
 
-# Set from each target's `target_framework`. Empty selects the newest .NET version the root module configures.
+# Set from each target's `target_framework`. Defaults to the newest .NET version the root module configures,
+# so NuGet packages pick their folders for the SDK that builds the target.
 string_flag(
     name = "target_framework",
-    build_setting_default = "",
+    build_setting_default = DEFAULT_TARGET_FRAMEWORK,
 )
