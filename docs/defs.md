@@ -381,7 +381,7 @@ Defines resolved C# SDK tools, packs, and target monikers.
 | <a id="CSharpToolchainInfo-aspnetcore_ref_pack"></a>aspnetcore_ref_pack |  Depset of reference assembly Files for Microsoft.AspNetCore.App.    |
 | <a id="CSharpToolchainInfo-csc_dll"></a>csc_dll |  Host File for Roslyn compiler assembly.    |
 | <a id="CSharpToolchainInfo-csc_worker"></a>csc_worker |  Host executable File for persistent compilation worker.    |
-| <a id="CSharpToolchainInfo-csc_worker_files"></a>csc_worker_files |  Depset of files required by csc_worker.    |
+| <a id="CSharpToolchainInfo-csc_worker_files"></a>csc_worker_files |  Depset of the dotnet runtime and compiler files that compiles run with, CscWorker included.    |
 | <a id="CSharpToolchainInfo-dotnet_env"></a>dotnet_env |  Dictionary of sealed environment variables for hermetic dotnet execution.    |
 | <a id="CSharpToolchainInfo-dotnet_muxer"></a>dotnet_muxer |  Host executable File for dotnet driver.    |
 | <a id="CSharpToolchainInfo-host_pack"></a>host_pack |  Binary template File for target platform application host.    |

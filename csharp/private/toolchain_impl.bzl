@@ -76,13 +76,13 @@ csharp_toolchain = rule(
         "csc_worker": attr.label(
             allow_single_file = True,
             cfg = "exec",
-            doc = "Host executable file for persistent multiplex worker.",
+            doc = "Host executable file for the persistent compile worker.",
             executable = True,
         ),
         "csc_worker_files": attr.label_list(
             allow_files = True,
             cfg = "exec",
-            doc = "Files required to run csc_worker.",
+            doc = "The dotnet runtime and compiler files that compiles run with, CscWorker included.",
         ),
         "dotnet_muxer": attr.label(
             allow_single_file = True,

@@ -31,7 +31,7 @@ CSharpToolchainInfo = provider(
         "aspnetcore_ref_pack": "Depset of reference assembly Files for Microsoft.AspNetCore.App.",
         "csc_dll": "Host File for Roslyn compiler assembly.",
         "csc_worker": "Host executable File for persistent compilation worker.",
-        "csc_worker_files": "Depset of files required by csc_worker.",
+        "csc_worker_files": "Depset of the dotnet runtime and compiler files that compiles run with, CscWorker included.",
         "dotnet_env": "Dictionary of sealed environment variables for hermetic dotnet execution.",
         "dotnet_muxer": "Host executable File for dotnet driver.",
         "host_pack": "Binary template File for target platform application host.",

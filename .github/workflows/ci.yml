@@ -72,6 +72,14 @@ jobs:
           if bazel build //tests/integration/resx:typed_resx_lib $flags > typed.log 2>&1; then exit 1; fi
           grep "entry 'Logo' is not a string" typed.log
 
+      - name: Analyze for an exec platform that is not the host
+        # The SDK repo of a foreign exec platform has to fetch without running its dotnet on the host, and its
+        # compile still needs that platform's dotnet runtime as inputs.
+        if: runner.os == 'Linux'
+        run: |
+          bazel aquery --extra_execution_platforms=//csharp/constraints:linux_arm64_platform --platforms=//csharp/constraints:linux_arm64_platform 'mnemonic("CSharpCompile", //tests/integration:ivt_consumer_test)' > arm64.log
+          grep -q '_linux_arm64/host/fxr/' arm64.log
+
       - name: Check library test filters and results
         run: |
           # Bazel exits with 3 when tests ran and failed, so a build error can't pass for a test failure.
