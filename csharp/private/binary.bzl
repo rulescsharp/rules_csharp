@@ -207,6 +207,9 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
             transitive = [toolchain.ref_pack, toolchain.runtime_pack] + ([toolchain.dotnet_runtime_files] if getattr(toolchain, "dotnet_runtime_files", None) else []),
         ),
         arguments = [
+            "exec",
+            "--runtimeconfig",
+            patcher_runtimeconfig.path,
             patcher_dll.path,
             "--apphost-template=" + toolchain.host_pack.path,
             "--output=" + exe_file.path,
@@ -226,7 +229,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
         deps_json_template = ctx.actions.declare_file(ctx.label.name + "_deps_template/" + deps_json.basename)
         ctx.actions.write(output = deps_json_template, content = deps_content)
         versions_args = ctx.actions.args()
-        versions_args.add(patcher_dll)
+        versions_args.add_all(["exec", "--runtimeconfig", patcher_runtimeconfig, patcher_dll])
         versions_args.add("--deps-json=" + deps_json_template.path)
         versions_args.add("--output=" + deps_json.path)
         versions_args.add_all(dep_dlls, format_each = "--dll=%s")
@@ -306,7 +309,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
             [patcher_dll, patcher_runtimeconfig] + layout.values(),
             transitive = [toolchain.dotnet_runtime_files if getattr(toolchain, "dotnet_runtime_files", None) else toolchain.runtime_pack],
         ),
-        arguments = [patcher_dll.path, "--link-tree=" + dotnet_tree.path, link_list],
+        arguments = ["exec", "--runtimeconfig", patcher_runtimeconfig.path, patcher_dll.path, "--link-tree=" + dotnet_tree.path, link_list],
         outputs = [dotnet_tree],
         env = patch_env,
         mnemonic = "CSharpRuntimeTree",
