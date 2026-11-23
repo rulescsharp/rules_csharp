@@ -1,2 +1,3 @@
 examples
 proto
+tests/runfiles_modules

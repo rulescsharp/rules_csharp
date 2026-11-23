@@ -24,3 +24,14 @@ nuget.from_lock(
 )
 use_repo(nuget, "nuget", "pinned_nuget")
 
+# Test-only modules: runfiles_lib reads a file from runfiles_data by its repo_name.
+bazel_dep(name = "runfiles_lib", dev_dependency = True)
+local_path_override(
+    module_name = "runfiles_lib",
+    path = "tests/runfiles_modules/lib",
+)
+
+local_path_override(
+    module_name = "runfiles_data",
+    path = "tests/runfiles_modules/data",
+)

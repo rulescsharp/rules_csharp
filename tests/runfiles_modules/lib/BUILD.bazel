@@ -1,0 +1,11 @@
+load("@rules_csharp//csharp:defs.bzl", "csharp_library")
+
+# Reads a file from runfiles_data by the repo_name this module gives it, which the main
+# repository can't see.
+csharp_library(
+    name = "lib",
+    srcs = ["DataReader.cs"],
+    data = ["@mydata//:payload.txt"],
+    visibility = ["//visibility:public"],
+    deps = ["@rules_csharp//csharp/runfiles"],
+)

@@ -36,10 +36,20 @@ public static class Runfiles
         {
             foreach (var line in File.ReadLines(manifest))
             {
-                var space = line.IndexOf(' ');
-                if (space > 0 && space < line.Length - 1)
+                // Same escaping as csharp/runfiles/Runfiles.cs.
+                var escaped = line.StartsWith(' ');
+                var entry = escaped ? line[1..] : line;
+                var space = entry.IndexOf(' ');
+                if (space > 0 && space < entry.Length - 1)
                 {
-                    map[line[..space]] = line[(space + 1)..];
+                    var link = entry[..space];
+                    var target = entry[(space + 1)..];
+                    if (escaped)
+                    {
+                        link = link.Replace(@"\s", " ").Replace(@"\n", "\n").Replace(@"\b", @"\");
+                        target = target.Replace(@"\n", "\n").Replace(@"\b", @"\");
+                    }
+                    map[link] = target;
                 }
             }
             return map;
