@@ -1,0 +1,29 @@
+load("//csharp:defs.bzl", "csharp_test")
+
+exports_files(["packages.lock.json"])
+
+# The sources and lock file of `dotnet new mstest` from the .NET 10 SDK, unchanged. MSTest 4 ships its
+# adapter under buildTransitive/, and the template's <Using> item becomes usings.
+csharp_test(
+    name = "mstest4_template_test",
+    srcs = [
+        "MSTestSettings.cs",
+        "Test1.cs",
+    ],
+    target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
+    deps = ["@mstest4_nuget//:MSTest"],
+)
+
+# The same template on net8.0, where restore picks the package's net8.0 build folders.
+csharp_test(
+    name = "mstest4_template_net8_test",
+    srcs = [
+        "MSTestSettings.cs",
+        "Test1.cs",
+    ],
+    target_framework = "net8.0",
+    target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
+    deps = ["@mstest4_nuget//:MSTest"],
+)

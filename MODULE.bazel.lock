@@ -190,7 +190,7 @@
   "moduleExtensions": {
     "//csharp:extensions.bzl%csharp": {
       "general": {
-        "bzlTransitiveDigest": "5LUh1eLJoaNZFu1eFq40Xvbwps2EzmRYlGKQ/8VJIvo=",
+        "bzlTransitiveDigest": "96IesJlTD4IOEF44ya3qctdws+MusiK2VeuFSPfQot8=",
         "usagesDigest": "acU/OxyYj1q0Lyu2X8jZdG2FbOsNFuz1PzaKu075ojQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -654,14 +654,558 @@
     },
     "//csharp:extensions.bzl%nuget": {
       "general": {
-        "bzlTransitiveDigest": "5LUh1eLJoaNZFu1eFq40Xvbwps2EzmRYlGKQ/8VJIvo=",
-        "usagesDigest": "j05+tZbcyZTcJsDtoH5oFTo0FPdzk8Mt6sJ1d/4McSw=",
+        "bzlTransitiveDigest": "96IesJlTD4IOEF44ya3qctdws+MusiK2VeuFSPfQot8=",
+        "usagesDigest": "Svl5qT7KevSERT8tzsjJixzTXzynzTcWstxWpAOVu24=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json 59d34740418b1ee6f208c5c06e862c02e0b65f4dfbdd479e38f439531a5cf71b",
-          "FILE:@@//tests/integration/second_hub/packages.lock.json 6248083f575ff89b0612321b3ce74c4a10ccee154807dc024ef29c4533e7407b"
+          "FILE:@@//tests/integration/packages.lock.json 21a7fba78cbb65cb8b517313beea15640b1715b90e16fc24352eb9203321dcec",
+          "FILE:@@//tests/integration/second_hub/packages.lock.json 6248083f575ff89b0612321b3ce74c4a10ccee154807dc024ef29c4533e7407b",
+          "FILE:@@//tests/integration/mstest4/packages.lock.json e585c44e3444d4424164c35404f6f5aae2d5b542c45208c4e1b25d2ae3c6110e"
         ],
         "generatedRepoSpecs": {
+          "nuget_microsoft_aspnetcore_openapi": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.OpenApi"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.AspNetCore.OpenApi",
+              "sha256": "99fde439d92588b178383f82ae612130d34318e3ca58604e056b57d845796045",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_hosting": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Configuration.Binder",
+                "Microsoft.Extensions.Configuration.CommandLine",
+                "Microsoft.Extensions.Configuration.EnvironmentVariables",
+                "Microsoft.Extensions.Configuration.FileExtensions",
+                "Microsoft.Extensions.Configuration.Json",
+                "Microsoft.Extensions.Configuration.UserSecrets",
+                "Microsoft.Extensions.DependencyInjection",
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Diagnostics",
+                "Microsoft.Extensions.FileProviders.Abstractions",
+                "Microsoft.Extensions.FileProviders.Physical",
+                "Microsoft.Extensions.Hosting.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Logging.Configuration",
+                "Microsoft.Extensions.Logging.Console",
+                "Microsoft.Extensions.Logging.Debug",
+                "Microsoft.Extensions.Logging.EventLog",
+                "Microsoft.Extensions.Logging.EventSource",
+                "Microsoft.Extensions.Options"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Hosting",
+              "sha256": "b58d20ea50b2db2169ac4f8d9ab8a253a1469b0a73c55f0ba84d1914d288c2e3",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration",
+              "sha256": "32c2ec9153e9902be8bf9f835886802c2b75a9f4515f8bb6dbc787c6fa44d1d8",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.Abstractions",
+              "sha256": "19c82b9d302278257b0154f5df3c8e8dfc302fce9ef7d8a23bf32230ec4f186d",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_commandline": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.CommandLine",
+              "sha256": "95d4e2445aa7bfcfe9034825e9447ee030c600864e7fdf8c85a2d63ae28e5ce2",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_environmentvariables": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.EnvironmentVariables",
+              "sha256": "51ac9f7aaac098dc9f3a4ba170129f8fc5298d0a95fd932a5ab0f2c42486d4c0",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_fileextensions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.FileProviders.Abstractions",
+                "Microsoft.Extensions.FileProviders.Physical",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.FileExtensions",
+              "sha256": "acdfb7aeaac78936817c780ff84e1d03c426d9c1493df6c471df77c8a2ecaa54",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_json": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Configuration.FileExtensions",
+                "Microsoft.Extensions.FileProviders.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.Json",
+              "sha256": "54216e920b31890d8c14613a4433054c6a290476dc64bdadd0447b10d6855d16",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_usersecrets": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Configuration.Json",
+                "Microsoft.Extensions.FileProviders.Abstractions",
+                "Microsoft.Extensions.FileProviders.Physical"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.UserSecrets",
+              "sha256": "b88a08a5b0cf44c7c5a93f18ea3ff01db142025cba1f537daa9c67a2645b1c8a",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_dependencyinjection": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.DependencyInjection",
+              "sha256": "2d89bd855968fd1f5cd9a00a1ec0d8279bd8f54d3edc9bdc9667b7a2edc1b6f4",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_dependencyinjection_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "sha256": "f62a1d5cfdfd62a831a269ce3cec5dfe6cdb1b425f3925f3168354de8993d8fb",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_diagnostics": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Diagnostics.Abstractions",
+                "Microsoft.Extensions.Options.ConfigurationExtensions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Diagnostics",
+              "sha256": "a3b4240a2b04705221db6eea0547d615c8b69ece1c804a4baa95fb62f1c64e84",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_diagnostics_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Options"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Diagnostics.Abstractions",
+              "sha256": "722c7b43143f837b23eab797bb78e7d1c46fd918a3cdc79a2cb91c844193b791",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_fileproviders_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.FileProviders.Abstractions",
+              "sha256": "0870ecd8708df1071fb9842980d56ccd9e5d7d715ee324bd2b61a841779c736d",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_fileproviders_physical": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.FileProviders.Abstractions",
+                "Microsoft.Extensions.FileSystemGlobbing",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.FileProviders.Physical",
+              "sha256": "d91c3f73004efbf037418d888cdfdcf18d0b86d0b5a9304bed5749883d49d944",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_filesystemglobbing": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.FileSystemGlobbing",
+              "sha256": "1137d54ddb1d06da7af448202e0fc00114d05b894b41855d565757210aec8d90",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_hosting_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Diagnostics.Abstractions",
+                "Microsoft.Extensions.FileProviders.Abstractions",
+                "Microsoft.Extensions.Logging.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Hosting.Abstractions",
+              "sha256": "4ae6f74e16b2ffe791f3870438393f9cf875a18218b5ac2f0d7eabd1db917aaa",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Options"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging",
+              "sha256": "3feccf01a74b2fade4fc6a8adf8fea0a1a908d8f5a211c597f1941f65aac4abb",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_configuration": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Configuration.Binder",
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Options",
+                "Microsoft.Extensions.Options.ConfigurationExtensions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.Configuration",
+              "sha256": "eff4d63b56aaf217606dc4c42830562238120bd2a914dde4467317fb5d9b3a45",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_console": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Logging.Configuration",
+                "Microsoft.Extensions.Options"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.Console",
+              "sha256": "46c6e5a3b1923133abe37f3be8a91dbea4bac14f53ca9d72a052b7b4be740819",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_debug": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.Debug",
+              "sha256": "9fff8a45596c80a9b5edc24899aa003c700e6c7a40a56fe17fa98cb10146aef6",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_eventlog": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Options",
+                "System.Diagnostics.EventLog"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.EventLog",
+              "sha256": "e11276afcd11b48dd05008420186c69c0d187139a8baab59bd053da370ab077f",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_eventsource": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Extensions.Options",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.EventSource",
+              "sha256": "b6a0b5dd0c247f8c75e221b13989574f27a837c28f557fa6ba9bf62dda73187a",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_options": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Options",
+              "sha256": "8f930ea9948a794b71c739998f364c1b2d2f10b1ddbcfadaab04d0410355b180",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_options_configurationextensions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration.Abstractions",
+                "Microsoft.Extensions.Configuration.Binder",
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "Microsoft.Extensions.Options",
+                "Microsoft.Extensions.Primitives"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Options.ConfigurationExtensions",
+              "sha256": "5c602ce43c4cbd69e68d7f1da91c0a634becb92e34487bec7c9a81d6b3b82fb9",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_primitives": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Primitives",
+              "sha256": "0eea74f0a729b4b8e59e9379b79ffffa9e27f0551381102ae27ff0d6ceaeb3e2",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_openapi": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.OpenApi",
+              "sha256": "f1e88cdccc781f1d5eb71e76465733a071b6cfd5c8a5682ed8b42d592b74f3a9",
+              "use_public_sources": true,
+              "version": "2.0.0"
+            }
+          },
+          "nuget_system_diagnostics_eventlog": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "System.Diagnostics.EventLog",
+              "sha256": "a4dded95df76e85a749f964d8e3cc826f89442bca794e001d2f85cd5aa2ca3a1",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_configuration_binder": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.Configuration",
+                "Microsoft.Extensions.Configuration.Abstractions"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Configuration.Binder",
+              "sha256": "612896a00dd5411db693af9b484014a9e1bb503cd99497c75834ee6d43b957c5",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_microsoft_extensions_logging_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Extensions.DependencyInjection.Abstractions",
+                "System.Diagnostics.DiagnosticSource"
+              ],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.Logging.Abstractions",
+              "sha256": "067860199734d47c134b1a206afabb51eab857b88c037c0f9db7d1c10e118469",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
           "nuget_commandlineparser": {
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
             "attributes": {
@@ -674,6 +1218,20 @@
               "sha256": "02953dcb5c97eb475a4a33e4dca60305e27b5d9072296f21b1ef4d45919c8dea",
               "use_public_sources": true,
               "version": "2.9.1"
+            }
+          },
+          "nuget_microsoft_build_locator": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Build.Locator",
+              "sha256": "3dd3dd8373ba0fc1305d998b1568fbf9e661b36f9d1da3580e80a813734e2148",
+              "use_public_sources": true,
+              "version": "1.4.1"
             }
           },
           "nuget_microsoft_net_test_sdk": {
@@ -1059,9 +1617,9 @@
               "hub": "nuget",
               "local_package_dirs": [],
               "package_id": "System.Diagnostics.DiagnosticSource",
-              "sha256": "ea65b737a16f71d347fe9079f2997ea4548219683268fe217d5b42fd23160d5e",
+              "sha256": "b7b35a92604d4996cc214f34d84a5f3f03541f04bb49df4695e6ce1ef62dcbe3",
               "use_public_sources": true,
-              "version": "5.0.0"
+              "version": "10.0.0"
             }
           },
           "nuget_system_reflection_metadata": {
@@ -1173,7 +1731,38 @@
             "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_hub_repo",
             "attributes": {
               "packages": {
+                "Microsoft.AspNetCore.OpenApi": "nuget_microsoft_aspnetcore_openapi",
+                "Microsoft.Extensions.Hosting": "nuget_microsoft_extensions_hosting",
+                "Microsoft.Extensions.Configuration": "nuget_microsoft_extensions_configuration",
+                "Microsoft.Extensions.Configuration.Abstractions": "nuget_microsoft_extensions_configuration_abstractions",
+                "Microsoft.Extensions.Configuration.CommandLine": "nuget_microsoft_extensions_configuration_commandline",
+                "Microsoft.Extensions.Configuration.EnvironmentVariables": "nuget_microsoft_extensions_configuration_environmentvariables",
+                "Microsoft.Extensions.Configuration.FileExtensions": "nuget_microsoft_extensions_configuration_fileextensions",
+                "Microsoft.Extensions.Configuration.Json": "nuget_microsoft_extensions_configuration_json",
+                "Microsoft.Extensions.Configuration.UserSecrets": "nuget_microsoft_extensions_configuration_usersecrets",
+                "Microsoft.Extensions.DependencyInjection": "nuget_microsoft_extensions_dependencyinjection",
+                "Microsoft.Extensions.DependencyInjection.Abstractions": "nuget_microsoft_extensions_dependencyinjection_abstractions",
+                "Microsoft.Extensions.Diagnostics": "nuget_microsoft_extensions_diagnostics",
+                "Microsoft.Extensions.Diagnostics.Abstractions": "nuget_microsoft_extensions_diagnostics_abstractions",
+                "Microsoft.Extensions.FileProviders.Abstractions": "nuget_microsoft_extensions_fileproviders_abstractions",
+                "Microsoft.Extensions.FileProviders.Physical": "nuget_microsoft_extensions_fileproviders_physical",
+                "Microsoft.Extensions.FileSystemGlobbing": "nuget_microsoft_extensions_filesystemglobbing",
+                "Microsoft.Extensions.Hosting.Abstractions": "nuget_microsoft_extensions_hosting_abstractions",
+                "Microsoft.Extensions.Logging": "nuget_microsoft_extensions_logging",
+                "Microsoft.Extensions.Logging.Configuration": "nuget_microsoft_extensions_logging_configuration",
+                "Microsoft.Extensions.Logging.Console": "nuget_microsoft_extensions_logging_console",
+                "Microsoft.Extensions.Logging.Debug": "nuget_microsoft_extensions_logging_debug",
+                "Microsoft.Extensions.Logging.EventLog": "nuget_microsoft_extensions_logging_eventlog",
+                "Microsoft.Extensions.Logging.EventSource": "nuget_microsoft_extensions_logging_eventsource",
+                "Microsoft.Extensions.Options": "nuget_microsoft_extensions_options",
+                "Microsoft.Extensions.Options.ConfigurationExtensions": "nuget_microsoft_extensions_options_configurationextensions",
+                "Microsoft.Extensions.Primitives": "nuget_microsoft_extensions_primitives",
+                "Microsoft.OpenApi": "nuget_microsoft_openapi",
+                "System.Diagnostics.EventLog": "nuget_system_diagnostics_eventlog",
+                "Microsoft.Extensions.Configuration.Binder": "nuget_microsoft_extensions_configuration_binder",
+                "Microsoft.Extensions.Logging.Abstractions": "nuget_microsoft_extensions_logging_abstractions",
                 "CommandLineParser": "nuget_commandlineparser",
+                "Microsoft.Build.Locator": "nuget_microsoft_build_locator",
                 "Microsoft.NET.Test.Sdk": "nuget_microsoft_net_test_sdk",
                 "MSTest.TestAdapter": "nuget_mstest_testadapter",
                 "MSTest.TestFramework": "nuget_mstest_testframework",
@@ -1245,6 +1834,351 @@
               "packages": {
                 "Newtonsoft.Json": "pinned_nuget_newtonsoft_json",
                 "Newtonsoft.Json.Bson": "pinned_nuget_newtonsoft_json_bson"
+              }
+            }
+          },
+          "mstest4_nuget_mstest": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "MSTest.TestAdapter",
+                "MSTest.TestFramework",
+                "Microsoft.NET.Test.Sdk",
+                "Microsoft.Testing.Extensions.CodeCoverage",
+                "Microsoft.Testing.Extensions.TrxReport"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "MSTest",
+              "sha256": "4a5ad33c3a94ab9f303af28c9fbae56a67aa56caf9554e5db48af6ba09a1609f",
+              "use_public_sources": true,
+              "version": "4.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_applicationinsights": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.ApplicationInsights",
+              "sha256": "e6c7f76e0ec26598c7b1e2be1777e839c84486655e8a878fc4c655bd2e918dbd",
+              "use_public_sources": true,
+              "version": "2.23.0"
+            }
+          },
+          "mstest4_nuget_microsoft_codecoverage": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.CodeCoverage",
+              "sha256": "d5137185e09801232eb030b8f015ed68edcc867227c35e4955f8df2ccd553060",
+              "use_public_sources": true,
+              "version": "18.0.0"
+            }
+          },
+          "mstest4_nuget_microsoft_diasymreader": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.DiaSymReader",
+              "sha256": "f21a2d66687c45be90ea80fd31e6fbe12bc075b0e8dfd63fd66f21e371c78e3c",
+              "use_public_sources": true,
+              "version": "2.0.0"
+            }
+          },
+          "mstest4_nuget_microsoft_extensions_dependencymodel": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Extensions.DependencyModel",
+              "sha256": "59533f82c84689ed49f6ae65dd8591ceb3d662556f5fa21223e4a254ca0fa79a",
+              "use_public_sources": true,
+              "version": "6.0.2"
+            }
+          },
+          "mstest4_nuget_microsoft_net_test_sdk": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.CodeCoverage",
+                "Microsoft.TestPlatform.TestHost"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.NET.Test.Sdk",
+              "sha256": "f625bef66bcc7998035f04a8474f1b9ef44db0de234fc39559c8eade5704f9cb",
+              "use_public_sources": true,
+              "version": "18.0.0"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_extensions_codecoverage": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.DiaSymReader",
+                "Microsoft.Extensions.DependencyModel",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.CodeCoverage",
+              "sha256": "b30e871a9a09e7595d3de7693f9d7a829631652ed68bdff4f0b15856f239c609",
+              "use_public_sources": true,
+              "version": "18.1.0"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_extensions_telemetry": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.ApplicationInsights",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.Telemetry",
+              "sha256": "d2f5e17bf0b4357de1b0704b8ce2b372aa25f9105afed672e62bde2d7dbf2db0",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_extensions_trxreport": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.TrxReport",
+              "sha256": "23882dbf98959ea2fdc8c5b527be4204fdeb5f25eb98b91abf807e064161b863",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_extensions_trxreport_abstractions": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+              "sha256": "892ad02e88504e96cdb5799a83c6f737dfc3a9f876e7f7f4cdbef13bbc6a55ed",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_extensions_vstestbridge": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.TestPlatform.AdapterUtilities",
+                "Microsoft.TestPlatform.ObjectModel",
+                "Microsoft.Testing.Extensions.Telemetry",
+                "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Extensions.VSTestBridge",
+              "sha256": "d40bf1422f329b0812c13dd0a8a085f18f29e101be4b9ec99800ae372b97b3fe",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_platform": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Platform",
+              "sha256": "d1a70bf031a0439aedbc98bf94641a87bc5aebe2287956f81d2f8d698b25f744",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testing_platform_msbuild": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.Testing.Platform"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.Testing.Platform.MSBuild",
+              "sha256": "a5fb783b95395ad3e2ae3db8c4c75571deadd1bc8663bcffb89494624ac25ca1",
+              "use_public_sources": true,
+              "version": "2.0.1"
+            }
+          },
+          "mstest4_nuget_microsoft_testplatform_adapterutilities": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.TestPlatform.AdapterUtilities",
+              "sha256": "a02c478573392530e502c5d15604808e39d357f93cb59a8c4f83d6c124e96797",
+              "use_public_sources": true,
+              "version": "18.0.0"
+            }
+          },
+          "mstest4_nuget_microsoft_testplatform_objectmodel": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.TestPlatform.ObjectModel",
+              "sha256": "3bf8af1dda083beab59f46f227d3993b8aae3aa002383dcadd09b4d307e1b999",
+              "use_public_sources": true,
+              "version": "18.0.0"
+            }
+          },
+          "mstest4_nuget_microsoft_testplatform_testhost": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "Microsoft.TestPlatform.ObjectModel",
+                "Newtonsoft.Json"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Microsoft.TestPlatform.TestHost",
+              "sha256": "a80217d91ab1ae7875c5a6118c26e492fbcc9b8d3ba322a286ac958d4457e706",
+              "use_public_sources": true,
+              "version": "18.0.0"
+            }
+          },
+          "mstest4_nuget_mstest_analyzers": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "MSTest.Analyzers",
+              "sha256": "40a00f4f64def5c8fa4dc9edb8d578bf5a717a1820d11c9a285b04638a16d924",
+              "use_public_sources": true,
+              "version": "4.0.1"
+            }
+          },
+          "mstest4_nuget_mstest_testadapter": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "MSTest.TestFramework",
+                "Microsoft.Testing.Extensions.VSTestBridge",
+                "Microsoft.Testing.Platform.MSBuild"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "MSTest.TestAdapter",
+              "sha256": "89436f7da9eaf6ab9b893e28957dbbe4eb0e1f7301db7c0681c194397427fde8",
+              "use_public_sources": true,
+              "version": "4.0.1"
+            }
+          },
+          "mstest4_nuget_mstest_testframework": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [
+                "MSTest.Analyzers"
+              ],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "MSTest.TestFramework",
+              "sha256": "d7b5eed67fe56dc29c45f090e4175a38a4cda82f4cd64a8f219c586a75c8e08e",
+              "use_public_sources": true,
+              "version": "4.0.1"
+            }
+          },
+          "mstest4_nuget_newtonsoft_json": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "mstest4_nuget",
+              "local_package_dirs": [],
+              "package_id": "Newtonsoft.Json",
+              "sha256": "872fc189e638ab1056555b03aaa38f68bcb54286e221aa646eb1129babf63c77",
+              "use_public_sources": true,
+              "version": "13.0.3"
+            }
+          },
+          "mstest4_nuget": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_hub_repo",
+            "attributes": {
+              "packages": {
+                "MSTest": "mstest4_nuget_mstest",
+                "Microsoft.ApplicationInsights": "mstest4_nuget_microsoft_applicationinsights",
+                "Microsoft.CodeCoverage": "mstest4_nuget_microsoft_codecoverage",
+                "Microsoft.DiaSymReader": "mstest4_nuget_microsoft_diasymreader",
+                "Microsoft.Extensions.DependencyModel": "mstest4_nuget_microsoft_extensions_dependencymodel",
+                "Microsoft.NET.Test.Sdk": "mstest4_nuget_microsoft_net_test_sdk",
+                "Microsoft.Testing.Extensions.CodeCoverage": "mstest4_nuget_microsoft_testing_extensions_codecoverage",
+                "Microsoft.Testing.Extensions.Telemetry": "mstest4_nuget_microsoft_testing_extensions_telemetry",
+                "Microsoft.Testing.Extensions.TrxReport": "mstest4_nuget_microsoft_testing_extensions_trxreport",
+                "Microsoft.Testing.Extensions.TrxReport.Abstractions": "mstest4_nuget_microsoft_testing_extensions_trxreport_abstractions",
+                "Microsoft.Testing.Extensions.VSTestBridge": "mstest4_nuget_microsoft_testing_extensions_vstestbridge",
+                "Microsoft.Testing.Platform": "mstest4_nuget_microsoft_testing_platform",
+                "Microsoft.Testing.Platform.MSBuild": "mstest4_nuget_microsoft_testing_platform_msbuild",
+                "Microsoft.TestPlatform.AdapterUtilities": "mstest4_nuget_microsoft_testplatform_adapterutilities",
+                "Microsoft.TestPlatform.ObjectModel": "mstest4_nuget_microsoft_testplatform_objectmodel",
+                "Microsoft.TestPlatform.TestHost": "mstest4_nuget_microsoft_testplatform_testhost",
+                "MSTest.Analyzers": "mstest4_nuget_mstest_analyzers",
+                "MSTest.TestAdapter": "mstest4_nuget_mstest_testadapter",
+                "MSTest.TestFramework": "mstest4_nuget_mstest_testframework",
+                "Newtonsoft.Json": "mstest4_nuget_newtonsoft_json"
               }
             }
           }

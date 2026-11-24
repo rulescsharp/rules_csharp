@@ -160,6 +160,25 @@ def _select(cases, default, prune = True):
     lines.append('        "//conditions:default": {},'.format(default))
     return "select({\n" + "\n".join(lines) + "\n    })"
 
+def _build_dlls(repository_ctx, tfm):
+    """Returns the build/ and buildTransitive/ dlls restore stages for tfm, and those the package references, as repr lists."""
+    test_runtime = {}
+    referenced = []
+    for top in ["build", "buildTransitive"]:
+        tfm_dir = _find_best_tfm_dir(repository_ctx, top, tfm)
+        if not tfm_dir:
+            continue
+        for f in repository_ctx.path(tfm_dir).readdir():
+            name = f.basename.lower()
+            if name.endswith(".dll"):
+                test_runtime[name] = tfm_dir + "/" + f.basename
+            elif name.endswith((".props", ".targets")):
+                referenced.extend([n.lower() + ".dll" for n in build_references(repository_ctx.read(f))])
+    return (
+        repr(sorted(test_runtime.values())),
+        repr(sorted([path for name, path in test_runtime.items() if name in referenced])),
+    )
+
 def _targets_files(repository_ctx):
     """Returns the .targets files under build/ and buildTransitive/ and their framework folders."""
     files = []
@@ -366,21 +385,14 @@ def _nuget_package_repo_impl(repository_ctx):
             if ns not in interceptors_namespaces:
                 interceptors_namespaces.append(ns)
 
-    # build/<tfm>/*.dll: MSBuild targets copy these next to a test, like the VSTest adapters.
+    # build/<tfm>/*.dll and buildTransitive/<tfm>/*.dll for the consumer's framework: MSBuild targets copy these
+    # next to a test, like the VSTest adapters. Restore imports both folders, and buildTransitive wins when both
+    # ship the same file.
     # The ones the package's own props or targets add as a <Reference> are compile and runtime dlls too.
-    # Other build/ dlls, such as MSBuild tasks, also land next to library tests, where nothing loads them.
-    test_runtime_dir = _find_best_tfm_dir(repository_ctx, "build")
-    build_refs = []
-    if test_runtime_dir:
-        referenced = []
-        for f in repository_ctx.path(test_runtime_dir).readdir():
-            if f.basename.lower().endswith((".props", ".targets")):
-                referenced.extend([n.lower() + ".dll" for n in build_references(repository_ctx.read(f))])
-        build_refs = sorted([
-            test_runtime_dir + "/" + f.basename
-            for f in repository_ctx.path(test_runtime_dir).readdir()
-            if f.basename.lower() in referenced
-        ])
+    # Other dlls there, such as MSBuild tasks, also land next to library tests, where nothing loads them.
+    build_dirs = {tfm: _build_dlls(repository_ctx, tfm) for tfm in tfms}
+    test_runtime_dlls_expr = _select({":" + t: build_dirs[t][0] for t in TARGET_FRAMEWORKS}, build_dirs[None][0])
+    build_refs_expr = _select({":" + t: build_dirs[t][1] for t in TARGET_FRAMEWORKS}, build_dirs[None][1])
 
     # Build file generation
     lines = [
@@ -458,16 +470,16 @@ def _nuget_package_repo_impl(repository_ctx):
 
     lines.append('csharp_import(')
     lines.append('    name = "{}",'.format(pkg_id))
-    if build_refs:
-        compile_refs_expr += " + {}".format(repr(build_refs))
-        runtime_dlls_expr += " + {}".format(repr(build_refs))
+    if build_refs_expr != "[]":
+        compile_refs_expr += " + " + build_refs_expr
+        runtime_dlls_expr += " + " + build_refs_expr
     lines.append('    compile_refs = {},'.format(compile_refs_expr))
     lines.append('    runtime_dlls = {},'.format(runtime_dlls_expr))
     lines.append('    native_libs = {},'.format(native_libs_expr))
     if satellites_expr != "[]":
         lines.append('    satellites = {},'.format(satellites_expr))
-    if test_runtime_dir:
-        lines.append('    test_runtime_dlls = glob(["{}/*.dll"]),'.format(test_runtime_dir))
+    if test_runtime_dlls_expr != "[]":
+        lines.append('    test_runtime_dlls = {},'.format(test_runtime_dlls_expr))
     lines.append('    deps = {},'.format(deps_expr))
     lines.append('    plugins = {},'.format(plugins_expr))
     if interceptors_namespaces:

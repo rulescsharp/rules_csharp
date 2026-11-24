@@ -107,6 +107,22 @@ csharp_test(
 )
 ```
 
+A test from `dotnet new mstest` ports without edits once its `<Using>` item moves to `usings`, and
+MSTest 4 works through its `MSTest` metapackage alone:
+
+```starlark
+csharp_test(
+    name = "mstest4_template_test",
+    srcs = [
+        "MSTestSettings.cs",
+        "Test1.cs",
+    ],
+    target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
+    deps = ["@nuget//:MSTest"],
+)
+```
+
 A test that runs no tests fails, so a missing adapter or a filter that matches nothing can't pass by
 accident. `test_filter` and `--test_filter` take a VSTest
 [filter](https://learn.microsoft.com/dotnet/core/testing/selective-unit-tests) such as
