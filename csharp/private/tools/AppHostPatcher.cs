@@ -29,6 +29,8 @@ namespace RulesCsharp.Tools
             string? outputPath = null;
             string? dllName = null;
             string? appRelativeDotnet = null;
+            string? linkTree = null;
+            string? linkList = null;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -42,6 +44,10 @@ namespace RulesCsharp.Tools
                     dllName = args[i].Substring("--assembly-name=".Length);
                 else if (args[i].StartsWith("--app-relative-dotnet="))
                     appRelativeDotnet = args[i].Substring("--app-relative-dotnet=".Length);
+                else if (args[i].StartsWith("--link-tree="))
+                    linkTree = args[i].Substring("--link-tree=".Length);
+                else if (args[i].StartsWith("--link-list="))
+                    linkList = args[i].Substring("--link-list=".Length);
                 else if (args[i].StartsWith("--dll-name="))
                     dllName = args[i].Substring("--dll-name=".Length);
                 else if (args[i] == "-t" && i + 1 < args.Length)
@@ -50,6 +56,16 @@ namespace RulesCsharp.Tools
                     outputPath = args[++i];
                 else if (args[i] == "-a" && i + 1 < args.Length)
                     dllName = args[++i];
+            }
+
+            if (linkTree != null)
+            {
+                if (string.IsNullOrEmpty(linkList))
+                {
+                    Console.Error.WriteLine("Usage: AppHostPatcher --link-tree=<dir> --link-list=<file of path and target lines>");
+                    return 1;
+                }
+                return LinkTree(linkTree, linkList!);
             }
 
             if (string.IsNullOrEmpty(templatePath) || string.IsNullOrEmpty(outputPath) || string.IsNullOrEmpty(dllName))
@@ -144,6 +160,65 @@ namespace RulesCsharp.Tools
             }
 
             return 0;
+        }
+
+        // Fills a directory with links. The list alternates a path inside the directory and the
+        // file it points to. A link holds the real path of its file, because the execroot
+        // paths Bazel stages inputs under are replanted by later builds. When the real path is
+        // inside the action's own directory, as in the hermetic sandbox or on a remote executor,
+        // nothing outside it lasts, so the file is copied. It's also copied where links aren't
+        // allowed, as on Windows without developer mode.
+        private static int LinkTree(string root, string listPath)
+        {
+            string[] lines = File.ReadAllLines(listPath);
+            if (lines.Length % 2 != 0)
+            {
+                Console.Error.WriteLine($"'{listPath}' must hold pairs of lines");
+                return 1;
+            }
+            Directory.CreateDirectory(root);
+            for (int i = 0; i < lines.Length; i += 2)
+            {
+                string link = Path.Combine(root, lines[i]);
+                string target = lines[i + 1];
+                Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+                if (!File.Exists(target))
+                {
+                    Console.Error.WriteLine($"Link target not found: '{target}'");
+                    return 1;
+                }
+                string real = RealPath(target);
+                if (!File.Exists(real) || IsUnder(real, Directory.GetCurrentDirectory()))
+                {
+                    File.Copy(target, link, true);
+                    continue;
+                }
+                try
+                {
+                    File.CreateSymbolicLink(link, real);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    File.Copy(target, link, true);
+                }
+            }
+            return 0;
+        }
+
+        private static bool IsUnder(string path, string dir) =>
+            path.StartsWith(dir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+
+        private static string RealPath(string path)
+        {
+            string current = Path.GetPathRoot(Path.GetFullPath(path))!;
+            foreach (string part in Path.GetFullPath(path).Substring(current.Length).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, part);
+                FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
+                FileSystemInfo? resolved = info.ResolveLinkTarget(true);
+                if (resolved != null) current = RealPath(resolved.FullName);
+            }
+            return current;
         }
 
         private static string ResolveRunfile(string path)

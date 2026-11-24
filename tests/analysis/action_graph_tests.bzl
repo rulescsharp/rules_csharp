@@ -93,28 +93,27 @@ def _cross_windows_action_test_impl(ctx):
     )
 
     # The apphost searches only <app dir>\dotnet, with no "..", since Windows resolves ".." from the
-    # bazel-bin path without following the junction. The runtime is linked there one file at a time
-    # from the runtime pack's source files, because a link to a generated tree fails when a cache
-    # leaves that tree undownloaded.
+    # bazel-bin path without following the junction. The runtime is one directory output, linked
+    # from the runtime pack's source files by the patcher, because a link to a generated tree fails
+    # when a cache leaves that tree undownloaded.
     asserts.true(
         env,
         "--app-relative-dotnet=dotnet" in patch_action.argv,
         "Expected the apphost to search cross_app_\\dotnet only, got: %s" % patch_action.argv,
     )
     target = analysistest.target_under_test(env)
-    outputs = [f for f in target[DefaultInfo].files.to_list() if "cross_app_/dotnet/" in f.short_path]
-    asserts.true(env, [f for f in outputs if "/host/fxr/" in f.short_path], "Expected hostfxr under cross_app_/dotnet, got: %s" % outputs)
-    asserts.true(env, [f for f in outputs if "/shared/Microsoft.NETCore.App/" in f.short_path], "Expected the shared framework under cross_app_/dotnet")
-    asserts.equals(env, [], [f for f in outputs if f.is_directory or "AspNetCore" in f.short_path], "Expected only file outputs of the frameworks the app references")
-    link_actions = {a.outputs.to_list()[0].path: a.inputs.to_list()[0] for a in actions if a.mnemonic == "Symlink" and "cross_app_/dotnet/" in a.outputs.to_list()[0].short_path}
-    asserts.equals(env, len(outputs), len(link_actions), "Expected one symlink action per runtime file")
-    for out in outputs:
-        source = link_actions[out.path]
-        asserts.true(
-            env,
-            source.is_source and "win" in source.path,
-            "Expected %s to link a source file of the Windows runtime pack, got: %s" % (out.short_path, source.path),
-        )
+    outputs = [f for f in target[DefaultInfo].files.to_list() if "cross_app_/dotnet" in f.short_path]
+    asserts.equals(env, ["tests/analysis/cross_app_/dotnet"], [f.short_path for f in outputs])
+    asserts.true(env, outputs[0].is_directory, "Expected the runtime as a directory output")
+    tree_actions = [a for a in actions if a.mnemonic == "CSharpRuntimeTree"]
+    asserts.equals(env, 1, len(tree_actions))
+    tree_action = tree_actions[0]
+    asserts.equals(env, [outputs[0]], tree_action.outputs.to_list())
+    asserts.true(env, "--link-tree=" + outputs[0].path in tree_action.argv, "Expected the patcher to fill the tree, got: %s" % tree_action.argv)
+    sources = [f for f in tree_action.inputs.to_list() if "win" in f.path and f.is_source]
+    asserts.true(env, [f for f in sources if "/host/fxr/" in f.path], "Expected hostfxr of the Windows runtime pack")
+    asserts.true(env, [f for f in sources if "/shared/Microsoft.NETCore.App/" in f.path], "Expected the shared framework of the Windows runtime pack")
+    asserts.equals(env, [], [f for f in tree_action.inputs.to_list() if "AspNetCore" in f.path and "win" in f.path], "Expected only the frameworks the app references")
 
     # bazel run reaches the runtime from <exe>.runfiles and from <exe>.runfiles/<workspace>
     exe = target[DefaultInfo].files_to_run.executable
@@ -510,3 +509,26 @@ def _additional_compiler_options_action_test_impl(ctx):
 
 additional_compiler_options_action_test = analysistest.make(_additional_compiler_options_action_test_impl)
 
+
+def _default_outputs_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    target = analysistest.target_under_test(env)
+    name = target.label.name
+    exe = target[DefaultInfo].files_to_run.executable.basename
+    files = target[DefaultInfo].files.to_list()
+    asserts.equals(
+        env,
+        sorted([exe, name + ".dll", name + ".pdb", name + ".runtimeconfig.json", name + ".deps.json", "dotnet"]),
+        sorted([f.basename for f in files]),
+        "Expected the app's files and one runtime directory, no per-file links",
+    )
+    asserts.equals(env, ["dotnet"], [f.basename for f in files if f.is_directory])
+
+    # The directory also reaches a tool action through the runfiles
+    runfiles = [f.short_path for f in target[DefaultInfo].default_runfiles.files.to_list()]
+    asserts.true(env, [p for p in runfiles if p.endswith("/{}_/dotnet".format(name))], "Expected the runtime directory in the runfiles, got: %s" % runfiles)
+
+    return analysistest.end(env)
+
+default_outputs_test = analysistest.make(_default_outputs_test_impl)

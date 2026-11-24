@@ -7,6 +7,7 @@ load(
     "compilation_mode_action_test",
     "cross_linux_action_test",
     "cross_windows_action_test",
+    "default_outputs_test",
     "csc_worker_action_test",
     "editorconfig_action_test",
     "friend_ref_action_test",
@@ -216,6 +217,12 @@ abi_refout_action_test(
 
 cross_windows_action_test(
     name = "cross_windows_action_test",
+    target_under_test = ":cross_app",
+)
+
+# bazel build lists the app's own outputs and one runtime directory.
+default_outputs_test(
+    name = "default_outputs_test",
     target_under_test = ":cross_app",
 )
 

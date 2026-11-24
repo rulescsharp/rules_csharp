@@ -201,7 +201,7 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
 
     # The apphost looks for .NET in the dotnet directory next to the app dll and nowhere else, so the
     # binary also runs as a build tool and straight from bazel-bin, where bazel run's DOTNET_ROOT
-    # That directory holds a link to each runtime file, declared below.
+    # is not set. That directory is the runtime tree declared below.
     ctx.actions.run(
         toolchain = Label("//csharp:toolchain_type"),
         executable = toolchain.dotnet_muxer,
@@ -257,15 +257,37 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     runfiles_symlinks[prefix + deps_json.basename] = deps_json
     runfiles_symlinks[prefix + toolchain.dotnet_muxer.basename] = toolchain.dotnet_muxer
 
-    # The runtime laid out as a .NET root next to the app, one link per file. Every link targets a
-    # source file. A link to a generated tree fails when a disk or remote cache leaves that tree
-    # undownloaded. The link has no "..", which the Windows apphost would resolve against the
-    # bazel-bin path without following its junction.
+    # The runtime laid out as a .NET root next to the app, in one directory output so a build lists
+    # one path. Each link holds the real path of its file, since a link through execroot/external
+    # dangles after a later build that needs other repos. Where the real path is inside the action
+    # directory, as in the hermetic sandbox, the file is copied instead. A link to a generated tree
+    # fails when a disk or remote cache leaves that tree undownloaded. The link has no "..", which
+    # the Windows apphost would resolve against the bazel-bin path without following its junction.
+    # The patcher makes the links, so the action needs no shell on any exec platform.
     extra_output_files = []
-    for rel, f in _runtime_layout(toolchain.runtime_pack.to_list(), ["Microsoft.NETCore.App"] + frameworks).items():
-        declared = ctx.actions.declare_file(app_dir + "dotnet/" + rel)
-        ctx.actions.symlink(output = declared, target_file = f)
-        extra_output_files.append(declared)
+    layout = _runtime_layout(toolchain.runtime_pack.to_list(), ["Microsoft.NETCore.App"] + frameworks)
+    dotnet_tree = ctx.actions.declare_directory(app_dir + "dotnet")
+    link_list = ctx.actions.args()
+    link_list.set_param_file_format("multiline")
+    link_list.use_param_file("--link-list=%s", use_always = True)
+    for rel, f in layout.items():
+        link_list.add(rel)
+        link_list.add(f.path)
+    ctx.actions.run(
+        toolchain = Label("//csharp:toolchain_type"),
+        executable = toolchain.dotnet_muxer,
+        inputs = depset(
+            [patcher_dll, patcher_runtimeconfig] + layout.values(),
+            transitive = [toolchain.dotnet_runtime_files if getattr(toolchain, "dotnet_runtime_files", None) else toolchain.runtime_pack],
+        ),
+        arguments = [patcher_dll.path, "--link-tree=" + dotnet_tree.path, link_list],
+        outputs = [dotnet_tree],
+        env = patch_env,
+        mnemonic = "CSharpRuntimeTree",
+        progress_message = "Linking the runtime for %{label}",
+        use_default_shell_env = False,
+    )
+    extra_output_files.append(dotnet_tree)
     app_files = {main_dll.basename: True}
     for f in csharp_info.transitive_runtime_dlls.to_list() + csharp_info.transitive_native_libs.to_list():
         if f.basename not in app_files:
