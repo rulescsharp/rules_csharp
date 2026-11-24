@@ -22,6 +22,7 @@ load(
     "proto_moved_test",
     "runtimeconfig_action_test",
     "target_framework_action_test",
+    "usings_action_test",
     "web_sdk_action_test",
     "worker_sdk_action_test",
 )
@@ -111,6 +112,18 @@ csharp_library(
     srcs = ["LibA.cs"],
     framework_references = ["Microsoft.AspNetCore.App"],
     sdk = "Microsoft.NET.Sdk.Worker",
+)
+
+csharp_library(
+    name = "usings_lib",
+    srcs = ["Usings.cs"],
+    implicit_usings = False,
+    # The repeat is written once, like MSBuild collapses repeated <Using> items.
+    usings = [
+        "System",
+        "System.Text",
+        "System.Text",
+    ],
 )
 
 csharp_library(
@@ -271,6 +284,11 @@ framework_reference_action_test(
 worker_sdk_action_test(
     name = "worker_sdk_action_test",
     target_under_test = ":worker_lib",
+)
+
+usings_action_test(
+    name = "usings_action_test",
+    target_under_test = ":usings_lib",
 )
 
 expect_failure_test(
