@@ -75,6 +75,30 @@ def version_to_tfm(version):
     major = version.split(".")[0]
     return "net" + major + ".0"
 
+def _version_key(version):
+    return [int(p) for p in version.split(".")]
+
+def merge_dotnet_versions(root_versions, dep_versions):
+    """Adds the SDKs dependencies ask for to the root module's SDKs.
+
+    The root's version wins for each target framework it lists. For the others the
+    newest version any dependency asks for wins, the way Bazel picks module versions.
+
+    Args:
+      root_versions: SDK versions of the root module.
+      dep_versions: SDK versions of every dependency module, in any order.
+
+    Returns:
+      root_versions followed by one dependency version per target framework the root lacks.
+    """
+    root_tfms = [version_to_tfm(v) for v in root_versions]
+    extra = {}
+    for v in dep_versions:
+        tfm = version_to_tfm(v)
+        if tfm not in root_tfms and (tfm not in extra or _version_key(v) > _version_key(extra[tfm])):
+            extra[tfm] = v
+    return root_versions + sorted(extra.values(), key = _version_key)
+
 def _resolve_netrc_auth(repository_ctx, urls):
     if repository_ctx.attr.netrc:
         netrc_data = read_netrc(repository_ctx, repository_ctx.attr.netrc)
@@ -492,7 +516,8 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     ]
 
     versions = repository_ctx.attr.dotnet_versions
-    newest = max(versions, key = lambda v: [int(p) for p in v.split(".")])
+    newest = max(versions, key = _version_key)
+    default = repository_ctx.attr.default_version or newest
 
     # Binaries search only the dotnet directory next to the app, an option that the apphost of .NET 9
     # and later carries. Every target framework stamps that apphost, net8.0 included.
@@ -510,7 +535,7 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     for version in versions:
         v_slug = version.replace(".", "_")
         tfm = version_to_tfm(version)
-        target_settings = [tfm] + (["default"] if version == newest else [])
+        target_settings = [tfm] + (["default"] if version == default else [])
 
         for exec_p, exec_info in PLATFORMS.items():
             worker_name = "CscWorker.bat" if "win" in exec_info["rid"] else "CscWorker"
@@ -585,6 +610,9 @@ csharp_toolchains_hub = repository_rule(
     doc = "Generates toolchain target declarations for all platform combinations.",
     implementation = _csharp_toolchains_hub_impl,
     attrs = {
+        "default_version": attr.string(
+            doc = "SDK version that targets with no target_framework build with. Defaults to the newest in dotnet_versions.",
+        ),
         "dotnet_versions": attr.string_list(
             default = ["8.0.403", "9.0.200", "10.0.100"],
             doc = "Supported .NET SDK version strings.",

@@ -1,0 +1,3 @@
+load(":toolchains_tests.bzl", "toolchains_test_suite")
+
+toolchains_test_suite(name = "toolchains_tests")
