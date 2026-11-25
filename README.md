@@ -72,6 +72,7 @@ These attributes do the same job as the MSBuild items and properties of a `.cspr
 | `<AllowUnsafeBlocks>true</AllowUnsafeBlocks>` | `allow_unsafe_blocks = True` |
 | `<GenerateDocumentationFile>true</GenerateDocumentationFile>` | `generate_documentation_file = True` |
 | `<DefineConstants>` | `defines` |
+| `<Using Include="Xunit" />` | `usings = ["Xunit"]` |
 | `dotnet build -c Release` | `bazel build -c opt` |
 
 ## Testing with MSTest or xUnit
@@ -96,12 +97,29 @@ csharp_test(
     shard_count = 2,
     target_framework = "net8.0",
     target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
     deps = [
         ":greeter",
         "@nuget//:MSTest.TestAdapter",
         "@nuget//:MSTest.TestFramework",
         "@nuget//:Microsoft.NET.Test.Sdk",
     ],
+)
+```
+
+A test from `dotnet new mstest` ports without edits once its `<Using>` item moves to `usings`, and
+MSTest 4 works through its `MSTest` metapackage alone:
+
+```starlark
+csharp_test(
+    name = "mstest4_template_test",
+    srcs = [
+        "MSTestSettings.cs",
+        "Test1.cs",
+    ],
+    target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
+    deps = ["@nuget//:MSTest"],
 )
 ```
 

@@ -22,7 +22,11 @@ nuget.from_lock(
     name = "pinned_nuget",
     packages_lock_json = "//tests/integration/second_hub:packages.lock.json",
 )
-use_repo(nuget, "nuget", "pinned_nuget")
+nuget.from_lock(
+    name = "mstest4_nuget",
+    packages_lock_json = "//tests/integration/mstest4:packages.lock.json",
+)
+use_repo(nuget, "mstest4_nuget", "nuget", "pinned_nuget")
 
 # Test-only modules: runfiles_lib reads a file from runfiles_data by its repo_name.
 bazel_dep(name = "runfiles_lib", dev_dependency = True)

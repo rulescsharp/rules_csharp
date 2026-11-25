@@ -159,6 +159,51 @@ csharp_test(
     deps = ["@nuget//:System.IO.Ports"],
 )
 
+# Each target framework gets the lib/ folder restore picks for it, and the package's source generator runs.
+[
+    csharp_test(
+        name = "package_assets_{}_test".format(tfm.replace(".", "")),
+        srcs = ["PackageAssetsTest.cs"],
+        env = {"EXPECTED_FRAMEWORK": ".NETCoreApp,Version=v" + tfm.removeprefix("net")},
+        target_framework = tfm,
+        deps = ["@nuget//:Microsoft.Extensions.Logging.Abstractions"],
+    )
+    for tfm in ["net8.0", "net10.0"]
+]
+
+# Microsoft.Build.Locator ships only lib/net46 and lib/netcoreapp2.0, and restore picks netcoreapp2.0.
+csharp_test(
+    name = "package_assets_netcoreapp_test",
+    srcs = ["NetCoreAppAssetsTest.cs"],
+    target_framework = "net10.0",
+    deps = ["@nuget//:Microsoft.Build.Locator"],
+)
+
+# The binder's targets leave its opt-in generator out, so Get<T>() binds by reflection like dotnet build.
+csharp_test(
+    name = "configuration_binder_test",
+    srcs = ["ConfigurationBinderTest.cs"],
+    deps = ["@nuget//:Microsoft.Extensions.Configuration.Binder"],
+)
+
+# Microsoft.AspNetCore.OpenApi's targets turn interceptors on for its generator, as in the dotnet new webapi template.
+csharp_test(
+    name = "webapi_template_test",
+    srcs = ["WebApiTemplateTest.cs"],
+    sdk = "Microsoft.NET.Sdk.Web",
+    target_framework = "net10.0",
+    deps = ["@nuget//:Microsoft.AspNetCore.OpenApi"],
+)
+
+# Microsoft.Extensions.Hosting brings in the logging and options generators under analyzers/dotnet/roslynX.Y, as in the dotnet new worker template.
+csharp_test(
+    name = "worker_template_test",
+    srcs = ["WorkerTemplateTest.cs"],
+    sdk = "Microsoft.NET.Sdk.Worker",
+    target_framework = "net10.0",
+    deps = ["@nuget//:Microsoft.Extensions.Hosting"],
+)
+
 csharp_library(
     name = "doc_lib",
     srcs = ["DocLib.cs"],

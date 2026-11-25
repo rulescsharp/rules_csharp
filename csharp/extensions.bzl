@@ -225,6 +225,13 @@ Packages come from `local_package_dirs` first, then `feeds` (or the sources
 in `nuget_config`), then nuget.org. Set `use_public_sources = False` to
 download only from those directories and feeds.
 
+Each package target picks its `ref/`, `lib/` and `runtimes/<rid>/lib/` folder
+for the `target_framework` of the target that depends on it, like restore
+does. A `net8.0` target gets `lib/net8.0` even when the package also ships
+`lib/net10.0`. Analyzers come from the highest `roslynX.Y` folder. When the
+package's own `.targets` remove its analyzers unless a property is `true`,
+like `EnableConfigurationBindingGenerator`, they are left out.
+
 A package whose `contentHash` is empty, as `CsprojSync --bootstrap-lock` writes
 when restore fails, can't be checked. With public sources on, the extension
 warns and downloads it unverified. With them off, it fails.

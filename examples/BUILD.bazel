@@ -38,13 +38,15 @@ csharp_test(
 )
 
 # An MSTest suite run by vstest. Bazel splits its test cases across two
-# shards, and each shard's test.xml lists the cases it ran.
+# shards, and each shard's test.xml lists the cases it ran. usings imports the
+# MSTest namespace into every file, like the template's <Using> item.
 csharp_test(
     name = "greeter_mstest",
     srcs = ["GreeterMSTest.cs"],
     shard_count = 2,
     target_framework = "net8.0",
     target_type = "library",
+    usings = ["Microsoft.VisualStudio.TestTools.UnitTesting"],
     deps = [
         ":greeter",
         "@nuget//:MSTest.TestAdapter",

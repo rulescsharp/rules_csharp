@@ -6,37 +6,8 @@ load(
     "read_user_netrc",
     "use_netrc",
 )
-load(":nupkg.bzl", "build_references", "file_url")
-
-TFM_PRECEDENCE = [
-    "net10.0",
-    "net9.0",
-    "net8.0",
-    "net7.0",
-    "net6.0",
-    "netstandard2.1",
-    "netstandard2.0",
-    "net5.0",
-    "netcoreapp3.1",
-    "netcoreapp3.0",
-    "netstandard1.6",
-    "netstandard1.5",
-    "netstandard1.4",
-    "netstandard1.3",
-    "netstandard1.2",
-    "netstandard1.1",
-    "netstandard1.0",
-    "net48",
-    "net472",
-    "net471",
-    "net47",
-    "net462",
-    "net461",
-    "net452",
-    "net451",
-    "net45",
-    "net40",
-]
+load(":common.bzl", "TARGET_FRAMEWORKS")
+load(":nupkg.bzl", "build_references", "file_url", "nearest_framework")
 
 SUPPORTED_RIDS = {
     "osx-arm64": "@rules_csharp//csharp/constraints:osx_arm64",
@@ -45,6 +16,17 @@ SUPPORTED_RIDS = {
     "linux-arm64": "@rules_csharp//csharp/constraints:linux_arm64",
     "win-x64": "@rules_csharp//csharp/constraints:win_x64",
 }
+
+# The os and cpu of each RID, for config_settings that also match a target framework.
+_RID_CONSTRAINTS = {
+    "osx-arm64": ["@platforms//os:osx", "@platforms//cpu:aarch64"],
+    "osx-x64": ["@platforms//os:osx", "@platforms//cpu:x86_64"],
+    "linux-x64": ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    "linux-arm64": ["@platforms//os:linux", "@platforms//cpu:aarch64"],
+    "win-x64": ["@platforms//os:windows", "@platforms//cpu:x86_64"],
+}
+
+_TFM_FLAG = str(Label("//csharp/settings:target_framework"))
 
 # Each RID and the more general RIDs NuGet falls back to, from
 # https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
@@ -89,58 +71,201 @@ def _has_dlls_iterative(path):
                 stack.append(child)
     return False
 
-def _find_best_tfm_dir(repository_ctx, base_rel):
+def _find_best_tfm_dir(repository_ctx, base_rel, max_tfm = None):
+    """Returns the folder under base_rel that restore picks for max_tfm, or the newest when max_tfm is None."""
     base_path = repository_ctx.path(base_rel)
     if not base_path.exists or not base_path.is_dir:
         return None
+    best = nearest_framework([c.basename for c in base_path.readdir() if _has_dlls(c)], max_tfm)
+    return base_rel + "/" + best if best else None
 
-    for tfm in TFM_PRECEDENCE:
-        child = base_path.get_child(tfm)
-        if _has_dlls(child):
-            return base_rel + "/" + tfm
+def _roslyn_version(name):
+    """Returns (major, minor) for roslynX.Y, or None."""
+    parts = name.removeprefix("roslyn").split(".")
+    if not name.startswith("roslyn") or len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+        return None
+    return (int(parts[0]), int(parts[1]))
 
+def _highest_roslyn_dir(base_path, suffix):
+    """Returns the roslynX.Y child of base_path with the highest version whose suffix folder has dlls."""
+    best = None
     for child in base_path.readdir():
-        if _has_dlls(child):
-            return base_rel + "/" + child.basename
-
-    return None
+        version = _roslyn_version(child.basename)
+        if not child.is_dir or version == None:
+            continue
+        cs_path = child
+        for part in suffix:
+            cs_path = cs_path.get_child(part)
+        if _has_dlls(cs_path) and (best == None or version > best[0]):
+            best = (version, child.basename)
+    return best[1] if best else None
 
 def _find_analyzer_dir(repository_ctx):
+    """Returns the one folder of C# analyzer dlls NuGet passes to csc, like restore does.
+
+    Packages ship one copy of a generator per Roslyn version, in analyzers/dotnet/roslynX.Y/cs or
+    analyzers/roslynX.Y/dotnet/cs. The compiler takes the highest, and culture subfolders hold only
+    resources.
+    """
     analyzers_path = repository_ctx.path("analyzers")
     if not analyzers_path.exists or not analyzers_path.is_dir:
         return None
 
-    # 1. Direct analyzers/dotnet/cs
-    direct_cs = repository_ctx.path("analyzers/dotnet/cs")
-    if direct_cs.exists and direct_cs.is_dir and _has_dlls_iterative(direct_cs):
-        return "analyzers/dotnet/cs"
+    dotnet_path = analyzers_path.get_child("dotnet")
+    if dotnet_path.exists and dotnet_path.is_dir:
+        roslyn = _highest_roslyn_dir(dotnet_path, ["cs"])
+        if roslyn:
+            return "analyzers/dotnet/" + roslyn + "/cs"
+        if _has_dlls(dotnet_path.get_child("cs")):
+            return "analyzers/dotnet/cs"
 
-    # 2. Roslyn versioned: analyzers/roslynX.Y/dotnet/cs
-    roslyn_dirs = []
+    roslyn = _highest_roslyn_dir(analyzers_path, ["dotnet", "cs"])
+    if roslyn:
+        return "analyzers/" + roslyn + "/dotnet/cs"
+
     for child in analyzers_path.readdir():
-        if child.is_dir and child.basename.startswith("roslyn"):
-            cs_path = child.get_child("dotnet").get_child("cs")
-            if cs_path.exists and cs_path.is_dir and _has_dlls_iterative(cs_path):
-                roslyn_dirs.append(child.basename)
+        if child.is_dir and _has_dlls(child.get_child("dotnet").get_child("cs")):
+            return "analyzers/" + child.basename + "/dotnet/cs"
 
-    if roslyn_dirs:
-        sorted_dirs = sorted(roslyn_dirs)
-        highest = sorted_dirs[-1]
-        return "analyzers/" + highest + "/dotnet/cs"
-
-    # 3. Any subdirectory of analyzers containing dotnet/cs
-    for child in analyzers_path.readdir():
-        if child.is_dir:
-            cs_path = child.get_child("dotnet").get_child("cs")
-            if cs_path.exists and cs_path.is_dir and _has_dlls_iterative(cs_path):
-                return "analyzers/" + child.basename + "/dotnet/cs"
-
-    # 4. Any dlls anywhere in analyzers
     if _has_dlls_iterative(analyzers_path):
         return "analyzers"
 
     return None
 
+def _compile_dir(repository_ctx, tfm):
+    return _find_best_tfm_dir(repository_ctx, "ref", tfm) or _find_best_tfm_dir(repository_ctx, "lib", tfm)
+
+def _runtime_dir(repository_ctx, tfm):
+    return _find_best_tfm_dir(repository_ctx, "lib", tfm) or _compile_dir(repository_ctx, tfm)
+
+def _rid_runtime_dir(repository_ctx, rid, tfm):
+    """Returns runtimes/<rid>/lib/<tfm>/ for the first RID along the fallback chain."""
+    for fallback in RID_FALLBACKS[rid]:
+        r_dir = _find_best_tfm_dir(repository_ctx, "runtimes/" + fallback + "/lib", tfm)
+        if r_dir:
+            return r_dir
+    return None
+
+def _glob(d):
+    return 'glob(["{}/*.dll"])'.format(d) if d else "[]"
+
+def _select(cases, default, prune = True):
+    """Returns default, or a select() over cases when any differs from it.
+
+    prune drops the cases equal to default, which is only right when no case specializes another.
+    """
+    if all([v == default for v in cases.values()]):
+        return default
+    lines = ['        "{}": {},'.format(k, v) for k, v in cases.items() if not prune or v != default]
+    lines.append('        "//conditions:default": {},'.format(default))
+    return "select({\n" + "\n".join(lines) + "\n    })"
+
+def _build_dlls(repository_ctx, tfm):
+    """Returns the build/ and buildTransitive/ dlls restore stages for tfm, and those the package references, as repr lists."""
+    test_runtime = {}
+    referenced = []
+    for top in ["build", "buildTransitive"]:
+        tfm_dir = _find_best_tfm_dir(repository_ctx, top, tfm)
+        if not tfm_dir:
+            continue
+        for f in repository_ctx.path(tfm_dir).readdir():
+            name = f.basename.lower()
+            if name.endswith(".dll"):
+                test_runtime[name] = tfm_dir + "/" + f.basename
+            elif name.endswith((".props", ".targets")):
+                referenced.extend([n.lower() + ".dll" for n in build_references(repository_ctx.read(f))])
+    return (
+        repr(sorted(test_runtime.values())),
+        repr(sorted([path for name, path in test_runtime.items() if name in referenced])),
+    )
+
+def _targets_files(repository_ctx):
+    """Returns the .targets files under build/ and buildTransitive/ and their framework folders."""
+    files = []
+    for top in ["build", "buildTransitive"]:
+        path = repository_ctx.path(top)
+        if not path.exists or not path.is_dir:
+            continue
+        for child in path.readdir():
+            if child.is_dir:
+                files.extend([f for f in child.readdir() if f.basename.lower().endswith(".targets")])
+            elif child.basename.lower().endswith(".targets"):
+                files.append(child)
+    return files
+
+def _interceptors_namespaces(content):
+    """Returns the namespaces a package's targets add to InterceptorsNamespaces outside any target or condition.
+
+    Matches `<InterceptorsNamespaces>$(InterceptorsNamespaces);Ns</InterceptorsNamespaces>` in an unconditioned
+    top-level PropertyGroup, which MSBuild always evaluates and passes to csc as a feature.
+    """
+    lower = content.lower()
+
+    # Drop target bodies: properties set inside a target depend on that target running.
+    kept = []
+    pos = 0
+    for _ in range(len(lower)):
+        start = lower.find("<target", pos)
+        if start < 0:
+            break
+        kept.append((pos, start))
+        end = lower.find("</target>", start)
+        if end < 0:
+            pos = len(lower)
+            break
+        pos = end + len("</target>")
+    kept.append((pos, len(lower)))
+
+    namespaces = []
+    for a, b in kept:
+        part, part_lower = content[a:b], lower[a:b]
+        offset = 0
+        for group in part_lower.split("<propertygroup")[1:]:
+            offset = part_lower.find("<propertygroup", offset) + len("<propertygroup")
+            header = group.split(">", 1)[0]
+            if "condition=" in header:
+                continue
+            body = group.split("</propertygroup>", 1)[0]
+            body_orig = part[offset:offset + len(body)]
+            search = 0
+            for _ in range(len(body)):
+                i = body.find("<interceptorsnamespaces", search)
+                if i < 0:
+                    break
+                close = body.find(">", i)
+                end = body.find("</interceptorsnamespaces>", close)
+                if close < 0 or end < 0:
+                    break
+                search = end
+                if "condition=" in body[i:close] or body[close - 1] == "/":
+                    continue
+                for ns in body_orig[close + 1:end].split(";"):
+                    ns = ns.strip()
+                    if ns and "$(" not in ns and "@(" not in ns and "%(" not in ns and ns not in namespaces:
+                        namespaces.append(ns)
+    return namespaces
+
+def _removes_own_analyzers(content, pkg_id):
+    """Whether a target removes the package's analyzers unless a property is 'true'.
+
+    Opt-in generators such as the configuration binder ship
+    <Target Condition="'$(EnableConfigurationBindingGenerator)' != 'true'"> with
+    <Analyzer Remove="@(Analyzer->WithMetadataValue('NuGetPackageId', '<id>'))" />, so dotnet build
+    leaves them out by default.
+    """
+    content = content.lower()
+    pkg = "'" + pkg_id.lower() + "'"
+    for target in content.split("<target")[1:]:
+        header = target.split(">", 1)[0]
+        if "condition=" not in header or "!= 'true'" not in header:
+            continue
+        body = target.split("</target>", 1)[0]
+        for item in body.split("<analyzer")[1:]:
+            # Not up to ">", which the "->" item transform also has.
+            tag = item.split("<", 1)[0]
+            if "remove=" in tag and "nugetpackageid" in tag and pkg in tag and "condition=" not in tag:
+                return True
+    return False
 
 def _sanitize_name(name):
     return name.replace(".", "_").replace("-", "_").lower()
@@ -231,26 +356,16 @@ def _nuget_package_repo_impl(repository_ctx):
 
     pkg_id = repository_ctx.attr.package_id
 
-    # 1. Compile references: ref/<tfm>/ falling back to lib/<tfm>/
-    compile_dir = _find_best_tfm_dir(repository_ctx, "ref")
-    if not compile_dir:
-        compile_dir = _find_best_tfm_dir(repository_ctx, "lib")
+    # Restore picks lib, ref and runtimes folders for the consumer's framework, so each one gets its own
+    # folder through //csharp/settings:target_framework. None is the default branch, for an unset flag.
+    tfms = TARGET_FRAMEWORKS + [None]
 
-    # 2. Default runtime assemblies: lib/<tfm>/
-    default_runtime_dir = _find_best_tfm_dir(repository_ctx, "lib")
-    if not default_runtime_dir and compile_dir:
-        default_runtime_dir = compile_dir
+    compile_dirs = {tfm: _compile_dir(repository_ctx, tfm) for tfm in tfms}
+    runtime_dirs = {tfm: _runtime_dir(repository_ctx, tfm) for tfm in tfms}
+    rid_lib_dirs = {(rid, tfm): _rid_runtime_dir(repository_ctx, rid, tfm) for rid in SUPPORTED_RIDS.keys() for tfm in tfms}
+    default_runtime_dir = runtime_dirs[None]
 
-    # 3. RID-specific runtime assemblies: runtimes/<rid>/lib/<tfm>/ for the first RID along the fallback chain
-    rid_lib_dirs = {}
-    for rid in SUPPORTED_RIDS.keys():
-        for fallback in RID_FALLBACKS[rid]:
-            r_dir = _find_best_tfm_dir(repository_ctx, "runtimes/" + fallback + "/lib")
-            if r_dir:
-                rid_lib_dirs[rid] = r_dir
-                break
-
-    # 4. Native libraries: runtimes/<rid>/native/ for the first RID along the fallback chain
+    # Native libraries: runtimes/<rid>/native/ for the first RID along the fallback chain
     rid_native_dirs = {}
     for rid in SUPPORTED_RIDS.keys():
         for fallback in RID_FALLBACKS[rid]:
@@ -258,24 +373,26 @@ def _nuget_package_repo_impl(repository_ctx):
                 rid_native_dirs[rid] = "runtimes/" + fallback + "/native/*"
                 break
 
-    # 5. Analyzers
+    # Analyzers, unless the package's targets leave them out by default
     analyzer_dir = _find_analyzer_dir(repository_ctx)
+    if analyzer_dir and any([_removes_own_analyzers(repository_ctx.read(f), pkg_id) for f in _targets_files(repository_ctx)]):
+        analyzer_dir = None
 
-    # 6. build/<tfm>/*.dll: MSBuild targets copy these next to a test, like the VSTest adapters.
+    # InterceptorsNamespaces the package's targets always set, which dotnet build passes to csc as a feature.
+    interceptors_namespaces = []
+    for f in _targets_files(repository_ctx):
+        for ns in _interceptors_namespaces(repository_ctx.read(f)):
+            if ns not in interceptors_namespaces:
+                interceptors_namespaces.append(ns)
+
+    # build/<tfm>/*.dll and buildTransitive/<tfm>/*.dll for the consumer's framework: MSBuild targets copy these
+    # next to a test, like the VSTest adapters. Restore imports both folders, and buildTransitive wins when both
+    # ship the same file.
     # The ones the package's own props or targets add as a <Reference> are compile and runtime dlls too.
-    # Other build/ dlls, such as MSBuild tasks, also land next to library tests, where nothing loads them.
-    test_runtime_dir = _find_best_tfm_dir(repository_ctx, "build")
-    build_refs = []
-    if test_runtime_dir:
-        referenced = []
-        for f in repository_ctx.path(test_runtime_dir).readdir():
-            if f.basename.lower().endswith((".props", ".targets")):
-                referenced.extend([n.lower() + ".dll" for n in build_references(repository_ctx.read(f))])
-        build_refs = sorted([
-            test_runtime_dir + "/" + f.basename
-            for f in repository_ctx.path(test_runtime_dir).readdir()
-            if f.basename.lower() in referenced
-        ])
+    # Other dlls there, such as MSBuild tasks, also land next to library tests, where nothing loads them.
+    build_dirs = {tfm: _build_dlls(repository_ctx, tfm) for tfm in tfms}
+    test_runtime_dlls_expr = _select({":" + t: build_dirs[t][0] for t in TARGET_FRAMEWORKS}, build_dirs[None][0])
+    build_refs_expr = _select({":" + t: build_dirs[t][1] for t in TARGET_FRAMEWORKS}, build_dirs[None][1])
 
     # Build file generation
     lines = [
@@ -289,7 +406,8 @@ def _nuget_package_repo_impl(repository_ctx):
     if has_analyzers:
         lines.append('csharp_analyzer_library(')
         lines.append('    name = "analyzers",')
-        lines.append('    dlls = glob(["{}/**/*.dll", "{}/*.dll"]),'.format(analyzer_dir, analyzer_dir))
+        pattern = "analyzers/**/*.dll" if analyzer_dir == "analyzers" else analyzer_dir + "/*.dll"
+        lines.append('    dlls = glob(["{}"]),'.format(pattern))
         lines.append(')')
         lines.append('')
 
@@ -298,32 +416,41 @@ def _nuget_package_repo_impl(repository_ctx):
     for dep in repository_ctx.attr.dependencies:
         dep_labels.append('"@{}_{}//:{}"'.format(repository_ctx.attr.hub, _sanitize_name(dep), dep))
 
-    # Compile refs expression
-    if compile_dir:
-        compile_refs_expr = 'glob(["{}/*.dll"])'.format(compile_dir)
-    else:
-        compile_refs_expr = '[]'
+    compile_refs_expr = _select(
+        {":" + t: _glob(compile_dirs[t]) for t in TARGET_FRAMEWORKS},
+        _glob(compile_dirs[None]),
+    )
 
-    # Runtime dlls expression
-    if rid_lib_dirs:
-        select_cases = []
+    # Runtime dlls expression. A RID and framework key specializes both the RID key and the framework key.
+    runtime_cases = {}
+    if any([d for d in rid_lib_dirs.values()]):
         for rid, constraint in SUPPORTED_RIDS.items():
-            if rid in rid_lib_dirs:
-                select_cases.append('        "{}": glob(["{}/*.dll"]),'.format(constraint, rid_lib_dirs[rid]))
-            elif default_runtime_dir:
-                select_cases.append('        "{}": glob(["{}/*.dll"]),'.format(constraint, default_runtime_dir))
-            else:
-                select_cases.append('        "{}": [],'.format(constraint))
-        if default_runtime_dir:
-            select_cases.append('        "//conditions:default": glob(["{}/*.dll"]),'.format(default_runtime_dir))
-        else:
-            select_cases.append('        "//conditions:default": [],')
+            for t in TARGET_FRAMEWORKS:
+                runtime_cases[":{}_{}".format(rid, t)] = _glob(rid_lib_dirs[(rid, t)] or runtime_dirs[t])
+            runtime_cases[constraint] = _glob(rid_lib_dirs[(rid, None)] or default_runtime_dir)
+    for t in TARGET_FRAMEWORKS:
+        runtime_cases[":" + t] = _glob(runtime_dirs[t])
+    runtime_dlls_expr = _select(runtime_cases, _glob(default_runtime_dir), prune = len(runtime_cases) == len(TARGET_FRAMEWORKS))
 
-        runtime_dlls_expr = 'select({\n' + '\n'.join(select_cases) + '\n    })'
-    elif default_runtime_dir:
-        runtime_dlls_expr = 'glob(["{}/*.dll"])'.format(default_runtime_dir)
-    else:
-        runtime_dlls_expr = '[]'
+    satellites_expr = _select(
+        {":" + t: 'glob(["{}/*/*.resources.dll"], allow_empty = True)'.format(runtime_dirs[t]) if runtime_dirs[t] and runtime_dirs[t].startswith("lib/") else "[]" for t in TARGET_FRAMEWORKS},
+        'glob(["{}/*/*.resources.dll"], allow_empty = True)'.format(default_runtime_dir) if default_runtime_dir and default_runtime_dir.startswith("lib/") else "[]",
+    )
+
+    for t in TARGET_FRAMEWORKS:
+        lines.append('config_setting(')
+        lines.append('    name = "{}",'.format(t))
+        lines.append('    flag_values = {{"{}": "{}"}},'.format(_TFM_FLAG, t))
+        lines.append(')')
+        lines.append('')
+        if any([d for d in rid_lib_dirs.values()]):
+            for rid in SUPPORTED_RIDS.keys():
+                lines.append('config_setting(')
+                lines.append('    name = "{}_{}",'.format(rid, t))
+                lines.append('    constraint_values = {},'.format(repr(_RID_CONSTRAINTS[rid])))
+                lines.append('    flag_values = {{"{}": "{}"}},'.format(_TFM_FLAG, t))
+                lines.append(')')
+                lines.append('')
 
     # Native libs expression
     if rid_native_dirs:
@@ -343,18 +470,20 @@ def _nuget_package_repo_impl(repository_ctx):
 
     lines.append('csharp_import(')
     lines.append('    name = "{}",'.format(pkg_id))
-    if build_refs:
-        compile_refs_expr += " + {}".format(repr(build_refs))
-        runtime_dlls_expr += " + {}".format(repr(build_refs))
+    if build_refs_expr != "[]":
+        compile_refs_expr += " + " + build_refs_expr
+        runtime_dlls_expr += " + " + build_refs_expr
     lines.append('    compile_refs = {},'.format(compile_refs_expr))
     lines.append('    runtime_dlls = {},'.format(runtime_dlls_expr))
     lines.append('    native_libs = {},'.format(native_libs_expr))
-    if default_runtime_dir and default_runtime_dir.startswith("lib/"):
-        lines.append('    satellites = glob(["{}/*/*.resources.dll"], allow_empty = True),'.format(default_runtime_dir))
-    if test_runtime_dir:
-        lines.append('    test_runtime_dlls = glob(["{}/*.dll"]),'.format(test_runtime_dir))
+    if satellites_expr != "[]":
+        lines.append('    satellites = {},'.format(satellites_expr))
+    if test_runtime_dlls_expr != "[]":
+        lines.append('    test_runtime_dlls = {},'.format(test_runtime_dlls_expr))
     lines.append('    deps = {},'.format(deps_expr))
     lines.append('    plugins = {},'.format(plugins_expr))
+    if interceptors_namespaces:
+        lines.append('    interceptors_namespaces = {},'.format(repr(interceptors_namespaces)))
     lines.append(')')
     lines.append('')
 
