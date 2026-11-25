@@ -115,6 +115,13 @@ csharp_library(
 )
 
 csharp_library(
+    name = "static_using_lib",
+    srcs = ["Usings.cs"],
+    tags = ["manual"],
+    usings = ["static System.Math"],
+)
+
+csharp_library(
     name = "usings_lib",
     srcs = ["Usings.cs"],
     implicit_usings = False,
@@ -289,6 +296,12 @@ worker_sdk_action_test(
 usings_action_test(
     name = "usings_action_test",
     target_under_test = ":usings_lib",
+)
+
+expect_failure_test(
+    name = "static_using_test",
+    message = "is not a namespace",
+    target_under_test = ":static_using_lib",
 )
 
 expect_failure_test(

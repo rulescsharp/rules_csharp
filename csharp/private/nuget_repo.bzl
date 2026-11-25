@@ -357,7 +357,7 @@ def _nuget_package_repo_impl(repository_ctx):
     pkg_id = repository_ctx.attr.package_id
 
     # Restore picks lib, ref and runtimes folders for the consumer's framework, so each one gets its own
-    # folder through //csharp/settings:target_framework. None is an empty flag, which builds for the newest.
+    # folder through //csharp/settings:target_framework. None is the default branch, for an unset flag.
     tfms = TARGET_FRAMEWORKS + [None]
 
     compile_dirs = {tfm: _compile_dir(repository_ctx, tfm) for tfm in tfms}

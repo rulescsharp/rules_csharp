@@ -342,6 +342,8 @@ hosting assemblies. Add framework_references = ["{}"], depend on the Microsoft.E
 implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
     namespaces = list(namespaces)
     for ns in getattr(ctx.attr, "usings", []):
+        if not ns or " " in ns or "=" in ns:
+            fail('{}: usings entry "{}" is not a namespace. Only plain namespaces such as "System.Text" work, not the Alias or Static forms.'.format(ctx.label, ns))
         # MSBuild collapses repeated <Using> items, and a repeated global using is CS0105.
         if ns not in namespaces:
             namespaces.append(ns)
