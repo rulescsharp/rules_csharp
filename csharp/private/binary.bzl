@@ -181,10 +181,6 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
         targets = ",\n".join(all_target_entries),
         libraries = ",\n".join(all_library_entries),
     )
-    ctx.actions.write(
-        output = deps_json,
-        content = deps_content,
-    )
 
     # 3. Stamp target platform's native apphost template binary
     is_windows = "win" in toolchain.target_rid
@@ -223,6 +219,36 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
         progress_message = "Stamping AppHost %{label}",
         use_default_shell_env = False,
     )
+
+    dep_dlls = [f for f in csharp_info.transitive_runtime_dlls.to_list() if f.basename != main_dll.basename]
+    if dep_dlls:
+        # Versions come from the dlls, so the host keeps a package assembly newer than the framework's copy.
+        deps_json_template = ctx.actions.declare_file(ctx.label.name + "_deps_template/" + deps_json.basename)
+        ctx.actions.write(output = deps_json_template, content = deps_content)
+        versions_args = ctx.actions.args()
+        versions_args.add(patcher_dll)
+        versions_args.add("--deps-json=" + deps_json_template.path)
+        versions_args.add("--output=" + deps_json.path)
+        versions_args.add_all(dep_dlls, format_each = "--dll=%s")
+        ctx.actions.run(
+            toolchain = Label("//csharp:toolchain_type"),
+            executable = toolchain.dotnet_muxer,
+            inputs = depset(
+                [deps_json_template, patcher_dll, patcher_runtimeconfig] + dep_dlls,
+                transitive = [toolchain.runtime_pack] + ([toolchain.dotnet_runtime_files] if getattr(toolchain, "dotnet_runtime_files", None) else []),
+            ),
+            arguments = [versions_args],
+            outputs = [deps_json],
+            env = patch_env,
+            mnemonic = "CSharpDepsJson",
+            progress_message = "Writing deps.json %{label}",
+            use_default_shell_env = False,
+        )
+    else:
+        ctx.actions.write(
+            output = deps_json,
+            content = deps_content,
+        )
 
     # 4. Assemble runfiles
     runfiles_files = [
