@@ -1,0 +1,4 @@
+module(name = "runfiles_lib")
+
+bazel_dep(name = "rules_csharp")
+bazel_dep(name = "runfiles_data", repo_name = "mydata")

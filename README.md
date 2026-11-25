@@ -206,7 +206,13 @@ versions, so two hubs can pin different versions of one package. Tags with the s
 Binaries and tests that need files from `data` use [`@rules_csharp//csharp/runfiles`](csharp/runfiles/).
 Call `Runfiles.Create()` then `Rlocation("_main/path/to/file")` (or the module name instead of
 `_main`). It reads `RUNFILES_MANIFEST_FILE` when Bazel sets it, which is the usual case on Windows,
-and falls back to the runfiles directory otherwise. See [examples/web](examples/web/).
+and falls back to the runfiles directory otherwise. File names with spaces resolve in both, and a
+data directory resolves whenever the runfiles tree exists. See [examples/web](examples/web/).
+
+A library that other modules depend on should pass its own assembly, as in
+`Rlocation("my_dep/path/to/file", typeof(MyClass).Assembly)`. Then the first segment is read the
+way that library's module sees it, so it can name its own `bazel_dep`s by their `repo_name` even when the
+main module can't see them. Every assembly the rules build records its repository for this.
 
 ## Ship a binary
 
