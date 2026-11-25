@@ -2,7 +2,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 package(default_visibility = ["//visibility:public"])
 
-# Set from each target's `target_framework`. Empty selects the newest configured .NET version.
+# Set from each target's `target_framework`. Empty selects the newest .NET version the root module configures.
 string_flag(
     name = "target_framework",
     build_setting_default = "",

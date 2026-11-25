@@ -1,7 +1,7 @@
 """Module extensions for rules_csharp."""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//csharp:toolchains.bzl", "DOTNET_ARTIFACTS", "PLATFORMS", "csharp_toolchains_hub", "runtime_pack", "sdk_exec")
+load("//csharp:toolchains.bzl", "DOTNET_ARTIFACTS", "PLATFORMS", "csharp_toolchains_hub", "merge_dotnet_versions", "runtime_pack", "sdk_exec")
 load("//csharp/private:nuget_repo.bzl", "nuget_hub_repo", "nuget_package_repo", "package_auth", "package_urls")
 load("//csharp/private:nupkg.bzl", "base64_to_hex", "hex_to_sri", "sha512_files", "strip_signature")
 
@@ -24,7 +24,13 @@ download only from the mirrors.
             doc = """Supported .NET SDK version strings.
 
 rules_csharp knows the checksums of the default versions. Any other version
-needs its archives in `sdk_checksums`.""",
+needs its archives in `sdk_checksums`.
+
+The root module's list is the one that counts. A dependency module can add an
+SDK for a target framework the root doesn't list, and when several ask for
+one, the newest wins. It never replaces the root's SDK for a framework the root
+lists, and targets with no `target_framework` keep building with the newest
+SDK of the root module.""",
         ),
         "mirror_urls": attr.string_list(
             doc = "Candidate mirror base URL list.",
@@ -77,7 +83,8 @@ False, other tags can't turn it back on.""",
 )
 
 def _csharp_impl(module_ctx):
-    dotnet_versions = ["8.0.403", "9.0.200", "10.0.100"]
+    root_versions = ["8.0.403", "9.0.200", "10.0.100"]
+    dep_versions = []
     mirror_urls = []
     url_templates = [
         "{mirror}/dotnet/Sdk/{version}/{archive}",
@@ -91,9 +98,14 @@ def _csharp_impl(module_ctx):
     # The root module's tags win over its dependencies' tags.
     tags = [t for mod in module_ctx.modules if not mod.is_root for t in mod.tags.toolchain]
     tags += [t for mod in module_ctx.modules if mod.is_root for t in mod.tags.toolchain]
+    for mod in module_ctx.modules:
+        for tag in mod.tags.toolchain:
+            if not mod.is_root:
+                dep_versions += tag.dotnet_versions
+            elif tag.dotnet_versions:
+                root_versions = tag.dotnet_versions
+    dotnet_versions = merge_dotnet_versions(root_versions, dep_versions)
     for tag in tags:
-        if tag.dotnet_versions:
-            dotnet_versions = tag.dotnet_versions
         if tag.mirror_urls:
             mirror_urls = tag.mirror_urls
         if tag.url_templates:
@@ -177,12 +189,15 @@ def _csharp_impl(module_ctx):
         urls = coverlet_urls,
     )
 
+    default_version = max(root_versions, key = lambda v: [int(p) for p in v.split(".")])
     csharp_toolchains_hub(
         name = "dotnet_toolchains",
+        default_version = default_version,
         dotnet_versions = dotnet_versions,
     )
     csharp_toolchains_hub(
         name = "csharp_toolchains",
+        default_version = default_version,
         dotnet_versions = dotnet_versions,
     )
 

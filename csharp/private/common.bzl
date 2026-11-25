@@ -11,7 +11,7 @@ TARGET_FRAMEWORKS = [version_to_tfm(v) for v in DOTNET_ARTIFACTS]
 
 TARGET_FRAMEWORK_DOC = """Target framework moniker, one of {}. Picks the SDK, reference pack, and runtime the target \
 builds and runs against, so its .NET version must be listed in `dotnet_versions` of `csharp.toolchain`. When unset, the \
-target uses the framework of the target that depends on it, or the newest configured version when built directly.""".format(", ".join(TARGET_FRAMEWORKS))
+target uses the framework of the target that depends on it, or the newest version in the root module's `dotnet_versions` when built directly.""".format(", ".join(TARGET_FRAMEWORKS))
 
 _TFM_FLAG = str(Label("//csharp/settings:target_framework"))
 
