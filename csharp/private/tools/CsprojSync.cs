@@ -40,9 +40,9 @@ namespace RulesCsharp.Tools
             workspace = Path.GetFullPath(workspace);
             Console.WriteLine($"CsprojSync running in workspace: {workspace}");
 
-            if (bootstrapLock)
+            if (bootstrapLock && BootstrapLock(workspace) != 0)
             {
-                BootstrapLock(workspace);
+                return 1;
             }
 
             var csDirs = FindCsDirectories(workspace);
@@ -176,7 +176,18 @@ namespace RulesCsharp.Tools
             string bazelBinRel = string.IsNullOrEmpty(upPrefix) ? "bazel-bin" : $"{upPrefix}/bazel-bin";
 
             var sb = new StringBuilder();
-            sb.AppendLine("<Project Sdk=\"Microsoft.NET.Sdk\">");
+            // The SDK is imported by hand so obj/<target>/ can be set before Sdk.props reads it. Restore then
+            // keeps its assets per project, and NuGetLockFilePath keeps it from adopting the packages.lock.json
+            // that sits next to the BUILD file for the nuget extension.
+            // https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies
+            sb.AppendLine("<Project>");
+            sb.AppendLine("  <PropertyGroup>");
+            sb.AppendLine($"    <BaseIntermediateOutputPath>obj/{targetName}/</BaseIntermediateOutputPath>");
+            sb.AppendLine($"    <NuGetLockFilePath>obj/{targetName}/packages.lock.json</NuGetLockFilePath>");
+            sb.AppendLine("  </PropertyGroup>");
+            sb.AppendLine();
+            sb.AppendLine("  <Import Project=\"Sdk.props\" Sdk=\"Microsoft.NET.Sdk\" />");
+            sb.AppendLine();
             sb.AppendLine("  <PropertyGroup>");
             sb.AppendLine("    <TargetFramework>net8.0</TargetFramework>");
             sb.AppendLine("    <EnableDefaultItems>false</EnableDefaultItems>");
@@ -196,34 +207,100 @@ namespace RulesCsharp.Tools
             sb.AppendLine($"      <HintPath>{bazelBinRel}/{relDir}/{targetName}.ref.dll</HintPath>");
             sb.AppendLine("    </Reference>");
             sb.AppendLine("  </ItemGroup>");
+            sb.AppendLine();
+            sb.AppendLine("  <Import Project=\"Sdk.targets\" Sdk=\"Microsoft.NET.Sdk\" />");
             sb.AppendLine("</Project>");
             return sb.ToString();
         }
 
-        private static void BootstrapLock(string workspace)
+        private static int BootstrapLock(string workspace)
         {
             var packages = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var frameworks = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            string propsFile = Path.Combine(workspace, "Directory.Packages.props");
+            if (File.Exists(propsFile))
+            {
+                // Central versions fill in PackageReferences that carry no Version.
+                foreach (Match m in Regex.Matches(File.ReadAllText(propsFile), @"<PackageVersion\s+Include=""([^""]+)""\s+Version=""([^""]+)""", RegexOptions.IgnoreCase))
+                    packages[m.Groups[1].Value] = m.Groups[2].Value;
+            }
             var csprojFiles = Directory.GetFiles(workspace, "*.csproj", SearchOption.AllDirectories)
-                .Where(p => !p.Contains("bazel-") && !p.Contains("/bin/") && !p.Contains("/obj/") && !p.Contains("\\bin\\") && !p.Contains("\\obj\\"));
+                .Where(p => !p.EndsWith(".bazel.csproj") && !Path.GetRelativePath(workspace, p).Split('/', '\\').Any(d => d.StartsWith(".")) && !p.Contains("bazel-") && !p.Contains("/bin/") && !p.Contains("/obj/") && !p.Contains("\\bin\\") && !p.Contains("\\obj\\"));
 
             foreach (var file in csprojFiles)
             {
                 string content = File.ReadAllText(file);
-                var matches = Regex.Matches(content, @"<PackageReference\s+[^>]+>", RegexOptions.IgnoreCase);
-                foreach (Match m in matches)
+                foreach (Match m in Regex.Matches(content, @"<PackageReference\s+[^>]+>", RegexOptions.IgnoreCase))
                 {
                     var idMatch = Regex.Match(m.Value, @"Include=""([^""]+)""", RegexOptions.IgnoreCase);
-                    if (idMatch.Success)
+                    var verMatch = Regex.Match(m.Value, @"Version=""([^""]+)""", RegexOptions.IgnoreCase);
+                    if (idMatch.Success && verMatch.Success)
+                        packages[idMatch.Groups[1].Value] = verMatch.Groups[1].Value;
+                }
+                foreach (Match m in Regex.Matches(content, @"<TargetFrameworks?>([^<]+)<", RegexOptions.IgnoreCase))
+                    frameworks.UnionWith(m.Groups[1].Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+
+            string lockFile = Path.Combine(workspace, "packages.lock.json");
+            if (!File.Exists(lockFile))
+            {
+                // Restore one project that references every package, so the workspace gets a single lock
+                // file with real content hashes. It sits in the workspace so its NuGet.Config applies.
+                string scratch = Path.Combine(workspace, ".bootstrap-lock");
+                Directory.CreateDirectory(scratch);
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("<Project Sdk=\"Microsoft.NET.Sdk\">");
+                    if (frameworks.Count > 0)
                     {
-                        string id = idMatch.Groups[1].Value;
-                        var verMatch = Regex.Match(m.Value, @"Version=""([^""]+)""", RegexOptions.IgnoreCase);
-                        string ver = verMatch.Success ? verMatch.Groups[1].Value : "1.0.0";
-                        packages[id] = ver;
+                        sb.AppendLine("  <PropertyGroup>");
+                        sb.AppendLine($"    <TargetFrameworks>{string.Join(';', frameworks)}</TargetFrameworks>");
+                        sb.AppendLine("  </PropertyGroup>");
                     }
+                    sb.AppendLine("  <ItemGroup>");
+                    foreach (var kvp in packages)
+                        sb.AppendLine($"    <PackageReference Include=\"{kvp.Key}\" Version=\"{kvp.Value}\" />");
+                    sb.AppendLine("  </ItemGroup>");
+                    sb.AppendLine("</Project>");
+                    string project = Path.Combine(scratch, "BootstrapLock.csproj");
+                    File.WriteAllText(project, sb.ToString(), Encoding.UTF8);
+
+                    string? root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+                    string dotnet = !string.IsNullOrEmpty(root) && File.Exists(Path.Combine(root, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"))
+                        ? Path.Combine(root, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet")
+                        : "dotnet";
+                    var psi = new System.Diagnostics.ProcessStartInfo(dotnet) { WorkingDirectory = scratch, UseShellExecute = false };
+                    foreach (var arg in new[] { "restore", project, "--use-lock-file", "-p:NuGetLockFilePath=" + lockFile, "-p:ManagePackageVersionsCentrally=false" })
+                        psi.ArgumentList.Add(arg);
+                    System.Diagnostics.Process proc;
+                    try
+                    {
+                        proc = System.Diagnostics.Process.Start(psi)!;
+                    }
+                    catch (System.ComponentModel.Win32Exception e)
+                    {
+                        Console.Error.WriteLine($"--bootstrap-lock needs a .NET SDK to run dotnet restore. Set DOTNET_ROOT or put dotnet on PATH. ({e.Message})");
+                        return 1;
+                    }
+                    using (proc)
+                    {
+                        proc.WaitForExit();
+                        if (proc.ExitCode != 0 || !File.Exists(lockFile))
+                        {
+                            Console.Error.WriteLine($"dotnet restore failed, so no packages.lock.json was written. Fix the errors above and run --bootstrap-lock again.");
+                            if (File.Exists(lockFile)) File.Delete(lockFile);
+                            return 1;
+                        }
+                    }
+                    Console.WriteLine($"Restored lockfile via dotnet restore: {lockFile}");
+                }
+                finally
+                {
+                    Directory.Delete(scratch, true);
                 }
             }
 
-            string propsFile = Path.Combine(workspace, "Directory.Packages.props");
             if (!File.Exists(propsFile))
             {
                 var sb = new StringBuilder();
@@ -241,60 +318,7 @@ namespace RulesCsharp.Tools
                 File.WriteAllText(propsFile, sb.ToString(), Encoding.UTF8);
                 Console.WriteLine($"Bootstrapped: {propsFile}");
             }
-
-            string lockFile = Path.Combine(workspace, "packages.lock.json");
-            if (!File.Exists(lockFile))
-            {
-                bool restored = false;
-                try
-                {
-                    var psi = new System.Diagnostics.ProcessStartInfo("dotnet", "restore --use-lock-file")
-                    {
-                        WorkingDirectory = workspace,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                    };
-                    using var proc = System.Diagnostics.Process.Start(psi);
-                    if (proc != null)
-                    {
-                        proc.WaitForExit();
-                        if (proc.ExitCode == 0 && File.Exists(lockFile))
-                        {
-                            restored = true;
-                            Console.WriteLine($"Restored lockfile via dotnet restore: {lockFile}");
-                        }
-                    }
-                }
-                catch { }
-
-                if (!restored)
-                {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("{");
-                    sb.AppendLine("  \"version\": 1,");
-                    sb.AppendLine("  \"dependencies\": {");
-                    sb.AppendLine("    \"net8.0\": {");
-                    int count = 0;
-                    foreach (var kvp in packages)
-                    {
-                        count++;
-                        string comma = count < packages.Count ? "," : "";
-                        sb.AppendLine($"      \"{kvp.Key}\": {{");
-                        sb.AppendLine("        \"type\": \"Direct\",");
-                        sb.AppendLine($"        \"requested\": \"[{kvp.Value}, )\",");
-                        sb.AppendLine($"        \"resolved\": \"{kvp.Value}\",");
-                        sb.AppendLine("        \"contentHash\": \"\",");
-                        sb.AppendLine("        \"dependencies\": {}");
-                        sb.AppendLine($"      }}{comma}");
-                    }
-                    sb.AppendLine("    }");
-                    sb.AppendLine("  }");
-                    sb.AppendLine("}");
-                    File.WriteAllText(lockFile, sb.ToString(), Encoding.UTF8);
-                    Console.WriteLine($"Synthesized lockfile: {lockFile}");
-                }
-            }
+            return 0;
         }
 
         private static string Normalize(string s) => s.Replace("\r\n", "\n").Trim();
