@@ -1,7 +1,7 @@
 """Binary and test rules for rules_csharp."""
 
 load(":common.bzl", "TARGET_FRAMEWORKS", "TARGET_FRAMEWORK_DOC", "target_framework_transition")
-load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "GENERATE_ASSEMBLY_INFO_DOC", "GENERATE_DOCUMENTATION_FILE_DOC", "INTERNALS_VISIBLE_TO_DOC", "OUTPUT_ASSEMBLY_DOC", "RESOURCES_DOC", "SDK_DOC", "USINGS_DOC", "compile_impl", "library_runfiles", "output_assembly")
+load(":compile.bzl", "ADDITIONAL_COMPILER_OPTIONS_DOC", "ALLOW_UNSAFE_BLOCKS_DOC", "DATA_DOC", "DEFINES_DOC", "EDITORCONFIG_FILES_DOC", "FRAMEWORK_REFERENCES_DOC", "GENERATE_ASSEMBLY_INFO_DOC", "GENERATE_DOCUMENTATION_FILE_DOC", "INTERNALS_VISIBLE_TO_DOC", "NATIVE_LIBS_DOC", "OUTPUT_ASSEMBLY_DOC", "RESOURCES_DOC", "SDK_DOC", "USINGS_DOC", "compile_impl", "library_runfiles", "output_assembly")
 load(":providers.bzl", "CSharpAnalyzerInfo", "CSharpInfo", "CSharpToolchainInfo")
 load(":toolchain_impl.bzl", "SEALED_DOTNET_ENV")
 
@@ -289,10 +289,20 @@ name is unique.""".format(ctx.label, f.basename.removesuffix(".dll"), other.owne
     )
     extra_output_files.append(dotnet_tree)
     app_files = {main_dll.basename: True}
-    for f in csharp_info.transitive_runtime_dlls.to_list() + csharp_info.transitive_native_libs.to_list():
-        if f.basename not in app_files:
-            app_files[f.basename] = True
-            declared = ctx.actions.declare_file(app_dir + f.basename)
+    native_libs = csharp_info.transitive_native_libs.to_list()
+    app_links = [(f.basename, f) for f in csharp_info.transitive_runtime_dlls.to_list() + native_libs]
+
+    # A cc_shared_library finds its dynamic_deps through a RUNPATH of $ORIGIN/<name>.runfiles/<rlocation>,
+    # the one entry that holds wherever the library is placed. Windows finds them next to the app instead.
+    solibs = [f for f in native_libs if "/_solib_" in "/" + f.short_path and f.extension != "dll"]
+    for lib in native_libs:
+        if lib.extension != "dll" and lib not in solibs:
+            app_links += [(lib.basename + ".runfiles/" + _rlocation_path(ctx, f), f) for f in solibs if f.basename != lib.basename]
+    for path, f in app_links:
+        if path not in app_files:
+            app_files[path] = True
+            runfiles_symlinks.setdefault(prefix + path, f)
+            declared = ctx.actions.declare_file(app_dir + path)
             ctx.actions.symlink(output = declared, target_file = f)
             extra_output_files.append(declared)
 
@@ -784,6 +794,11 @@ _BINARY_ATTRS = {
         default = [],
         doc = "Direct dependency libraries.",
         providers = [[CSharpInfo]],
+    ),
+    "native_libs": attr.label_list(
+        allow_files = True,
+        default = [],
+        doc = NATIVE_LIBS_DOC,
     ),
     "editorconfig_files": attr.label_list(
         allow_files = True,

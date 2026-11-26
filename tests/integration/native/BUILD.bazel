@@ -1,0 +1,58 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
+load("//csharp:defs.bzl", "csharp_library", "csharp_test")
+
+cc_library(
+    name = "add_impl",
+    srcs = ["add.c"],
+)
+
+cc_shared_library(
+    name = "add_shared",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libadd.dylib",
+        "@platforms//os:windows": "add.dll",
+        "//conditions:default": "libadd.so",
+    }),
+    deps = [":add_impl"],
+)
+
+cc_library(
+    name = "mul_impl",
+    srcs = ["mul.c"],
+)
+
+cc_shared_library(
+    name = "mul_shared",
+    deps = [":mul_impl"],
+)
+
+cc_library(
+    name = "muladd_impl",
+    srcs = ["muladd.c"],
+    deps = [":mul_impl"],
+)
+
+cc_shared_library(
+    name = "muladd_shared",
+    dynamic_deps = [":mul_shared"],
+    shared_lib_name = select({
+        "@platforms//os:macos": "libmuladd.dylib",
+        "@platforms//os:windows": "muladd.dll",
+        "//conditions:default": "libmuladd.so",
+    }),
+    deps = [":muladd_impl"],
+)
+
+csharp_library(
+    name = "native_lib",
+    srcs = ["NativeLib.cs"],
+    native_libs = [":add_shared"],
+)
+
+csharp_test(
+    name = "native_test",
+    srcs = ["NativeTest.cs"],
+    native_libs = [":muladd_shared"],
+    deps = [":native_lib"],
+)

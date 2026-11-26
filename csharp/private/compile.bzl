@@ -554,7 +554,15 @@ implicit_usings = False.""".format(ctx.label, _ASPNETCORE_APP))
         order = "preorder",
     )
 
+    # A shared library's own dynamic deps, such as a cc_shared_library's dynamic_deps, ride in its runfiles.
+    native_libs = [
+        f
+        for t in getattr(ctx.attr, "native_libs", [])
+        for f in t[DefaultInfo].default_runfiles.files.to_list()
+        if f.extension in ("so", "dylib", "dll")
+    ]
     transitive_native_libs = depset(
+        getattr(ctx.files, "native_libs", []) + native_libs,
         transitive = [dep[CSharpInfo].transitive_native_libs for dep in direct_deps_and_exports if CSharpInfo in dep],
         order = "preorder",
     )
@@ -727,6 +735,8 @@ def _csharp_analyzer_import_impl(ctx):
         DefaultInfo(files = depset(dlls)),
     ]
 
+NATIVE_LIBS_DOC = "Shared libraries for `DllImport`, such as a `cc_shared_library`. They land next to the app's dll, with the shared libraries in their runfiles, for every app that depends on this target. A plain `cc_library` needs a `cc_shared_library` around it."
+
 _COMMON_ATTRS = {
     "additional_compiler_options": attr.string_list(
         default = [],
@@ -778,7 +788,7 @@ _COMMON_ATTRS = {
     "native_libs": attr.label_list(
         allow_files = True,
         default = [],
-        doc = "Unmanaged target platform shared libraries.",
+        doc = NATIVE_LIBS_DOC,
     ),
     "nowarn": attr.string_list(
         default = [],
