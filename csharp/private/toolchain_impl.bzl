@@ -35,6 +35,7 @@ def _csharp_toolchain_impl(ctx):
 
     toolchain_info = CSharpToolchainInfo(
         aspnetcore_ref_pack = depset(aspnet_files),
+        aspnetcore_ref_pack_analyzers = depset(ctx.files.aspnetcore_ref_pack_analyzers),
         csc_dll = ctx.file.csc_dll,
         csc_worker = ctx.executable.csc_worker if ctx.attr.csc_worker else None,
         csc_worker_files = depset(worker_files),
@@ -44,6 +45,7 @@ def _csharp_toolchain_impl(ctx):
         host_pack = ctx.file.host_pack,
         host_rid = ctx.attr.host_rid,
         ref_pack = depset(ref_files),
+        ref_pack_analyzers = depset(ctx.files.ref_pack_analyzers),
         runtime_pack = depset(runtime_files),
         target_framework = ctx.attr.target_framework,
         target_rid = ctx.attr.target_rid,
@@ -68,6 +70,11 @@ csharp_toolchain = rule(
             allow_files = True,
             cfg = "target",
             doc = "Reference assembly files for Microsoft.AspNetCore.App.",
+        ),
+        "aspnetcore_ref_pack_analyzers": attr.label_list(
+            allow_files = True,
+            cfg = "target",
+            doc = "Source generator and analyzer files the Microsoft.AspNetCore.App targeting pack ships.",
         ),
         "csc_dll": attr.label(
             allow_single_file = True,
@@ -110,6 +117,11 @@ csharp_toolchain = rule(
             allow_files = True,
             cfg = "target",
             doc = "Reference assembly files for target framework.",
+        ),
+        "ref_pack_analyzers": attr.label_list(
+            allow_files = True,
+            cfg = "target",
+            doc = "Source generator and analyzer files the targeting pack ships for every project of its framework.",
         ),
         "runtime_pack": attr.label_list(
             allow_files = True,

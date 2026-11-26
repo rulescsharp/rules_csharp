@@ -1,3 +1,4 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//csharp:defs.bzl", "csharp_binary", "csharp_grpc_library", "csharp_import", "csharp_library", "csharp_proto_library", "csharp_test")
 load(
     ":action_graph_tests.bzl",
@@ -14,11 +15,13 @@ load(
     "expect_failure_test",
     "framework_reference_action_test",
     "hermetic_sandbox_action_test",
+    "interceptors_namespaces_action_test",
     "msbuild_parity_action_test",
     "older_csharp_info",
     "older_csharp_info_dep_test",
     "opt_compilation_mode_action_test",
     "output_assembly_action_test",
+    "pack_analyzers_first_action_test",
     "proto_moved_test",
     "runtimeconfig_action_test",
     "target_framework_action_test",
@@ -26,6 +29,7 @@ load(
     "web_sdk_action_test",
     "worker_sdk_action_test",
 )
+load(":workerless_toolchain.bzl", "workerless_csharp_toolchain", "workerless_package_generator_action_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -469,6 +473,18 @@ additional_compiler_options_action_test(
 )
 
 csharp_library(
+    name = "aspnetcore_interceptors_lib",
+    srcs = ["LibA.cs"],
+    additional_compiler_options = ["-features:InterceptorsNamespaces=MyIx"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+)
+
+interceptors_namespaces_action_test(
+    name = "interceptors_namespaces_action_test",
+    target_under_test = ":aspnetcore_interceptors_lib",
+)
+
+csharp_library(
     name = "empty_compiler_option_lib",
     srcs = ["LibA.cs"],
     additional_compiler_options = [""],
@@ -510,4 +526,49 @@ csharp_test(
         "DOCS_SCAN": "README.md",
     },
     deps = ["//tests/support:runfiles"],
+)
+
+csharp_library(
+    name = "aspnetcore_logging_package_lib",
+    srcs = ["LibA.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    target_framework = "net10.0",
+    deps = ["@nuget//:Microsoft.Extensions.Logging.Abstractions"],
+)
+
+pack_analyzers_first_action_test(
+    name = "pack_analyzers_first_action_test",
+    target_under_test = ":aspnetcore_logging_package_lib",
+)
+
+bool_flag(
+    name = "workerless",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "workerless_on",
+    flag_values = {":workerless": "true"},
+)
+
+workerless_csharp_toolchain(name = "workerless_csharp_toolchain")
+
+toolchain(
+    name = "workerless_toolchain",
+    target_settings = [":workerless_on"],
+    toolchain = ":workerless_csharp_toolchain",
+    toolchain_type = "//csharp:toolchain_type",
+)
+
+csharp_library(
+    name = "net8_aspnetcore_logging_package_lib",
+    srcs = ["LibA.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    target_framework = "net8.0",
+    deps = ["@nuget//:Microsoft.Extensions.Logging.Abstractions"],
+)
+
+workerless_package_generator_action_test(
+    name = "workerless_package_generator_action_test",
+    target_under_test = ":net8_aspnetcore_logging_package_lib",
 )

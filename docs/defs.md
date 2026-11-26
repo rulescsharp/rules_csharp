@@ -377,9 +377,10 @@ Propagates compilation references, runtime assemblies, and unmanaged libraries.
 <pre>
 load("@rules_csharp//csharp:defs.bzl", "CSharpToolchainInfo")
 
-CSharpToolchainInfo(<a href="#CSharpToolchainInfo-aspnetcore_ref_pack">aspnetcore_ref_pack</a>, <a href="#CSharpToolchainInfo-csc_dll">csc_dll</a>, <a href="#CSharpToolchainInfo-csc_worker">csc_worker</a>, <a href="#CSharpToolchainInfo-csc_worker_files">csc_worker_files</a>, <a href="#CSharpToolchainInfo-dotnet_env">dotnet_env</a>,
-                    <a href="#CSharpToolchainInfo-dotnet_muxer">dotnet_muxer</a>, <a href="#CSharpToolchainInfo-dotnet_runtime_files">dotnet_runtime_files</a>, <a href="#CSharpToolchainInfo-host_pack">host_pack</a>, <a href="#CSharpToolchainInfo-host_rid">host_rid</a>, <a href="#CSharpToolchainInfo-ref_pack">ref_pack</a>, <a href="#CSharpToolchainInfo-runtime_pack">runtime_pack</a>,
-                    <a href="#CSharpToolchainInfo-target_framework">target_framework</a>, <a href="#CSharpToolchainInfo-target_rid">target_rid</a>, <a href="#CSharpToolchainInfo-vstest_dll">vstest_dll</a>, <a href="#CSharpToolchainInfo-vstest_files">vstest_files</a>)
+CSharpToolchainInfo(<a href="#CSharpToolchainInfo-aspnetcore_ref_pack">aspnetcore_ref_pack</a>, <a href="#CSharpToolchainInfo-aspnetcore_ref_pack_analyzers">aspnetcore_ref_pack_analyzers</a>, <a href="#CSharpToolchainInfo-csc_dll">csc_dll</a>, <a href="#CSharpToolchainInfo-csc_worker">csc_worker</a>,
+                    <a href="#CSharpToolchainInfo-csc_worker_files">csc_worker_files</a>, <a href="#CSharpToolchainInfo-dotnet_env">dotnet_env</a>, <a href="#CSharpToolchainInfo-dotnet_muxer">dotnet_muxer</a>, <a href="#CSharpToolchainInfo-dotnet_runtime_files">dotnet_runtime_files</a>, <a href="#CSharpToolchainInfo-host_pack">host_pack</a>,
+                    <a href="#CSharpToolchainInfo-host_rid">host_rid</a>, <a href="#CSharpToolchainInfo-ref_pack">ref_pack</a>, <a href="#CSharpToolchainInfo-ref_pack_analyzers">ref_pack_analyzers</a>, <a href="#CSharpToolchainInfo-runtime_pack">runtime_pack</a>, <a href="#CSharpToolchainInfo-target_framework">target_framework</a>,
+                    <a href="#CSharpToolchainInfo-target_rid">target_rid</a>, <a href="#CSharpToolchainInfo-vstest_dll">vstest_dll</a>, <a href="#CSharpToolchainInfo-vstest_files">vstest_files</a>)
 </pre>
 
 Defines resolved C# SDK tools, packs, and target monikers.
@@ -389,6 +390,7 @@ Defines resolved C# SDK tools, packs, and target monikers.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="CSharpToolchainInfo-aspnetcore_ref_pack"></a>aspnetcore_ref_pack |  Depset of reference assembly Files for Microsoft.AspNetCore.App.    |
+| <a id="CSharpToolchainInfo-aspnetcore_ref_pack_analyzers"></a>aspnetcore_ref_pack_analyzers |  Depset of source generator and analyzer Files from the Microsoft.AspNetCore.App targeting pack.    |
 | <a id="CSharpToolchainInfo-csc_dll"></a>csc_dll |  Host File for Roslyn compiler assembly.    |
 | <a id="CSharpToolchainInfo-csc_worker"></a>csc_worker |  Host executable File for persistent compilation worker.    |
 | <a id="CSharpToolchainInfo-csc_worker_files"></a>csc_worker_files |  Depset of the dotnet runtime and compiler files that compiles run with, CscWorker included.    |
@@ -398,6 +400,7 @@ Defines resolved C# SDK tools, packs, and target monikers.
 | <a id="CSharpToolchainInfo-host_pack"></a>host_pack |  Binary template File for target platform application host.    |
 | <a id="CSharpToolchainInfo-host_rid"></a>host_rid |  Host runtime identifier string.    |
 | <a id="CSharpToolchainInfo-ref_pack"></a>ref_pack |  Depset of reference assembly Files for target framework.    |
+| <a id="CSharpToolchainInfo-ref_pack_analyzers"></a>ref_pack_analyzers |  Depset of source generator and analyzer Files from the target framework's targeting pack.    |
 | <a id="CSharpToolchainInfo-runtime_pack"></a>runtime_pack |  Depset of runtime assembly Files for target platform.    |
 | <a id="CSharpToolchainInfo-target_framework"></a>target_framework |  Target framework moniker string.    |
 | <a id="CSharpToolchainInfo-target_rid"></a>target_rid |  Target runtime identifier string.    |

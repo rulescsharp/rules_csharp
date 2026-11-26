@@ -295,13 +295,28 @@ def _target_framework_action_test_impl(ctx):
 
     compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
     asserts.equals(env, 1, len(compile_actions))
-    ref_dirs = {f.dirname: None for f in compile_actions[0].inputs.to_list() if "/Microsoft.NETCore.App.Ref/" in f.path}
+    pack_dirs = {f.dirname: None for f in compile_actions[0].inputs.to_list() if "/Microsoft.NETCore.App.Ref/" in f.path}
     want = "/ref/" + ctx.attr.expected_tfm
+    ref_dirs = [d for d in pack_dirs if "/analyzers/" not in d]
     asserts.true(
         env,
         ref_dirs and all([d.endswith(want) for d in ref_dirs]),
-        "Expected only %s reference assemblies, got: %s" % (want, ref_dirs.keys()),
+        "Expected only %s reference assemblies, got: %s" % (want, ref_dirs),
     )
+
+    # The generators come from the same targeting pack as the reference assemblies.
+    pack_root = ref_dirs[0].removesuffix(want).removesuffix("/ref") if ref_dirs else ""
+    analyzer_dirs = [d for d in pack_dirs if "/analyzers/" in d]
+    asserts.equals(env, [pack_root + "/analyzers/dotnet/cs"], analyzer_dirs)
+    aspnet = [f.path for f in compile_actions[0].inputs.to_list() if "/Microsoft.AspNetCore.App.Ref/" in f.path]
+    asserts.equals(env, [], aspnet)
+    generators = [
+        a.rpartition("/")[2]
+        for a in compile_actions[0].argv
+        if a.startswith("-analyzer:")
+    ]
+    for want_generator in ["System.Text.RegularExpressions.Generator.dll", "Microsoft.Interop.LibraryImportGenerator.dll", "System.Text.Json.SourceGeneration.dll"]:
+        asserts.true(env, want_generator in generators, "Expected -analyzer for %s, got: %s" % (want_generator, generators))
 
     return analysistest.end(env)
 
@@ -355,6 +370,12 @@ def _framework_reference_action_test_impl(ctx):
         any(["Microsoft.AspNetCore.App.Ref" in p for p in input_paths]),
         "Expected the ASP.NET Core reference assemblies from the library in compile inputs, got: %s" % input_paths,
     )
+
+    # dotnet build leaves these two off unless the app is trimmed.
+    analyzers = [a.rpartition("/")[2] for a in compile_actions[0].argv if a.startswith("-analyzer:")]
+    asserts.true(env, "Microsoft.Extensions.Logging.Generators.dll" in analyzers, "Expected the logging generator, got: %s" % analyzers)
+    for off in ["Microsoft.AspNetCore.Http.RequestDelegateGenerator.dll", "Microsoft.Extensions.Configuration.Binder.SourceGeneration.dll"]:
+        asserts.false(env, off in analyzers, "Expected no %s, got: %s" % (off, analyzers))
 
     runtimeconfig = _written_content(actions, ".runtimeconfig.json")
     asserts.true(
@@ -542,3 +563,37 @@ def _default_outputs_test_impl(ctx):
     return analysistest.end(env)
 
 default_outputs_test = analysistest.make(_default_outputs_test_impl)
+
+def _interceptors_namespaces_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+
+    # csc keeps only the last InterceptorsNamespaces flag, so there must be one carrying every namespace.
+    flags = [a for a in compile_actions[0].argv if a.lower().startswith("-features:interceptorsnamespaces=")]
+    asserts.equals(env, ["-features:InterceptorsNamespaces=MyIx;Microsoft.Extensions.Validation.Generated"], flags)
+
+    return analysistest.end(env)
+
+interceptors_namespaces_action_test = analysistest.make(_interceptors_namespaces_action_test_impl)
+
+def _pack_analyzers_first_action_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    compile_actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "CSharpCompile"]
+    asserts.equals(env, 1, len(compile_actions))
+
+    # The package ships the same generator under analyzers/dotnet/roslyn4.4/cs. CscWorker passes csc only the higher
+    # assembly version and the first one on a tie, so the pack copy has to come first.
+    logging = [a for a in compile_actions[0].argv if a.startswith("-analyzer:") and a.endswith("/Microsoft.Extensions.Logging.Generators.dll")]
+    asserts.equals(env, 2, len(logging), "Expected the pack and package logging generators, got: %s" % logging)
+    asserts.true(
+        env,
+        len(logging) == 2 and "/Microsoft.AspNetCore.App.Ref/" in logging[0] and "/Microsoft.AspNetCore.App.Ref/" not in logging[1],
+        "Expected the ASP.NET Core pack copy first, got: %s" % logging,
+    )
+
+    return analysistest.end(env)
+
+pack_analyzers_first_action_test = analysistest.make(_pack_analyzers_first_action_test_impl)
