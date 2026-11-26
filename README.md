@@ -232,6 +232,34 @@ A library that other modules depend on should pass its own assembly, as in
 way that library's module sees it, so it can name its own `bazel_dep`s by their `repo_name` even when the
 main module can't see them. Every assembly the rules build records its repository for this.
 
+## Calling native code
+
+`native_libs` on a `csharp_library`, `csharp_binary` or `csharp_test` takes shared libraries for
+`DllImport`, such as a `cc_shared_library`. Every app that depends on the target gets them next to
+its dll, where .NET looks for them, under `bazel run`, `bazel test` and straight from `bazel-bin`. A `cc_shared_library`'s `dynamic_deps` come along too.
+
+```starlark
+cc_shared_library(
+    name = "add",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libadd.dylib",
+        "@platforms//os:windows": "add.dll",
+        "//conditions:default": "libadd.so",
+    }),
+    deps = [":add_impl"],
+)
+
+csharp_binary(
+    name = "native",
+    srcs = ["Native.cs"],
+    native_libs = [":add"],
+)
+```
+
+`[DllImport("add")]` then finds the library. `shared_lib_name` gives it a file name .NET probes for on
+each OS. A plain `cc_library` needs a `cc_shared_library` around it, and on Windows the C code has
+to export its functions with `__declspec(dllexport)`. See [examples/native](examples/native/).
+
 ## Ship a binary
 
 `bazel build` of a `csharp_binary` lists the launcher, dll, pdb, runtimeconfig, deps.json and one

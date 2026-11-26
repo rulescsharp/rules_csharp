@@ -171,6 +171,13 @@ jobs:
         working-directory: examples
         run: test "$(bazel run //:localized | tr -d '\r')" = $'Hello\nBonjour'
 
+      - name: Run native example
+        working-directory: examples
+        run: |
+          test "$(bazel run //native | tr -d '\r')" = "2 + 3 = 5"
+          # Straight from bazel-bin too, where the shared library sits next to the app.
+          test "$(./bazel-bin/native/native | tr -d '\r')" = "2 + 3 = 5"
+
       - name: Run web example
         working-directory: examples
         run: test "$(bazel run //web | tr -d '\r')" = "200 Hello, web!"
