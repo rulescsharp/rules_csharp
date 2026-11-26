@@ -658,7 +658,7 @@
         "usagesDigest": "Svl5qT7KevSERT8tzsjJixzTXzynzTcWstxWpAOVu24=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/integration/packages.lock.json 21a7fba78cbb65cb8b517313beea15640b1715b90e16fc24352eb9203321dcec",
+          "FILE:@@//tests/integration/packages.lock.json bdfa5dc8dc7669141b48e845e5fc6ed67e99d4615ddb0eb737dc1722f5723319",
           "FILE:@@//tests/integration/second_hub/packages.lock.json 6248083f575ff89b0612321b3ce74c4a10ccee154807dc024ef29c4533e7407b",
           "FILE:@@//tests/integration/mstest4/packages.lock.json e585c44e3444d4424164c35404f6f5aae2d5b542c45208c4e1b25d2ae3c6110e"
         ],
@@ -712,6 +712,34 @@
               "local_package_dirs": [],
               "package_id": "Microsoft.Extensions.Hosting",
               "sha256": "b58d20ea50b2db2169ac4f8d9ab8a253a1469b0a73c55f0ba84d1914d288c2e3",
+              "use_public_sources": true,
+              "version": "10.0.0"
+            }
+          },
+          "nuget_system_collections_immutable": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "System.Collections.Immutable",
+              "sha256": "48cc34693bf66e99c609d92f032a94ce72445625ca3eb0ba2b175658f579fdc5",
+              "use_public_sources": true,
+              "version": "11.0.0"
+            }
+          },
+          "nuget_system_text_json": {
+            "repoRuleId": "@@//csharp/private:nuget_repo.bzl%nuget_package_repo",
+            "attributes": {
+              "auth_patterns": {},
+              "dependencies": [],
+              "feeds": [],
+              "hub": "nuget",
+              "local_package_dirs": [],
+              "package_id": "System.Text.Json",
+              "sha256": "67200c213df240325acd800e6c0957992706b21183f4c55981898ba87c880aad",
               "use_public_sources": true,
               "version": "10.0.0"
             }
@@ -1733,6 +1761,8 @@
               "packages": {
                 "Microsoft.AspNetCore.OpenApi": "nuget_microsoft_aspnetcore_openapi",
                 "Microsoft.Extensions.Hosting": "nuget_microsoft_extensions_hosting",
+                "System.Collections.Immutable": "nuget_system_collections_immutable",
+                "System.Text.Json": "nuget_system_text_json",
                 "Microsoft.Extensions.Configuration": "nuget_microsoft_extensions_configuration",
                 "Microsoft.Extensions.Configuration.Abstractions": "nuget_microsoft_extensions_configuration_abstractions",
                 "Microsoft.Extensions.Configuration.CommandLine": "nuget_microsoft_extensions_configuration_commandline",

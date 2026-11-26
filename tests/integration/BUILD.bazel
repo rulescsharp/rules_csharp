@@ -171,6 +171,20 @@ csharp_test(
     for tfm in ["net8.0", "net10.0"]
 ]
 
+# A package newer than the framework's copy of an assembly replaces it at compile and run time, and one
+# at the framework's version leaves the framework copy in place. An extern alias reference to the same
+# dll still compiles.
+csharp_test(
+    name = "package_newer_than_framework_test",
+    srcs = ["PackageNewerThanFrameworkTest.cs"],
+    additional_compiler_options = ["-reference:SCI=external/+nuget+nuget_system_collections_immutable/lib/net10.0/System.Collections.Immutable.dll"],
+    target_framework = "net10.0",
+    deps = [
+        "@nuget//:System.Collections.Immutable",
+        "@nuget//:System.Text.Json",
+    ],
+)
+
 # Microsoft.Build.Locator ships only lib/net46 and lib/netcoreapp2.0, and restore picks netcoreapp2.0.
 csharp_test(
     name = "package_assets_netcoreapp_test",

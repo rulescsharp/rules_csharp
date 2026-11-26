@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
+using System.Text.Json.Nodes;
 
 namespace RulesCsharp.Tools
 {
@@ -31,6 +34,8 @@ namespace RulesCsharp.Tools
             string? appRelativeDotnet = null;
             string? linkTree = null;
             string? linkList = null;
+            string? depsJson = null;
+            var dlls = new List<string>();
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -48,6 +53,10 @@ namespace RulesCsharp.Tools
                     linkTree = args[i].Substring("--link-tree=".Length);
                 else if (args[i].StartsWith("--link-list="))
                     linkList = args[i].Substring("--link-list=".Length);
+                else if (args[i].StartsWith("--deps-json="))
+                    depsJson = args[i].Substring("--deps-json=".Length);
+                else if (args[i].StartsWith("--dll="))
+                    dlls.Add(args[i].Substring("--dll=".Length));
                 else if (args[i].StartsWith("--dll-name="))
                     dllName = args[i].Substring("--dll-name=".Length);
                 else if (args[i] == "-t" && i + 1 < args.Length)
@@ -66,6 +75,17 @@ namespace RulesCsharp.Tools
                     return 1;
                 }
                 return LinkTree(linkTree, linkList!);
+            }
+
+            if (depsJson != null)
+            {
+                if (string.IsNullOrEmpty(outputPath))
+                {
+                    Console.Error.WriteLine("Usage: AppHostPatcher --deps-json=<template> --output=<path> [--dll=<path>]...");
+                    return 1;
+                }
+                AddAssemblyVersions(depsJson, outputPath!, dlls);
+                return 0;
             }
 
             if (string.IsNullOrEmpty(templatePath) || string.IsNullOrEmpty(outputPath) || string.IsNullOrEmpty(dllName))
@@ -271,6 +291,51 @@ namespace RulesCsharp.Tools
                 if (match) return i;
             }
             return -1;
+        }
+
+        // The host keeps a framework assembly over an app one unless the app's deps.json entry has a higher
+        // assemblyVersion, or the same one and a higher fileVersion. So record both, read from each dll.
+        private static void AddAssemblyVersions(string templatePath, string outputPath, List<string> dlls)
+        {
+            var versions = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+            foreach (var dll in dlls)
+            {
+                Version? assemblyVersion;
+                try
+                {
+                    assemblyVersion = AssemblyName.GetAssemblyName(dll).Version;
+                }
+                catch (BadImageFormatException)
+                {
+                    continue;
+                }
+                var entry = new JsonObject();
+                if (assemblyVersion != null)
+                    entry["assemblyVersion"] = assemblyVersion.ToString();
+                string? fileVersion = FileVersionInfo.GetVersionInfo(dll).FileVersion;
+                if (!string.IsNullOrEmpty(fileVersion))
+                    entry["fileVersion"] = fileVersion;
+                versions[Path.GetFileName(dll)] = entry;
+            }
+
+            var doc = JsonNode.Parse(File.ReadAllText(templatePath))!;
+            foreach (var framework in doc["targets"]!.AsObject())
+            {
+                foreach (var library in framework.Value!.AsObject())
+                {
+                    if (library.Value?["runtime"] is not JsonObject runtime)
+                        continue;
+                    var names = new List<string>();
+                    foreach (var pair in runtime)
+                        names.Add(pair.Key);
+                    foreach (var name in names)
+                    {
+                        if (versions.TryGetValue(name, out var entry))
+                            runtime[name] = entry.DeepClone();
+                    }
+                }
+            }
+            File.WriteAllText(outputPath, doc.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }) + "\n");
         }
     }
 }

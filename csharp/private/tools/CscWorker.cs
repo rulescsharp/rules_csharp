@@ -293,9 +293,64 @@ namespace RulesCsharp.Tools
                 }
                 processed.Add(arg);
             }
+            DropLowerDuplicateReferences(processed);
             // csc applies -pathmap to the absolute paths it resolves, so `.` never matches. Map the real execroot or sandbox root.
             processed.Add($"-pathmap:{Directory.GetCurrentDirectory()}=/_/");
             return processed.ToArray();
+        }
+
+        // Like ResolvePackageFileConflicts in dotnet build, when the framework and a package both give an assembly,
+        // only the higher assembly version is referenced. A tie keeps the first, which is the framework's.
+        // Aliased, listed or unreadable references are left alone so csc handles and reports them as usual.
+        private static void DropLowerDuplicateReferences(List<string> args)
+        {
+            var kept = new Dictionary<string, (int index, Version version)>(StringComparer.OrdinalIgnoreCase);
+            var drop = new HashSet<int>();
+            for (int i = 0; i < args.Count; i++)
+            {
+                if (!args[i].StartsWith("-reference:") && !args[i].StartsWith("/reference:"))
+                {
+                    continue;
+                }
+                string path = args[i].Substring("-reference:".Length);
+                if (path.IndexOfAny(new[] { '=', ',', ';' }) >= 0 || ReferenceVersion(path) is not Version version)
+                {
+                    continue;
+                }
+                string name = Path.GetFileName(path);
+                if (!kept.TryGetValue(name, out var first))
+                {
+                    kept[name] = (i, version);
+                }
+                else if (version > first.version)
+                {
+                    drop.Add(first.index);
+                    kept[name] = (i, version);
+                }
+                else
+                {
+                    drop.Add(i);
+                }
+            }
+            for (int i = args.Count - 1; i >= 0; i--)
+            {
+                if (drop.Contains(i))
+                {
+                    args.RemoveAt(i);
+                }
+            }
+        }
+
+        private static Version? ReferenceVersion(string path)
+        {
+            try
+            {
+                return AssemblyName.GetAssemblyName(path).Version;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or BadImageFormatException)
+            {
+                return null;
+            }
         }
 
         private static string OutputDir(List<string> args)
