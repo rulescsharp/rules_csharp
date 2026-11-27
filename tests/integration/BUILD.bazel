@@ -103,11 +103,20 @@ csharp_test(
 )
 
 # The sync tool writes a .csproj from a BUILD file, a second sync changes
-# nothing, and --check fails once a new source is added.
+# nothing, and --check fails once a new source is added. A real dotnet restore
+# of the generated project leaves the lock file beside it alone.
 csharp_test(
     name = "sync_roundtrip_test",
     srcs = ["SyncRoundtripTest.cs"],
-    data = ["//csharp:sync"],
+    data = [
+        "//csharp:sync",
+    ] + select({
+        "//csharp/constraints:linux_x64": ["@dotnet_sdk_10_0_100_linux_x86_64//:sdk_files"],
+        "//csharp/constraints:linux_arm64": ["@dotnet_sdk_10_0_100_linux_arm64//:sdk_files"],
+        "//csharp/constraints:osx_x64": ["@dotnet_sdk_10_0_100_darwin_x86_64//:sdk_files"],
+        "//csharp/constraints:osx_arm64": ["@dotnet_sdk_10_0_100_darwin_arm64//:sdk_files"],
+        "//csharp/constraints:win_x64": ["@dotnet_sdk_10_0_100_windows_x86_64//:sdk_files"],
+    }),
     deps = ["//tests/support:runfiles"],
 )
 

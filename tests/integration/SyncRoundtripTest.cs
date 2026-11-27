@@ -1,6 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using RulesCsharp.Tests;
 
 var sync = Runfiles.Find("//csharp:sync", key => key.EndsWith("csharp/sync" + (OperatingSystem.IsWindows() ? ".exe" : ""), StringComparison.Ordinal));
@@ -73,26 +76,130 @@ Expect(Sync() == 0, "sync exited nonzero.");
 Expect(FileHas(csproj, "<Compile Include=\"Helper.cs\" />"), "Helper.cs not included in updated csproj.");
 Expect(Sync("--check") == 0, "--check failed after resync.");
 
-// 5. --bootstrap-lock writes Directory.Packages.props and packages.lock.json
-File.WriteAllText(Path.Combine(lib, "SampleWithPkgs.csproj"), """
+// 5. A real restore of a generated project leaves the workspace lock file and props alone
+var dotnetName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+var dotnet = Runfiles.Find("the SDK dotnet", key => Regex.IsMatch(key, @"^\+csharp\+dotnet_sdk_[^/]+/" + Regex.Escape(dotnetName) + "$"));
+
+var restoreRoot = Path.Combine(Path.GetDirectoryName(workspace)!, "restore_ws");
+Directory.CreateDirectory(restoreRoot);
+File.WriteAllText(Path.Combine(restoreRoot, "Lib.cs"), "namespace RestoreLib;\npublic class Lib { }\n");
+File.WriteAllText(Path.Combine(restoreRoot, "BUILD.bazel"), """
+    load("@rules_csharp//csharp:defs.bzl", "csharp_library")
+
+    csharp_library(
+        name = "restore_lib",
+        srcs = ["Lib.cs"],
+    )
+    """);
+// The lock file the nuget extension reads and the props file beside it, in the shape the extension takes.
+var restoreLock = Path.Combine(restoreRoot, "packages.lock.json");
+var restoreProps = Path.Combine(restoreRoot, "Directory.Packages.props");
+File.WriteAllText(restoreLock, "{\n  \"version\": 2,\n  \"dependencies\": {\n    \"net8.0\": {\n      \"Serilog\": {\n        \"type\": \"Direct\",\n        \"requested\": \"[3.1.1, )\",\n        \"resolved\": \"3.1.1\",\n        \"contentHash\": \"x\"\n      }\n    }\n  }\n}\n");
+File.WriteAllText(restoreProps, "<Project>\n  <ItemGroup>\n    <PackageVersion Include=\"Serilog\" Version=\"3.1.1\" />\n  </ItemGroup>\n</Project>\n");
+// No NuGet source, so restore cannot reach the network.
+File.WriteAllText(Path.Combine(restoreRoot, "NuGet.Config"), "<configuration>\n  <packageSources>\n    <clear />\n  </packageSources>\n</configuration>\n");
+
+// Runs dotnet against a private home. NuGet on Windows finds its user and machine-wide config folders
+// through APPDATA and ProgramFiles, which a Bazel test doesn't inherit, so point those at the home too.
+void IsolateDotnet(ProcessStartInfo psi, string home)
+{
+    psi.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(dotnet)!;
+    psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+    psi.Environment["DOTNET_NOLOGO"] = "1";
+    psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+    psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+    psi.Environment["DOTNET_CLI_HOME"] = home;
+    psi.Environment["NUGET_PACKAGES"] = Path.Combine(home, "packages");
+    psi.Environment["HOME"] = home;
+    psi.Environment["USERPROFILE"] = home;
+    psi.Environment["APPDATA"] = home;
+    psi.Environment["LOCALAPPDATA"] = home;
+    psi.Environment["ProgramFiles"] = home;
+    psi.Environment["ProgramFiles(x86)"] = home;
+}
+
+string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+var lockBefore = Hash(restoreLock);
+var propsBefore = Hash(restoreProps);
+
+var restoreSync = new ProcessStartInfo(sync) { UseShellExecute = false };
+restoreSync.ArgumentList.Add("--workspace=" + restoreRoot);
+using (var p = Process.Start(restoreSync)!)
+{
+    p.WaitForExit();
+    Expect(p.ExitCode == 0, "sync of the restore workspace exited nonzero.");
+}
+var restoreProject = Path.Combine(restoreRoot, "restore_lib.bazel.csproj");
+Expect(File.Exists(restoreProject), "restore_lib.bazel.csproj was not generated.");
+
+var restoreHome = Path.Combine(restoreRoot, "home");
+var restorePsi = new ProcessStartInfo(dotnet) { UseShellExecute = false, WorkingDirectory = restoreRoot };
+restorePsi.ArgumentList.Add("restore");
+restorePsi.ArgumentList.Add(restoreProject);
+// The SDK bundles only its own targeting pack and the feed list is empty, so restore targets the SDK's
+// framework instead of downloading the net8.0 pack. The lock file handling does not depend on the framework.
+restorePsi.ArgumentList.Add("-p:TargetFramework=net10.0");
+IsolateDotnet(restorePsi, restoreHome);
+using (var p = Process.Start(restorePsi)!)
+{
+    p.WaitForExit();
+    Expect(p.ExitCode == 0, "dotnet restore of the generated project exited nonzero.");
+}
+Expect(Hash(restoreLock) == lockBefore, "dotnet restore rewrote packages.lock.json.");
+Expect(Hash(restoreProps) == propsBefore, "dotnet restore rewrote Directory.Packages.props.");
+Console.WriteLine("dotnet restore left packages.lock.json and Directory.Packages.props untouched.");
+
+// 6. --bootstrap-lock restores a real lock file and writes the props for a project below the workspace root
+var bootRoot = Path.Combine(Path.GetDirectoryName(workspace)!, "bootstrap_ws");
+var feed = Path.Combine(bootRoot, "feed");
+Directory.CreateDirectory(feed);
+using (var nupkg = System.IO.Compression.ZipFile.Open(Path.Combine(feed, "local.pkg.1.0.0.nupkg"), System.IO.Compression.ZipArchiveMode.Create))
+using (var nuspec = new StreamWriter(nupkg.CreateEntry("Local.Pkg.nuspec").Open()))
+{
+    nuspec.Write("""
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+          <metadata>
+            <id>Local.Pkg</id>
+            <version>1.0.0</version>
+            <authors>test</authors>
+            <description>test</description>
+          </metadata>
+        </package>
+        """);
+}
+File.WriteAllText(Path.Combine(bootRoot, "NuGet.Config"), $"<configuration>\n  <packageSources>\n    <clear />\n    <add key=\"local\" value=\"{feed}\" />\n  </packageSources>\n</configuration>\n");
+var app = Path.Combine(bootRoot, "src", "App");
+Directory.CreateDirectory(app);
+File.WriteAllText(Path.Combine(app, "App.csproj"), """
     <Project Sdk="Microsoft.NET.Sdk">
       <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Serilog" Version="3.1.1" />
+        <PackageReference Include="Local.Pkg" Version="1.0.0" />
       </ItemGroup>
     </Project>
     """);
-Expect(Sync("--bootstrap-lock") == 0, "sync --bootstrap-lock exited nonzero.");
-var props = Path.Combine(workspace, "Directory.Packages.props");
-var lockFile = Path.Combine(workspace, "packages.lock.json");
-Expect(File.Exists(props), "Directory.Packages.props was not created by --bootstrap-lock.");
-Expect(File.Exists(lockFile), "packages.lock.json was not created by --bootstrap-lock.");
-Expect(FileHas(props, "<PackageVersion Include=\"Newtonsoft.Json\" Version=\"13.0.3\""), "Newtonsoft.Json not found in bootstrapped Directory.Packages.props.");
-Expect(FileHas(lockFile, "\"Newtonsoft.Json\""), "Newtonsoft.Json not found in bootstrapped packages.lock.json.");
-Console.WriteLine("--bootstrap-lock verified successfully.");
+var bootHome = Path.Combine(bootRoot, "home");
+var bootPsi = new ProcessStartInfo(sync) { UseShellExecute = false };
+bootPsi.ArgumentList.Add("--workspace=" + bootRoot);
+bootPsi.ArgumentList.Add("--bootstrap-lock");
+IsolateDotnet(bootPsi, bootHome);
+using (var p = Process.Start(bootPsi)!)
+{
+    p.WaitForExit();
+    Expect(p.ExitCode == 0, "sync --bootstrap-lock of a PackageReference project exited nonzero.");
+}
+var bootLock = Path.Combine(bootRoot, "packages.lock.json");
+Expect(File.Exists(bootLock), "--bootstrap-lock wrote no packages.lock.json.");
+Console.WriteLine(File.ReadAllText(bootLock));
+Expect(FileHas(bootLock, "\"Local.Pkg\""), "Local.Pkg missing from the bootstrapped packages.lock.json.");
+Expect(!FileHas(bootLock, "\"contentHash\": \"\""), "--bootstrap-lock wrote an empty contentHash instead of restoring.");
+var bootProps = Path.Combine(bootRoot, "Directory.Packages.props");
+Expect(FileHas(bootProps, "<PackageVersion Include=\"Local.Pkg\" Version=\"1.0.0\""), "Local.Pkg missing from the bootstrapped Directory.Packages.props.");
+Expect(!Directory.Exists(Path.Combine(bootRoot, ".bootstrap-lock")), "--bootstrap-lock left its scratch project behind.");
+Console.WriteLine("--bootstrap-lock restored a lock file with content hashes.");
 
 Console.WriteLine("Round-trip synchronization verified successfully.");
 return 0;

@@ -232,8 +232,7 @@ does. A `net8.0` target gets `lib/net8.0` even when the package also ships
 package's own `.targets` remove its analyzers unless a property is `true`,
 like `EnableConfigurationBindingGenerator`, they are left out.
 
-A package whose `contentHash` is empty, as `CsprojSync --bootstrap-lock` writes
-when restore fails, can't be checked. With public sources on, the extension
+A package whose `contentHash` is empty can't be checked. With public sources on, the extension
 warns and downloads it unverified. With them off, it fails.
 
 Feeds must use https or local directories. Bazel does not download over plain

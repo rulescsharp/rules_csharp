@@ -12,6 +12,17 @@ bazel_dep(name = "rules_cc", version = "0.2.17", dev_dependency = True)
 csharp = use_extension("//csharp:extensions.bzl", "csharp")
 use_repo(csharp, "csharp_coverlet", "dotnet_toolchains")
 
+# The sync roundtrip test runs a real dotnet restore with the default SDK.
+csharp_dev = use_extension("//csharp:extensions.bzl", "csharp", dev_dependency = True)
+use_repo(
+    csharp_dev,
+    "dotnet_sdk_10_0_100_darwin_arm64",
+    "dotnet_sdk_10_0_100_darwin_x86_64",
+    "dotnet_sdk_10_0_100_linux_arm64",
+    "dotnet_sdk_10_0_100_linux_x86_64",
+    "dotnet_sdk_10_0_100_windows_x86_64",
+)
+
 register_toolchains("@dotnet_toolchains//:all")
 
 nuget = use_extension("//csharp:extensions.bzl", "nuget", dev_dependency = True)
