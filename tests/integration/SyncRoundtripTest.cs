@@ -99,6 +99,25 @@ File.WriteAllText(restoreProps, "<Project>\n  <ItemGroup>\n    <PackageVersion I
 // No NuGet source, so restore cannot reach the network.
 File.WriteAllText(Path.Combine(restoreRoot, "NuGet.Config"), "<configuration>\n  <packageSources>\n    <clear />\n  </packageSources>\n</configuration>\n");
 
+// Runs dotnet against a private home. NuGet on Windows finds its user and machine-wide config folders
+// through APPDATA and ProgramFiles, which a Bazel test doesn't inherit, so point those at the home too.
+void IsolateDotnet(ProcessStartInfo psi, string home)
+{
+    psi.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(dotnet)!;
+    psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+    psi.Environment["DOTNET_NOLOGO"] = "1";
+    psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+    psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+    psi.Environment["DOTNET_CLI_HOME"] = home;
+    psi.Environment["NUGET_PACKAGES"] = Path.Combine(home, "packages");
+    psi.Environment["HOME"] = home;
+    psi.Environment["USERPROFILE"] = home;
+    psi.Environment["APPDATA"] = home;
+    psi.Environment["LOCALAPPDATA"] = home;
+    psi.Environment["ProgramFiles"] = home;
+    psi.Environment["ProgramFiles(x86)"] = home;
+}
+
 string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 var lockBefore = Hash(restoreLock);
 var propsBefore = Hash(restoreProps);
@@ -120,15 +139,7 @@ restorePsi.ArgumentList.Add(restoreProject);
 // The SDK bundles only its own targeting pack and the feed list is empty, so restore targets the SDK's
 // framework instead of downloading the net8.0 pack. The lock file handling does not depend on the framework.
 restorePsi.ArgumentList.Add("-p:TargetFramework=net10.0");
-restorePsi.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(dotnet)!;
-restorePsi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
-restorePsi.Environment["DOTNET_NOLOGO"] = "1";
-restorePsi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
-restorePsi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
-restorePsi.Environment["DOTNET_CLI_HOME"] = restoreHome;
-restorePsi.Environment["NUGET_PACKAGES"] = Path.Combine(restoreHome, "packages");
-restorePsi.Environment["HOME"] = restoreHome;
-restorePsi.Environment["USERPROFILE"] = restoreHome;
+IsolateDotnet(restorePsi, restoreHome);
 using (var p = Process.Start(restorePsi)!)
 {
     p.WaitForExit();
@@ -174,14 +185,7 @@ var bootHome = Path.Combine(bootRoot, "home");
 var bootPsi = new ProcessStartInfo(sync) { UseShellExecute = false };
 bootPsi.ArgumentList.Add("--workspace=" + bootRoot);
 bootPsi.ArgumentList.Add("--bootstrap-lock");
-bootPsi.Environment["DOTNET_ROOT"] = Path.GetDirectoryName(dotnet)!;
-bootPsi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
-bootPsi.Environment["DOTNET_NOLOGO"] = "1";
-bootPsi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
-bootPsi.Environment["DOTNET_CLI_HOME"] = bootHome;
-bootPsi.Environment["NUGET_PACKAGES"] = Path.Combine(bootHome, "packages");
-bootPsi.Environment["HOME"] = bootHome;
-bootPsi.Environment["USERPROFILE"] = bootHome;
+IsolateDotnet(bootPsi, bootHome);
 using (var p = Process.Start(bootPsi)!)
 {
     p.WaitForExit();
