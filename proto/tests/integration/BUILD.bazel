@@ -6,17 +6,27 @@ package(default_visibility = ["//visibility:public"])
 
 proto_library(
     name = "service_proto",
-    srcs = ["service.proto"],
+    srcs = [
+        # Has no service, so the gRPC plugin writes nothing for it.
+        "echo_messages.proto",
+        "service.proto",
+    ],
 )
 
 csharp_grpc_library(
     name = "service_cs_grpc",
     proto = ":service_proto",
-    deps = ["@nuget//:Google.Protobuf"],
+    deps = [
+        "@nuget//:Google.Protobuf",
+        "@nuget//:Grpc.Core.Api",
+    ],
 )
 
 csharp_test(
     name = "grpc_test",
     srcs = ["GrpcTest.cs"],
-    deps = [":service_cs_grpc"],
+    deps = [
+        ":service_cs_grpc",
+        "@nuget//:Grpc.Core.Api",
+    ],
 )

@@ -68,6 +68,24 @@ csharp_grpc_library(<a href="#csharp_grpc_library-name">name</a>, <a href="#csha
 
 Compiles Protocol Buffer and gRPC service definitions into a C# assembly library.
 
+For each `service` it generates the client class and the service base class, the same code
+`Grpc.Tools` generates for `<Protobuf GrpcServices="Both">`. That code needs the `Grpc.Core.Api`
+package as well as `Google.Protobuf`:
+
+```starlark
+csharp_grpc_library(
+    name = "echo_cs_grpc",
+    proto = ":echo_proto",
+    deps = [
+        "@nuget//:Google.Protobuf",
+        "@nuget//:Grpc.Core.Api",
+    ],
+)
+```
+
+A server or client app adds a transport such as `Grpc.AspNetCore` or `Grpc.Net.Client` to its own
+deps.
+
 **ATTRIBUTES**
 
 
@@ -97,7 +115,7 @@ Compiles Protocol Buffer and gRPC service definitions into a C# assembly library
 | <a id="csharp_grpc_library-native_libs"></a>native_libs |  Shared libraries for `DllImport`, such as a `cc_shared_library`. They land next to the app's dll, with the shared libraries in their runfiles, for every app that depends on this target. A plain `cc_library` needs a `cc_shared_library` around it.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_grpc_library-nowarn"></a>nowarn |  Compiler diagnostic codes to suppress, the same as MSBuild `NoWarn`. CS1701 and CS1702 are always suppressed like in MSBuild, so a target on a newer framework than its dependencies builds quietly.   | List of strings | optional |  `[]`  |
 | <a id="csharp_grpc_library-output_assembly"></a>output_assembly |  Name of the compiled assembly, the same as MSBuild `AssemblyName`. Defaults to the target name. It names the dll, pdb and reference assembly, and for executables the runtimeconfig.json and deps.json, and it is the default prefix of embedded resource names. The executable Bazel runs keeps the target name. Two assemblies with the same name can't load into one app, so an executable fails analysis when two of its assemblies share a name and one of them is built from sources.   | String | optional |  `""`  |
-| <a id="csharp_grpc_library-plugin"></a>plugin |  The grpc_csharp_plugin executable.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="csharp_grpc_library-plugin"></a>plugin |  The protoc plugin that writes the gRPC client and service code. The default is `grpc_csharp_plugin` from the `Grpc.Tools` 2.85.0 NuGet package, picked for the exec platform (Linux x64, arm64 and x86, macOS, Windows x64 and x86). Set it to use another build of the plugin, for example one built from source with the `grpc` module.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `"@grpc_csharp_plugin"`  |
 | <a id="csharp_grpc_library-plugins"></a>plugins |  Roslyn analyzer and generator plugins.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="csharp_grpc_library-proto"></a>proto |  The `proto_library` whose `.proto` files this target compiles to C#. Protos it imports from other `proto_library` targets aren't compiled here. Put a `csharp_proto_library` for each of those directly in `deps` or `exports`, the same as a `ProjectReference` to the project that compiles them. A `csharp_library` that re-exports one isn't seen. Analysis fails and names the missing protos otherwise. The well-known types such as `google/protobuf/timestamp.proto` come from the `Google.Protobuf` package.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="csharp_grpc_library-runtime_dlls"></a>runtime_dlls |  Precompiled runtime implementation assembly DLL files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |

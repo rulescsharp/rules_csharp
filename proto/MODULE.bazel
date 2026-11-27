@@ -5,9 +5,14 @@ module(
 
 bazel_dep(name = "rules_csharp", version = "0.4.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "protobuf", version = "33.4")
 bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
 bazel_dep(name = "apple_support", version = "2.5.2", dev_dependency = True)
+
+grpc_csharp_plugin = use_repo_rule("//csharp/private:grpc_csharp_plugin.bzl", "grpc_csharp_plugin")
+
+grpc_csharp_plugin(name = "grpc_csharp_plugin")
 
 nuget = use_extension("@rules_csharp//csharp:extensions.bzl", "nuget", dev_dependency = True)
 nuget.from_lock(

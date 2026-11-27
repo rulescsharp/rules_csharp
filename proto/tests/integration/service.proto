@@ -2,14 +2,8 @@ syntax = "proto3";
 
 package integration;
 
+import "tests/integration/echo_messages.proto";
+
 service EchoService {
   rpc Echo (EchoRequest) returns (EchoResponse);
-}
-
-message EchoRequest {
-  string message = 1;
-}
-
-message EchoResponse {
-  string message = 1;
 }
