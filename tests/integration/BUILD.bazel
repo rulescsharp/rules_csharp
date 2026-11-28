@@ -140,6 +140,53 @@ csharp_test(
     deps = [":web_lib"],
 )
 
+# [GeneratedRegex], [LibraryImport] and [JsonSerializable] come from generators in the targeting pack.
+csharp_test(
+    name = "framework_generators_test",
+    srcs = ["FrameworkGeneratorsTest.cs"],
+    allow_unsafe_blocks = True,
+)
+
+csharp_test(
+    name = "net8_framework_generators_test",
+    srcs = ["FrameworkGeneratorsTest.cs"],
+    allow_unsafe_blocks = True,
+    target_framework = "net8.0",
+)
+
+# [LoggerMessage] and the AddValidation interceptor come from generators in the ASP.NET Core targeting pack.
+csharp_test(
+    name = "aspnet_generators_test",
+    srcs = ["AspNetGeneratorsTest.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+)
+
+csharp_test(
+    name = "net8_aspnet_generators_test",
+    srcs = ["AspNetGeneratorsTest.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    target_framework = "net8.0",
+)
+
+# The logging package ships the generator the ASP.NET Core pack has at the same version, and only the pack copy runs.
+csharp_test(
+    name = "aspnet_logging_package_generators_test",
+    srcs = ["AspNetGeneratorsTest.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    target_framework = "net10.0",
+    deps = ["@nuget//:Microsoft.Extensions.Logging.Abstractions"],
+)
+
+# Microsoft.Extensions.Logging.Abstractions 10.0.0 ships a newer logging generator than the net8.0 ASP.NET Core pack, and
+# like dotnet build the package one runs.
+csharp_test(
+    name = "package_generator_newer_than_pack_test",
+    srcs = ["PackageGeneratorNewerThanPackTest.cs"],
+    framework_references = ["Microsoft.AspNetCore.App"],
+    target_framework = "net8.0",
+    deps = ["@nuget//:Microsoft.Extensions.Logging.Abstractions"],
+)
+
 # The Worker SDK's implicit usings compile against the hosting assemblies in ASP.NET Core.
 csharp_test(
     name = "worker_test",

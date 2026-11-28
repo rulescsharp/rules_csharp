@@ -184,7 +184,7 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         if CSharpInfo in dep:
             transitive_compile_depsets.append(dep[CSharpInfo].transitive_compile_refs)
 
-    # Analyzers from plugins and deps
+    # Analyzers from plugins and deps. The targeting pack ones go first once the frameworks are known.
     analyzer_depsets = []
     for plugin in getattr(ctx.attr, "plugins", []):
         if CSharpAnalyzerInfo in plugin:
@@ -192,8 +192,6 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
     for dep in ctx.attr.deps:
         if CSharpAnalyzerInfo in dep:
             analyzer_depsets.append(dep[CSharpAnalyzerInfo].analyzers)
-
-    analyzers_depset = depset(transitive = analyzer_depsets)
 
     # Flags shared by the compile and the public reference assembly actions
     args = []
@@ -262,8 +260,6 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
                     interceptors_namespaces.append(ns)
             continue
         args.append(opt)
-    if interceptors_namespaces:
-        args.append("-features:InterceptorsNamespaces=" + ";".join(interceptors_namespaces))
 
     # Toolchain reference assemblies
     for ref in toolchain.ref_pack.to_list():
@@ -277,6 +273,29 @@ def _compile_impl(ctx, is_analyzer = False, extra_srcs = [], out_dir = ""):
         aspnet_depsets.append(toolchain.aspnetcore_ref_pack)
         for ref in toolchain.aspnetcore_ref_pack.to_list():
             args.append("-reference:" + ref.path.replace("\\", "/"))
+
+    # dotnet build runs the generators of every targeting pack the project references.
+    pack_analyzers = [getattr(toolchain, "ref_pack_analyzers", None) or depset()]
+    if uses_aspnetcore:
+        pack_analyzers.append(getattr(toolchain, "aspnetcore_ref_pack_analyzers", None) or depset())
+
+        # The SDK lets the validations generator intercept AddValidation from net10.0 on.
+        if major >= 10 and "Microsoft.Extensions.Validation.Generated" not in interceptors_namespaces:
+            interceptors_namespaces.append("Microsoft.Extensions.Validation.Generated")
+    if interceptors_namespaces:
+        args.append("-features:InterceptorsNamespaces=" + ";".join(interceptors_namespaces))
+
+    # Packages such as Microsoft.Extensions.Logging.Abstractions ship a pack generator too, and csc fails with CS0102
+    # when both copies run. CscWorker keeps the higher assembly version and the first one on a tie, like dotnet build,
+    # so the pack copies go first. A toolchain without CscWorker, like the hub's for an exec platform other than the
+    # host, can't compare versions at analysis time. There a pack generator that a plugin or dep also brings is left
+    # out, so the package copy runs just like it did before pack generators were passed at all.
+    pack_analyzers_depset = depset(transitive = pack_analyzers)
+    other_analyzers = depset(transitive = analyzer_depsets)
+    if not getattr(toolchain, "csc_worker", None):
+        other_analyzer_names = {f.basename: None for f in other_analyzers.to_list()}
+        pack_analyzers_depset = depset([f for f in pack_analyzers_depset.to_list() if f.basename not in other_analyzer_names])
+    analyzers_depset = depset(transitive = [pack_analyzers_depset, other_analyzers])
 
     # Dependency compile references. A library that names this assembly in internals_visible_to gives it the
     # reference assembly with internals in place of the public one every other dependent compiles against.

@@ -285,6 +285,19 @@ Unpack the tar anywhere and run `./hello`. No installed .NET is needed. A plain
 `pkg_tar(srcs = [":hello"])` flattens every path into the tar root, so the launcher can't find
 `hello_/hello.dll` there. [examples/BUILD.bazel](examples/BUILD.bazel) has the full setup.
 
+## Source generators
+
+Every compile runs the source generators that ship in the targeting pack of its framework, the same
+as `dotnet build`, so `[GeneratedRegex]`, `[LibraryImport]` and `[JsonSerializable]` work with no
+extra setup. `[LibraryImport]` also needs `allow_unsafe_blocks = True`. Targets that use
+`Microsoft.AspNetCore.App` also get its generators, such as `[LoggerMessage]`. Like `dotnet build`,
+the request delegate and configuration binding generators only run for trimmed apps, so they're
+off here. On `net10.0` and later the validation generator's interceptors are allowed, alongside the
+namespaces NuGet packages enable and any `-features:InterceptorsNamespaces=` in
+`additional_compiler_options`.
+Generators that ship in a NuGet package run when the package is listed in `deps` or `plugins`.
+A `csharp_analyzer_library` goes in `plugins`.
+
 ## Protobuf and gRPC
 
 `csharp_proto_library` and `csharp_grpc_library` live in the separate `rules_csharp_proto` module,

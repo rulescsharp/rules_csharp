@@ -443,9 +443,31 @@ filegroup(
     srcs = glob(["packs/Microsoft.NETCore.App.Ref/*/ref/*/*.dll"]),
 )
 
+# The source generators dotnet build runs for every project, such as [GeneratedRegex] and [LibraryImport].
+filegroup(
+    name = "ref_pack_analyzers",
+    srcs = glob(["packs/Microsoft.NETCore.App.Ref/*/analyzers/dotnet/cs/*.dll"], allow_empty = True),
+)
+
 filegroup(
     name = "aspnetcore_ref_pack",
     srcs = glob(["packs/Microsoft.AspNetCore.App.Ref/*/ref/*/*.dll"]),
+)
+
+# dotnet build leaves the request delegate and configuration binding generators off unless the app is trimmed.
+filegroup(
+    name = "aspnetcore_ref_pack_analyzers",
+    srcs = glob(
+        [
+            "packs/Microsoft.AspNetCore.App.Ref/*/analyzers/dotnet/cs/*.dll",
+            "packs/Microsoft.AspNetCore.App.Ref/*/analyzers/dotnet/roslyn*/cs/*.dll",
+        ],
+        exclude = [
+            "**/Microsoft.AspNetCore.Http.RequestDelegateGenerator.dll",
+            "**/Microsoft.Extensions.Configuration.Binder.SourceGeneration.dll",
+        ],
+        allow_empty = True,
+    ),
 )
 
 filegroup(
@@ -558,7 +580,9 @@ def _csharp_toolchains_hub_impl(repository_ctx):
     csc_worker_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:csc_worker_files"],
     dotnet_runtime_files = ["@dotnet_sdk_{v_slug}_{exec_p}//:dotnet_runtime_files"],
     ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:ref_pack"],
+    ref_pack_analyzers = ["@csharp_pack_{v_slug}_{target_p}//:ref_pack_analyzers"],
     aspnetcore_ref_pack = ["@csharp_pack_{v_slug}_{target_p}//:aspnetcore_ref_pack"],
+    aspnetcore_ref_pack_analyzers = ["@csharp_pack_{v_slug}_{target_p}//:aspnetcore_ref_pack_analyzers"],
     host_pack = "@csharp_pack_{newest_slug}_{target_p}//:host_pack",
     runtime_pack = ["@csharp_pack_{v_slug}_{target_p}//:runtime_pack"],
     target_framework = "{tfm}",

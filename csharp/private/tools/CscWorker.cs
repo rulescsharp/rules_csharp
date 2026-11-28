@@ -293,26 +293,28 @@ namespace RulesCsharp.Tools
                 }
                 processed.Add(arg);
             }
-            DropLowerDuplicateReferences(processed);
+            DropLowerDuplicates(processed, "reference:");
+            DropLowerDuplicates(processed, "analyzer:");
             // csc applies -pathmap to the absolute paths it resolves, so `.` never matches. Map the real execroot or sandbox root.
             processed.Add($"-pathmap:{Directory.GetCurrentDirectory()}=/_/");
             return processed.ToArray();
         }
 
-        // Like ResolvePackageFileConflicts in dotnet build, when the framework and a package both give an assembly,
-        // only the higher assembly version is referenced. A tie keeps the first, which is the framework's.
-        // Aliased, listed or unreadable references are left alone so csc handles and reports them as usual.
-        private static void DropLowerDuplicateReferences(List<string> args)
+        // Like ResolvePackageFileConflicts in dotnet build, which runs over references and analyzers, when two dlls
+        // share a file name only the higher assembly version is passed. A tie keeps the first, which is the
+        // framework's or the targeting pack's. Aliased, listed or unreadable ones are left alone so csc handles and
+        // reports them as usual.
+        private static void DropLowerDuplicates(List<string> args, string option)
         {
             var kept = new Dictionary<string, (int index, Version version)>(StringComparer.OrdinalIgnoreCase);
             var drop = new HashSet<int>();
             for (int i = 0; i < args.Count; i++)
             {
-                if (!args[i].StartsWith("-reference:") && !args[i].StartsWith("/reference:"))
+                if (!args[i].StartsWith("-" + option) && !args[i].StartsWith("/" + option))
                 {
                     continue;
                 }
-                string path = args[i].Substring("-reference:".Length);
+                string path = args[i].Substring(option.Length + 1);
                 if (path.IndexOfAny(new[] { '=', ',', ';' }) >= 0 || ReferenceVersion(path) is not Version version)
                 {
                     continue;

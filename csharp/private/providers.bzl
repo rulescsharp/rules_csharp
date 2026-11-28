@@ -30,6 +30,7 @@ CSharpToolchainInfo = provider(
     doc = "Defines resolved C# SDK tools, packs, and target monikers.",
     fields = {
         "aspnetcore_ref_pack": "Depset of reference assembly Files for Microsoft.AspNetCore.App.",
+        "aspnetcore_ref_pack_analyzers": "Depset of source generator and analyzer Files from the Microsoft.AspNetCore.App targeting pack.",
         "csc_dll": "Host File for Roslyn compiler assembly.",
         "csc_worker": "Host executable File for persistent compilation worker.",
         "csc_worker_files": "Depset of the dotnet runtime and compiler files that compiles run with, CscWorker included.",
@@ -39,6 +40,7 @@ CSharpToolchainInfo = provider(
         "host_pack": "Binary template File for target platform application host.",
         "host_rid": "Host runtime identifier string.",
         "ref_pack": "Depset of reference assembly Files for target framework.",
+        "ref_pack_analyzers": "Depset of source generator and analyzer Files from the target framework's targeting pack.",
         "runtime_pack": "Depset of runtime assembly Files for target platform.",
         "target_framework": "Target framework moniker string.",
         "target_rid": "Target runtime identifier string.",

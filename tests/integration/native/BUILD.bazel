@@ -53,6 +53,8 @@ csharp_library(
 csharp_test(
     name = "native_test",
     srcs = ["NativeTest.cs"],
+    # The LibraryImport generator needs unsafe code.
+    allow_unsafe_blocks = True,
     native_libs = [":muladd_shared"],
     deps = [":native_lib"],
 )
