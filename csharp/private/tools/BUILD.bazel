@@ -11,21 +11,11 @@ csharp_library(
     visibility = ["//visibility:public"],
 )
 
-genrule(
+# A plain file, so building any binary needs no shell action. binary.bzl passes it to
+# dotnet exec with --runtimeconfig, since it doesn't sit next to the patcher dll.
+alias(
     name = "apphost_patcher_runtimeconfig",
-    outs = ["apphost_patcher.runtimeconfig.json"],
-    cmd = """cat << 'EOF' > $@
-{
-  "runtimeOptions": {
-    "tfm": "net8.0",
-    "rollForward": "LatestMajor",
-    "framework": {
-      "name": "Microsoft.NETCore.App",
-      "version": "8.0.0"
-    }
-  }
-}
-EOF""",
+    actual = "apphost_patcher.runtimeconfig.json",
     visibility = ["//visibility:public"],
 )
 
